@@ -1,5 +1,7 @@
 "use client"
 
+// screen-4のコピーです
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,9 +18,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { ArrowLeft, User, Building2, Car, Hotel, Users, CheckCircle2, Calendar, MapPin, Sparkles } from "lucide-react"
-import type { ProjectData } from "@/app/page"
+import type { ProjectData } from "@/types/project"
 
-type Screen4Props = {
+type ProjectArrangementsProps = {
   projectData: ProjectData
   onNext: () => void
   onBack: () => void
@@ -34,7 +36,7 @@ type ArrangementItem = {
   status: "pending" | "in-progress" | "completed"
 }
 
-export function Screen4({ projectData, onNext, onBack }: Screen4Props) {
+export function ProjectArrangements({ projectData, onNext, onBack }: ProjectArrangementsProps) {
   const [selectedArrangement, setSelectedArrangement] = useState<ArrangementType | null>(null)
   const [arrangements, setArrangements] = useState<ArrangementItem[]>([
     {

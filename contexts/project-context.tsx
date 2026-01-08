@@ -1,0 +1,1658 @@
+"use client"
+
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react"
+import { useToast } from "@/hooks/use-toast"
+import type { ProjectData, Role } from "@/types/project"
+
+type Project = NonNullable<ProjectData["projects"]>[number]
+
+// 法人データの型定義
+export type CompanyData = {
+  id: number
+  companyId: string
+  name: string
+}
+
+// ホールデータの型定義
+export type HallData = {
+  id: number
+  hallId: string // ホールID
+  name: string
+  salesPersonName: string
+  companyId: number // 法人IDへの参照
+  discountAmount: number // ホールごとの割引金額（5000円〜50000円）
+}
+
+type ProjectContextType = {
+  projectData: ProjectData
+  setProjectData: (data: ProjectData) => void
+  currentRole: Role
+  setCurrentRole: (role: Role) => void
+  notifications: string[]
+  addNotification: (message: string) => void
+  // 仮想DB操作関数
+  getProjects: () => Project[]
+  createProject: (project: Omit<Project, "id">) => Project
+  createProjects: (projects: Omit<Project, "id">[]) => Project[]
+  updateProject: (id: number, updates: Partial<Project>) => Project | null
+  deleteProject: (id: number) => boolean
+  getProjectById: (id: number) => Project | null
+  generateProjectNumber: (existingProjects: Project[]) => string
+  // ホールデータ操作関数
+  getHalls: () => HallData[]
+  getHallByName: (name: string) => HallData | null
+  searchHalls: (query: string, companyId?: number) => HallData[]
+  // 法人データ操作関数
+  getCompanies: () => CompanyData[]
+  getCompanyById: (id: number) => CompanyData | null
+  getCompanyByCompanyId: (companyId: string) => CompanyData | null
+  searchCompanies: (query: string) => CompanyData[]
+  getHallsByCompanyId: (companyId: number) => HallData[]
+}
+
+const ProjectContext = createContext<ProjectContextType | undefined>(undefined)
+
+// 初期法人データ（10個の法人）
+const initialCompanies: CompanyData[] = [
+  { id: 1, companyId: "CORP-001", name: "株式会社マルハン" },
+  { id: 2, companyId: "CORP-002", name: "株式会社ダイナム" },
+  { id: 3, companyId: "CORP-003", name: "株式会社ガイア" },
+  { id: 4, companyId: "CORP-004", name: "株式会社エース" },
+  { id: 5, companyId: "CORP-005", name: "株式会社サンライズ" },
+  { id: 6, companyId: "CORP-006", name: "株式会社ビッグエース" },
+  { id: 7, companyId: "CORP-007", name: "株式会社パチンコランド" },
+  { id: 8, companyId: "CORP-008", name: "株式会社エースパチンコ" },
+  { id: 9, companyId: "CORP-009", name: "株式会社パチンコワールド" },
+  { id: 10, companyId: "CORP-010", name: "株式会社ビッグパチンコ" },
+]
+
+// 営業担当者のリスト（20人）
+const salesPersonNames = [
+  "山田 太郎", "佐藤 次郎", "鈴木 三郎", "高橋 四郎", "伊藤 五郎",
+  "渡辺 六郎", "中村 七郎", "小林 八郎", "加藤 九郎", "松本 十郎",
+  "井上 十一", "木村 十二", "林 十三", "斎藤 十四", "清水 十五",
+  "山本 十六", "森 十七", "池田 十八", "橋本 十九", "石川 二十",
+]
+
+// 5000円から5万円までのランダムな割引金額を生成する関数
+const generateRandomDiscount = (): number => {
+  // 5000円刻みでランダムに生成（5000, 10000, 15000, ..., 50000）
+  const min = 1 // 5000円 / 5000
+  const max = 10 // 50000円 / 5000
+  return (Math.floor(Math.random() * (max - min + 1)) + min) * 5000
+}
+
+// 初期ホールデータ（10法人 × 20ホール = 200ホール）
+const initialHalls: HallData[] = []
+let hallCounter = 1
+initialCompanies.forEach((company, companyIndex) => {
+  for (let i = 1; i <= 20; i++) {
+    const salesPersonIndex = (companyIndex * 20 + i - 1) % salesPersonNames.length
+    const hallNumber = String(i).padStart(2, "0")
+    initialHalls.push({
+      id: hallCounter,
+      hallId: `${company.companyId}-HALL-${hallNumber}`, // ホールIDを生成
+      name: `${company.name.replace("株式会社", "")}${["本店", "渋谷店", "新宿店", "池袋店", "上野店", "錦糸町店", "新橋店", "横浜店", "川崎店", "大宮店", "千葉店", "船橋店", "柏店", "立川店", "八王子店", "町田店", "相模原店", "厚木店", "藤沢店", "鎌倉店"][i - 1]}`,
+      salesPersonName: salesPersonNames[salesPersonIndex],
+      companyId: company.id,
+      discountAmount: generateRandomDiscount(), // 5000円〜50000円のランダムな割引金額
+    })
+    hallCounter++
+  }
+})
+
+// ホール名から法人情報とホールIDを取得するヘルパー関数
+const getCompanyAndHallInfo = (hallName: string): { companyName: string; companyId: string; hallId: string } => {
+  const hall = initialHalls.find(h => h.name === hallName)
+  if (hall) {
+    const company = initialCompanies.find(c => c.id === hall.companyId)
+    if (company) {
+      return {
+        companyName: company.name,
+        companyId: company.companyId,
+        hallId: hall.hallId,
+      }
+    }
+  }
+  // フォールバック（見つからない場合）
+  return {
+    companyName: "-",
+    companyId: "-",
+    hallId: "-",
+  }
+}
+
+// 初期案件データ（10ホール × 2案件 × 3商材 = 60商材）
+const initialProjects: Project[] = [
+  // マルハン渋谷店 - 山田 太郎
+  // 案件No 1
+  {
+    id: 1,
+    projectNumber: "1",
+    projectName: "新台入替キャンペーン①",
+    clientName: "マルハン渋谷店",
+    date: "2025/12/10",
+    venue: "パチンコ店舗フロア",
+    talent: "山田 太郎",
+    estimateAmount: "¥650,000",
+    status: "proposed",
+    salesPersonName: "山田 太郎",
+    requestDate: "2025/11/01",
+    hallName: "マルハン渋谷店",
+    projectStatus: "見込み入力完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "新台入替キャンペーン①",
+    eventDate: "2025/12/10",
+    estimatedBillingAmount: 650000,
+    ...getCompanyAndHallInfo("マルハン渋谷店"),
+  },
+  {
+    id: 2,
+    projectNumber: "1",
+    projectName: "新台入替キャンペーン②",
+    clientName: "マルハン渋谷店",
+    date: "2025/12/15",
+    venue: "パチンコ店舗フロア",
+    talent: "山田 太郎",
+    estimateAmount: "¥580,000",
+    status: "proposed",
+    salesPersonName: "山田 太郎",
+    requestDate: "2025/11/01",
+    hallName: "マルハン渋谷店",
+    projectStatus: "見積作成完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "新台入替キャンペーン②",
+    eventDate: "2025/12/15",
+    estimatedBillingAmount: 580000,
+    ...getCompanyAndHallInfo("マルハン渋谷店"),
+  },
+  {
+    id: 3,
+    projectNumber: "1",
+    projectName: "新台入替キャンペーン③",
+    clientName: "マルハン渋谷店",
+    date: "2025/12/20",
+    venue: "パチンコ店舗フロア",
+    talent: "山田 太郎",
+    estimateAmount: "¥720,000",
+    status: "proposed",
+    salesPersonName: "山田 太郎",
+    requestDate: "2025/11/01",
+    hallName: "マルハン渋谷店",
+    projectStatus: "見積送付完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "新台入替キャンペーン③",
+    eventDate: "2025/12/20",
+    estimatedBillingAmount: 720000,
+    ...getCompanyAndHallInfo("マルハン渋谷店"),
+  },
+  // 案件No 2
+  {
+    id: 4,
+    projectNumber: "2",
+    projectName: "年末年始イベント①",
+    clientName: "マルハン渋谷店",
+    date: "2025/12/28",
+    venue: "パチンコ店舗フロア",
+    talent: "山田 太郎",
+    estimateAmount: "¥550,000",
+    status: "proposed",
+    salesPersonName: "山田 太郎",
+    requestDate: "2025/11/15",
+    hallName: "マルハン渋谷店",
+    projectStatus: "受注済み",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "年末年始イベント①",
+    eventDate: "2025/12/28",
+    estimatedBillingAmount: 550000,
+    ...getCompanyAndHallInfo("マルハン渋谷店"),
+  },
+  {
+    id: 5,
+    projectNumber: "2",
+    projectName: "年末年始イベント②",
+    clientName: "マルハン渋谷店",
+    date: "2026/01/03",
+    venue: "パチンコ店舗フロア",
+    talent: "山田 太郎",
+    estimateAmount: "¥480,000",
+    status: "proposed",
+    salesPersonName: "山田 太郎",
+    requestDate: "2025/11/15",
+    hallName: "マルハン渋谷店",
+    projectStatus: "手配中",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "年末年始イベント②",
+    eventDate: "2026/01/03",
+    estimatedBillingAmount: 480000,
+    ...getCompanyAndHallInfo("マルハン渋谷店"),
+  },
+  {
+    id: 6,
+    projectNumber: "2",
+    projectName: "年末年始イベント③",
+    clientName: "マルハン渋谷店",
+    date: "2026/01/05",
+    venue: "パチンコ店舗フロア",
+    talent: "山田 太郎",
+    estimateAmount: "¥620,000",
+    status: "proposed",
+    salesPersonName: "山田 太郎",
+    requestDate: "2025/11/15",
+    hallName: "マルハン渋谷店",
+    projectStatus: "手配完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "年末年始イベント③",
+    eventDate: "2026/01/05",
+    estimatedBillingAmount: 620000,
+    ...getCompanyAndHallInfo("マルハン渋谷店"),
+  },
+  // ダイナム新宿店 - 佐藤 次郎
+  // 案件No 3
+  {
+    id: 7,
+    projectNumber: "3",
+    projectName: "グランドオープン記念①",
+    clientName: "ダイナム新宿店",
+    date: "2026/01/15",
+    venue: "パチンコ店舗エントランス",
+    talent: "佐藤 次郎",
+    estimateAmount: "¥680,000",
+    status: "proposed",
+    salesPersonName: "佐藤 次郎",
+    requestDate: "2025/12/01",
+    hallName: "ダイナム新宿店",
+    projectStatus: "見込み入力完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "グランドオープン記念①",
+    eventDate: "2026/01/15",
+    estimatedBillingAmount: 680000,
+    ...getCompanyAndHallInfo("ダイナム新宿店"),
+  },
+  {
+    id: 8,
+    projectNumber: "3",
+    projectName: "グランドオープン記念②",
+    clientName: "ダイナム新宿店",
+    date: "2026/01/20",
+    venue: "パチンコ店舗エントランス",
+    talent: "佐藤 次郎",
+    estimateAmount: "¥590,000",
+    status: "proposed",
+    salesPersonName: "佐藤 次郎",
+    requestDate: "2025/12/01",
+    hallName: "ダイナム新宿店",
+    projectStatus: "見積作成完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "グランドオープン記念②",
+    eventDate: "2026/01/20",
+    estimatedBillingAmount: 590000,
+    ...getCompanyAndHallInfo("ダイナム新宿店"),
+  },
+  {
+    id: 9,
+    projectNumber: "3",
+    projectName: "グランドオープン記念③",
+    clientName: "ダイナム新宿店",
+    date: "2026/01/25",
+    venue: "パチンコ店舗エントランス",
+    talent: "佐藤 次郎",
+    estimateAmount: "¥750,000",
+    status: "proposed",
+    salesPersonName: "佐藤 次郎",
+    requestDate: "2025/12/01",
+    hallName: "ダイナム新宿店",
+    projectStatus: "見積送付完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "グランドオープン記念③",
+    eventDate: "2026/01/25",
+    estimatedBillingAmount: 750000,
+    ...getCompanyAndHallInfo("ダイナム新宿店"),
+  },
+  // 案件No 4
+  {
+    id: 10,
+    projectNumber: "4",
+    projectName: "新春セールイベント①",
+    clientName: "ダイナム新宿店",
+    date: "2026/01/05",
+    venue: "パチンコ店舗フロア",
+    talent: "佐藤 次郎",
+    estimateAmount: "¥520,000",
+    status: "proposed",
+    salesPersonName: "佐藤 次郎",
+    requestDate: "2025/12/10",
+    hallName: "ダイナム新宿店",
+    projectStatus: "受注済み",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "新春セールイベント①",
+    eventDate: "2026/01/05",
+    estimatedBillingAmount: 520000,
+    ...getCompanyAndHallInfo("ダイナム新宿店"),
+  },
+  {
+    id: 11,
+    projectNumber: "4",
+    projectName: "新春セールイベント②",
+    clientName: "ダイナム新宿店",
+    date: "2026/01/10",
+    venue: "パチンコ店舗フロア",
+    talent: "佐藤 次郎",
+    estimateAmount: "¥450,000",
+    status: "proposed",
+    salesPersonName: "佐藤 次郎",
+    requestDate: "2025/12/10",
+    hallName: "ダイナム新宿店",
+    projectStatus: "手配中",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "新春セールイベント②",
+    eventDate: "2026/01/10",
+    estimatedBillingAmount: 450000,
+    ...getCompanyAndHallInfo("ダイナム新宿店"),
+  },
+  {
+    id: 12,
+    projectNumber: "4",
+    projectName: "新春セールイベント③",
+    clientName: "ダイナム新宿店",
+    date: "2026/01/12",
+    venue: "パチンコ店舗フロア",
+    talent: "佐藤 次郎",
+    estimateAmount: "¥640,000",
+    status: "proposed",
+    salesPersonName: "佐藤 次郎",
+    requestDate: "2025/12/10",
+    hallName: "ダイナム新宿店",
+    projectStatus: "手配完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "新春セールイベント③",
+    eventDate: "2026/01/12",
+    estimatedBillingAmount: 640000,
+    ...getCompanyAndHallInfo("ダイナム新宿店"),
+  },
+  // ガイア池袋店 - 鈴木 三郎
+  // 案件No 5
+  {
+    id: 13,
+    projectNumber: "5",
+    projectName: "新機種導入イベント①",
+    clientName: "ガイア池袋店",
+    date: "2026/02/20",
+    venue: "パチンコ店舗特設ステージ",
+    talent: "鈴木 三郎",
+    estimateAmount: "¥600,000",
+    status: "proposed",
+    salesPersonName: "鈴木 三郎",
+    requestDate: "2026/01/05",
+    hallName: "ガイア池袋店",
+    projectStatus: "見込み入力完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "新機種導入イベント①",
+    eventDate: "2026/02/20",
+    estimatedBillingAmount: 600000,
+    ...getCompanyAndHallInfo("ガイア池袋店"),
+  },
+  {
+    id: 14,
+    projectNumber: "5",
+    projectName: "新機種導入イベント②",
+    clientName: "ガイア池袋店",
+    date: "2026/02/25",
+    venue: "パチンコ店舗特設ステージ",
+    talent: "鈴木 三郎",
+    estimateAmount: "¥510,000",
+    status: "proposed",
+    salesPersonName: "鈴木 三郎",
+    requestDate: "2026/01/05",
+    hallName: "ガイア池袋店",
+    projectStatus: "見積作成完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "新機種導入イベント②",
+    eventDate: "2026/02/25",
+    estimatedBillingAmount: 510000,
+    ...getCompanyAndHallInfo("ガイア池袋店"),
+  },
+  {
+    id: 15,
+    projectNumber: "5",
+    projectName: "新機種導入イベント③",
+    clientName: "ガイア池袋店",
+    date: "2026/03/01",
+    venue: "パチンコ店舗特設ステージ",
+    talent: "鈴木 三郎",
+    estimateAmount: "¥670,000",
+    status: "proposed",
+    salesPersonName: "鈴木 三郎",
+    requestDate: "2026/01/05",
+    hallName: "ガイア池袋店",
+    projectStatus: "見積送付完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "新機種導入イベント③",
+    eventDate: "2026/03/01",
+    estimatedBillingAmount: 670000,
+    ...getCompanyAndHallInfo("ガイア池袋店"),
+  },
+  // 案件No 6
+  {
+    id: 16,
+    projectNumber: "6",
+    projectName: "桜まつりイベント①",
+    clientName: "ガイア池袋店",
+    date: "2026/03/25",
+    venue: "パチンコ店舗フロア",
+    talent: "鈴木 三郎",
+    estimateAmount: "¥630,000",
+    status: "proposed",
+    salesPersonName: "鈴木 三郎",
+    requestDate: "2026/02/15",
+    hallName: "ガイア池袋店",
+    projectStatus: "受注済み",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "桜まつりイベント①",
+    eventDate: "2026/03/25",
+    estimatedBillingAmount: 630000,
+    ...getCompanyAndHallInfo("ガイア池袋店"),
+  },
+  {
+    id: 17,
+    projectNumber: "6",
+    projectName: "桜まつりイベント②",
+    clientName: "ガイア池袋店",
+    date: "2026/03/30",
+    venue: "パチンコ店舗フロア",
+    talent: "鈴木 三郎",
+    estimateAmount: "¥560,000",
+    status: "proposed",
+    salesPersonName: "鈴木 三郎",
+    requestDate: "2026/02/15",
+    hallName: "ガイア池袋店",
+    projectStatus: "手配中",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "桜まつりイベント②",
+    eventDate: "2026/03/30",
+    estimatedBillingAmount: 560000,
+    ...getCompanyAndHallInfo("ガイア池袋店"),
+  },
+  {
+    id: 18,
+    projectNumber: "6",
+    projectName: "桜まつりイベント③",
+    clientName: "ガイア池袋店",
+    date: "2026/04/05",
+    venue: "パチンコ店舗フロア",
+    talent: "鈴木 三郎",
+    estimateAmount: "¥610,000",
+    status: "proposed",
+    salesPersonName: "鈴木 三郎",
+    requestDate: "2026/02/15",
+    hallName: "ガイア池袋店",
+    projectStatus: "手配完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "桜まつりイベント③",
+    eventDate: "2026/04/05",
+    estimatedBillingAmount: 610000,
+    ...getCompanyAndHallInfo("ガイア池袋店"),
+  },
+  // パチンコエース上野店 - 高橋 四郎
+  // 案件No 7
+  {
+    id: 19,
+    projectNumber: "7",
+    projectName: "リニューアルオープン記念①",
+    clientName: "パチンコエース上野店",
+    date: "2026/01/20",
+    venue: "パチンコ店舗エントランス",
+    talent: "高橋 四郎",
+    estimateAmount: "¥640,000",
+    status: "proposed",
+    salesPersonName: "高橋 四郎",
+    requestDate: "2025/12/05",
+    hallName: "パチンコエース上野店",
+    projectStatus: "見込み入力完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "リニューアルオープン記念①",
+    eventDate: "2026/01/20",
+    estimatedBillingAmount: 640000,
+    ...getCompanyAndHallInfo("パチンコエース上野店"),
+  },
+  {
+    id: 20,
+    projectNumber: "7",
+    projectName: "リニューアルオープン記念②",
+    clientName: "パチンコエース上野店",
+    date: "2026/01/25",
+    venue: "パチンコ店舗エントランス",
+    talent: "高橋 四郎",
+    estimateAmount: "¥570,000",
+    status: "proposed",
+    salesPersonName: "高橋 四郎",
+    requestDate: "2025/12/05",
+    hallName: "パチンコエース上野店",
+    projectStatus: "見積作成完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "リニューアルオープン記念②",
+    eventDate: "2026/01/25",
+    estimatedBillingAmount: 570000,
+    ...getCompanyAndHallInfo("パチンコエース上野店"),
+  },
+  {
+    id: 21,
+    projectNumber: "7",
+    projectName: "リニューアルオープン記念③",
+    clientName: "パチンコエース上野店",
+    date: "2026/01/30",
+    venue: "パチンコ店舗エントランス",
+    talent: "高橋 四郎",
+    estimateAmount: "¥600,000",
+    status: "proposed",
+    salesPersonName: "高橋 四郎",
+    requestDate: "2025/12/05",
+    hallName: "パチンコエース上野店",
+    projectStatus: "見積送付完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "リニューアルオープン記念③",
+    eventDate: "2026/01/30",
+    estimatedBillingAmount: 600000,
+    ...getCompanyAndHallInfo("パチンコエース上野店"),
+  },
+  // 案件No 8
+  {
+    id: 22,
+    projectNumber: "8",
+    projectName: "節分イベント①",
+    clientName: "パチンコエース上野店",
+    date: "2026/02/03",
+    venue: "パチンコ店舗フロア",
+    talent: "高橋 四郎",
+    estimateAmount: "¥550,000",
+    status: "proposed",
+    salesPersonName: "高橋 四郎",
+    requestDate: "2026/01/10",
+    hallName: "パチンコエース上野店",
+    projectStatus: "受注済み",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "節分イベント①",
+    eventDate: "2026/02/03",
+    estimatedBillingAmount: 550000,
+    ...getCompanyAndHallInfo("パチンコエース上野店"),
+  },
+  {
+    id: 23,
+    projectNumber: "8",
+    projectName: "節分イベント②",
+    clientName: "パチンコエース上野店",
+    date: "2026/02/05",
+    venue: "パチンコ店舗フロア",
+    talent: "高橋 四郎",
+    estimateAmount: "¥720,000",
+    status: "proposed",
+    salesPersonName: "高橋 四郎",
+    requestDate: "2026/01/10",
+    hallName: "パチンコエース上野店",
+    projectStatus: "手配中",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "節分イベント②",
+    eventDate: "2026/02/05",
+    estimatedBillingAmount: 720000,
+    ...getCompanyAndHallInfo("パチンコエース上野店"),
+  },
+  {
+    id: 24,
+    projectNumber: "8",
+    projectName: "節分イベント③",
+    clientName: "パチンコエース上野店",
+    date: "2026/02/08",
+    venue: "パチンコ店舗フロア",
+    talent: "高橋 四郎",
+    estimateAmount: "¥660,000",
+    status: "proposed",
+    salesPersonName: "高橋 四郎",
+    requestDate: "2026/01/10",
+    hallName: "パチンコエース上野店",
+    projectStatus: "手配完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "節分イベント③",
+    eventDate: "2026/02/08",
+    estimatedBillingAmount: 660000,
+    ...getCompanyAndHallInfo("パチンコエース上野店"),
+  },
+  // サンライズ錦糸町店 - 伊藤 五郎
+  // 案件No 9
+  {
+    id: 25,
+    projectNumber: "9",
+    projectName: "開店記念イベント①",
+    clientName: "サンライズ錦糸町店",
+    date: "2026/02/10",
+    venue: "パチンコ店舗エントランス",
+    talent: "伊藤 五郎",
+    estimateAmount: "¥680,000",
+    status: "proposed",
+    salesPersonName: "伊藤 五郎",
+    requestDate: "2026/01/01",
+    hallName: "サンライズ錦糸町店",
+    projectStatus: "見込み入力完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "開店記念イベント①",
+    eventDate: "2026/02/10",
+    estimatedBillingAmount: 680000,
+    ...getCompanyAndHallInfo("サンライズ錦糸町店"),
+  },
+  {
+    id: 26,
+    projectNumber: "9",
+    projectName: "開店記念イベント②",
+    clientName: "サンライズ錦糸町店",
+    date: "2026/02/15",
+    venue: "パチンコ店舗エントランス",
+    talent: "伊藤 五郎",
+    estimateAmount: "¥590,000",
+    status: "proposed",
+    salesPersonName: "伊藤 五郎",
+    requestDate: "2026/01/01",
+    hallName: "サンライズ錦糸町店",
+    projectStatus: "見積作成完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "開店記念イベント②",
+    eventDate: "2026/02/15",
+    estimatedBillingAmount: 590000,
+    ...getCompanyAndHallInfo("サンライズ錦糸町店"),
+  },
+  {
+    id: 27,
+    projectNumber: "9",
+    projectName: "開店記念イベント③",
+    clientName: "サンライズ錦糸町店",
+    date: "2026/02/20",
+    venue: "パチンコ店舗エントランス",
+    talent: "伊藤 五郎",
+    estimateAmount: "¥750,000",
+    status: "proposed",
+    salesPersonName: "伊藤 五郎",
+    requestDate: "2026/01/01",
+    hallName: "サンライズ錦糸町店",
+    projectStatus: "見積送付完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "開店記念イベント③",
+    eventDate: "2026/02/20",
+    estimatedBillingAmount: 750000,
+    ...getCompanyAndHallInfo("サンライズ錦糸町店"),
+  },
+  // 案件No 10
+  {
+    id: 28,
+    projectNumber: "10",
+    projectName: "ひなまつりイベント①",
+    clientName: "サンライズ錦糸町店",
+    date: "2026/03/03",
+    venue: "パチンコ店舗フロア",
+    talent: "伊藤 五郎",
+    estimateAmount: "¥520,000",
+    status: "proposed",
+    salesPersonName: "伊藤 五郎",
+    requestDate: "2026/02/05",
+    hallName: "サンライズ錦糸町店",
+    projectStatus: "受注済み",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "ひなまつりイベント①",
+    eventDate: "2026/03/03",
+    estimatedBillingAmount: 520000,
+    ...getCompanyAndHallInfo("サンライズ錦糸町店"),
+  },
+  {
+    id: 29,
+    projectNumber: "10",
+    projectName: "ひなまつりイベント②",
+    clientName: "サンライズ錦糸町店",
+    date: "2026/03/05",
+    venue: "パチンコ店舗フロア",
+    talent: "伊藤 五郎",
+    estimateAmount: "¥450,000",
+    status: "proposed",
+    salesPersonName: "伊藤 五郎",
+    requestDate: "2026/02/05",
+    hallName: "サンライズ錦糸町店",
+    projectStatus: "手配中",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "ひなまつりイベント②",
+    eventDate: "2026/03/05",
+    estimatedBillingAmount: 450000,
+    ...getCompanyAndHallInfo("サンライズ錦糸町店"),
+  },
+  {
+    id: 30,
+    projectNumber: "10",
+    projectName: "ひなまつりイベント③",
+    clientName: "サンライズ錦糸町店",
+    date: "2026/03/08",
+    venue: "パチンコ店舗フロア",
+    talent: "伊藤 五郎",
+    estimateAmount: "¥640,000",
+    status: "proposed",
+    salesPersonName: "伊藤 五郎",
+    requestDate: "2026/02/05",
+    hallName: "サンライズ錦糸町店",
+    projectStatus: "手配完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "ひなまつりイベント③",
+    eventDate: "2026/03/08",
+    estimatedBillingAmount: 640000,
+    ...getCompanyAndHallInfo("サンライズ錦糸町店"),
+  },
+  // ビッグエース新橋店 - 渡辺 六郎
+  // 案件No 11
+  {
+    id: 31,
+    projectNumber: "11",
+    projectName: "開店記念イベント①",
+    clientName: "ビッグエース新橋店",
+    date: "2026/02/15",
+    venue: "パチンコ店舗エントランス",
+    talent: "渡辺 六郎",
+    estimateAmount: "¥600,000",
+    status: "proposed",
+    salesPersonName: "渡辺 六郎",
+    requestDate: "2026/01/05",
+    hallName: "ビッグエース新橋店",
+    projectStatus: "見込み入力完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "開店記念イベント①",
+    eventDate: "2026/02/15",
+    estimatedBillingAmount: 600000,
+    ...getCompanyAndHallInfo("ビッグエース新橋店"),
+  },
+  {
+    id: 32,
+    projectNumber: "11",
+    projectName: "開店記念イベント②",
+    clientName: "ビッグエース新橋店",
+    date: "2026/02/20",
+    venue: "パチンコ店舗エントランス",
+    talent: "渡辺 六郎",
+    estimateAmount: "¥510,000",
+    status: "proposed",
+    salesPersonName: "渡辺 六郎",
+    requestDate: "2026/01/05",
+    hallName: "ビッグエース新橋店",
+    projectStatus: "見積作成完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "開店記念イベント②",
+    eventDate: "2026/02/20",
+    estimatedBillingAmount: 510000,
+    ...getCompanyAndHallInfo("ビッグエース新橋店"),
+  },
+  {
+    id: 33,
+    projectNumber: "11",
+    projectName: "開店記念イベント③",
+    clientName: "ビッグエース新橋店",
+    date: "2026/02/25",
+    venue: "パチンコ店舗エントランス",
+    talent: "渡辺 六郎",
+    estimateAmount: "¥670,000",
+    status: "proposed",
+    salesPersonName: "渡辺 六郎",
+    requestDate: "2026/01/05",
+    hallName: "ビッグエース新橋店",
+    projectStatus: "見積送付完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "開店記念イベント③",
+    eventDate: "2026/02/25",
+    estimatedBillingAmount: 670000,
+    ...getCompanyAndHallInfo("ビッグエース新橋店"),
+  },
+  // 案件No 12
+  {
+    id: 34,
+    projectNumber: "12",
+    projectName: "春のキャンペーン①",
+    clientName: "ビッグエース新橋店",
+    date: "2026/04/10",
+    venue: "パチンコ店舗フロア",
+    talent: "渡辺 六郎",
+    estimateAmount: "¥630,000",
+    status: "proposed",
+    salesPersonName: "渡辺 六郎",
+    requestDate: "2026/03/01",
+    hallName: "ビッグエース新橋店",
+    projectStatus: "受注済み",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "春のキャンペーン①",
+    eventDate: "2026/04/10",
+    estimatedBillingAmount: 630000,
+    ...getCompanyAndHallInfo("ビッグエース新橋店"),
+  },
+  {
+    id: 35,
+    projectNumber: "12",
+    projectName: "春のキャンペーン②",
+    clientName: "ビッグエース新橋店",
+    date: "2026/04/15",
+    venue: "パチンコ店舗フロア",
+    talent: "渡辺 六郎",
+    estimateAmount: "¥560,000",
+    status: "proposed",
+    salesPersonName: "渡辺 六郎",
+    requestDate: "2026/03/01",
+    hallName: "ビッグエース新橋店",
+    projectStatus: "手配中",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "春のキャンペーン②",
+    eventDate: "2026/04/15",
+    estimatedBillingAmount: 560000,
+    ...getCompanyAndHallInfo("ビッグエース新橋店"),
+  },
+  {
+    id: 36,
+    projectNumber: "12",
+    projectName: "春のキャンペーン③",
+    clientName: "ビッグエース新橋店",
+    date: "2026/04/20",
+    venue: "パチンコ店舗フロア",
+    talent: "渡辺 六郎",
+    estimateAmount: "¥610,000",
+    status: "proposed",
+    salesPersonName: "渡辺 六郎",
+    requestDate: "2026/03/01",
+    hallName: "ビッグエース新橋店",
+    projectStatus: "手配完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "春のキャンペーン③",
+    eventDate: "2026/04/20",
+    estimatedBillingAmount: 610000,
+    ...getCompanyAndHallInfo("ビッグエース新橋店"),
+  },
+  // パチンコランド横浜店 - 中村 七郎
+  // 案件No 13
+  {
+    id: 37,
+    projectNumber: "13",
+    projectName: "新台入替キャンペーン①",
+    clientName: "パチンコランド横浜店",
+    date: "2026/03/05",
+    venue: "パチンコ店舗フロア",
+    talent: "中村 七郎",
+    estimateAmount: "¥640,000",
+    status: "proposed",
+    salesPersonName: "中村 七郎",
+    requestDate: "2026/02/01",
+    hallName: "パチンコランド横浜店",
+    projectStatus: "見込み入力完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "新台入替キャンペーン①",
+    eventDate: "2026/03/05",
+    estimatedBillingAmount: 640000,
+    ...getCompanyAndHallInfo("パチンコランド横浜店"),
+  },
+  {
+    id: 38,
+    projectNumber: "13",
+    projectName: "新台入替キャンペーン②",
+    clientName: "パチンコランド横浜店",
+    date: "2026/03/10",
+    venue: "パチンコ店舗フロア",
+    talent: "中村 七郎",
+    estimateAmount: "¥570,000",
+    status: "proposed",
+    salesPersonName: "中村 七郎",
+    requestDate: "2026/02/01",
+    hallName: "パチンコランド横浜店",
+    projectStatus: "見積作成完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "新台入替キャンペーン②",
+    eventDate: "2026/03/10",
+    estimatedBillingAmount: 570000,
+    ...getCompanyAndHallInfo("パチンコランド横浜店"),
+  },
+  {
+    id: 39,
+    projectNumber: "13",
+    projectName: "新台入替キャンペーン③",
+    clientName: "パチンコランド横浜店",
+    date: "2026/03/15",
+    venue: "パチンコ店舗フロア",
+    talent: "中村 七郎",
+    estimateAmount: "¥600,000",
+    status: "proposed",
+    salesPersonName: "中村 七郎",
+    requestDate: "2026/02/01",
+    hallName: "パチンコランド横浜店",
+    projectStatus: "見積送付完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "新台入替キャンペーン③",
+    eventDate: "2026/03/15",
+    estimatedBillingAmount: 600000,
+    ...getCompanyAndHallInfo("パチンコランド横浜店"),
+  },
+  // 案件No 14
+  {
+    id: 40,
+    projectNumber: "14",
+    projectName: "夏祭りイベント①",
+    clientName: "パチンコランド横浜店",
+    date: "2026/07/20",
+    venue: "パチンコ店舗フロア",
+    talent: "中村 七郎",
+    estimateAmount: "¥550,000",
+    status: "proposed",
+    salesPersonName: "中村 七郎",
+    requestDate: "2026/06/01",
+    hallName: "パチンコランド横浜店",
+    projectStatus: "受注済み",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "夏祭りイベント①",
+    eventDate: "2026/07/20",
+    estimatedBillingAmount: 550000,
+    ...getCompanyAndHallInfo("パチンコランド横浜店"),
+  },
+  {
+    id: 41,
+    projectNumber: "14",
+    projectName: "夏祭りイベント②",
+    clientName: "パチンコランド横浜店",
+    date: "2026/07/25",
+    venue: "パチンコ店舗フロア",
+    talent: "中村 七郎",
+    estimateAmount: "¥720,000",
+    status: "proposed",
+    salesPersonName: "中村 七郎",
+    requestDate: "2026/06/01",
+    hallName: "パチンコランド横浜店",
+    projectStatus: "手配中",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "夏祭りイベント②",
+    eventDate: "2026/07/25",
+    estimatedBillingAmount: 720000,
+    ...getCompanyAndHallInfo("パチンコランド横浜店"),
+  },
+  {
+    id: 42,
+    projectNumber: "14",
+    projectName: "夏祭りイベント③",
+    clientName: "パチンコランド横浜店",
+    date: "2026/07/30",
+    venue: "パチンコ店舗フロア",
+    talent: "中村 七郎",
+    estimateAmount: "¥660,000",
+    status: "proposed",
+    salesPersonName: "中村 七郎",
+    requestDate: "2026/06/01",
+    hallName: "パチンコランド横浜店",
+    projectStatus: "手配完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "夏祭りイベント③",
+    eventDate: "2026/07/30",
+    estimatedBillingAmount: 660000,
+    ...getCompanyAndHallInfo("パチンコランド横浜店"),
+  },
+  // エースパチンコ川崎店 - 小林 八郎
+  // 案件No 15
+  {
+    id: 43,
+    projectNumber: "15",
+    projectName: "グランドオープン記念①",
+    clientName: "エースパチンコ川崎店",
+    date: "2026/04/20",
+    venue: "パチンコ店舗エントランス",
+    talent: "小林 八郎",
+    estimateAmount: "¥680,000",
+    status: "proposed",
+    salesPersonName: "小林 八郎",
+    requestDate: "2026/03/10",
+    hallName: "エースパチンコ川崎店",
+    projectStatus: "見込み入力完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "グランドオープン記念①",
+    eventDate: "2026/04/20",
+    estimatedBillingAmount: 680000,
+    ...getCompanyAndHallInfo("エースパチンコ川崎店"),
+  },
+  {
+    id: 44,
+    projectNumber: "15",
+    projectName: "グランドオープン記念②",
+    clientName: "エースパチンコ川崎店",
+    date: "2026/04/25",
+    venue: "パチンコ店舗エントランス",
+    talent: "小林 八郎",
+    estimateAmount: "¥590,000",
+    status: "proposed",
+    salesPersonName: "小林 八郎",
+    requestDate: "2026/03/10",
+    hallName: "エースパチンコ川崎店",
+    projectStatus: "見積作成完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "グランドオープン記念②",
+    eventDate: "2026/04/25",
+    estimatedBillingAmount: 590000,
+    ...getCompanyAndHallInfo("エースパチンコ川崎店"),
+  },
+  {
+    id: 45,
+    projectNumber: "15",
+    projectName: "グランドオープン記念③",
+    clientName: "エースパチンコ川崎店",
+    date: "2026/04/30",
+    venue: "パチンコ店舗エントランス",
+    talent: "小林 八郎",
+    estimateAmount: "¥750,000",
+    status: "proposed",
+    salesPersonName: "小林 八郎",
+    requestDate: "2026/03/10",
+    hallName: "エースパチンコ川崎店",
+    projectStatus: "見積送付完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "グランドオープン記念③",
+    eventDate: "2026/04/30",
+    estimatedBillingAmount: 750000,
+    ...getCompanyAndHallInfo("エースパチンコ川崎店"),
+  },
+  // 案件No 16
+  {
+    id: 46,
+    projectNumber: "16",
+    projectName: "秋のキャンペーン①",
+    clientName: "エースパチンコ川崎店",
+    date: "2026/10/10",
+    venue: "パチンコ店舗フロア",
+    talent: "小林 八郎",
+    estimateAmount: "¥520,000",
+    status: "proposed",
+    salesPersonName: "小林 八郎",
+    requestDate: "2026/09/01",
+    hallName: "エースパチンコ川崎店",
+    projectStatus: "受注済み",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "秋のキャンペーン①",
+    eventDate: "2026/10/10",
+    estimatedBillingAmount: 520000,
+    ...getCompanyAndHallInfo("エースパチンコ川崎店"),
+  },
+  {
+    id: 47,
+    projectNumber: "16",
+    projectName: "秋のキャンペーン②",
+    clientName: "エースパチンコ川崎店",
+    date: "2026/10/15",
+    venue: "パチンコ店舗フロア",
+    talent: "小林 八郎",
+    estimateAmount: "¥450,000",
+    status: "proposed",
+    salesPersonName: "小林 八郎",
+    requestDate: "2026/09/01",
+    hallName: "エースパチンコ川崎店",
+    projectStatus: "手配中",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "秋のキャンペーン②",
+    eventDate: "2026/10/15",
+    estimatedBillingAmount: 450000,
+    ...getCompanyAndHallInfo("エースパチンコ川崎店"),
+  },
+  {
+    id: 48,
+    projectNumber: "16",
+    projectName: "秋のキャンペーン③",
+    clientName: "エースパチンコ川崎店",
+    date: "2026/10/20",
+    venue: "パチンコ店舗フロア",
+    talent: "小林 八郎",
+    estimateAmount: "¥640,000",
+    status: "proposed",
+    salesPersonName: "小林 八郎",
+    requestDate: "2026/09/01",
+    hallName: "エースパチンコ川崎店",
+    projectStatus: "手配完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "秋のキャンペーン③",
+    eventDate: "2026/10/20",
+    estimatedBillingAmount: 640000,
+    ...getCompanyAndHallInfo("エースパチンコ川崎店"),
+  },
+  // パチンコワールド大宮店 - 加藤 九郎
+  // 案件No 17
+  {
+    id: 49,
+    projectNumber: "17",
+    projectName: "リニューアルオープン記念①",
+    clientName: "パチンコワールド大宮店",
+    date: "2026/05/15",
+    venue: "パチンコ店舗エントランス",
+    talent: "加藤 九郎",
+    estimateAmount: "¥600,000",
+    status: "proposed",
+    salesPersonName: "加藤 九郎",
+    requestDate: "2026/04/01",
+    hallName: "パチンコワールド大宮店",
+    projectStatus: "見込み入力完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "リニューアルオープン記念①",
+    eventDate: "2026/05/15",
+    estimatedBillingAmount: 600000,
+    ...getCompanyAndHallInfo("パチンコワールド大宮店"),
+  },
+  {
+    id: 50,
+    projectNumber: "17",
+    projectName: "リニューアルオープン記念②",
+    clientName: "パチンコワールド大宮店",
+    date: "2026/05/20",
+    venue: "パチンコ店舗エントランス",
+    talent: "加藤 九郎",
+    estimateAmount: "¥510,000",
+    status: "proposed",
+    salesPersonName: "加藤 九郎",
+    requestDate: "2026/04/01",
+    hallName: "パチンコワールド大宮店",
+    projectStatus: "見積作成完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "リニューアルオープン記念②",
+    eventDate: "2026/05/20",
+    estimatedBillingAmount: 510000,
+    ...getCompanyAndHallInfo("パチンコワールド大宮店"),
+  },
+  {
+    id: 51,
+    projectNumber: "17",
+    projectName: "リニューアルオープン記念③",
+    clientName: "パチンコワールド大宮店",
+    date: "2026/05/25",
+    venue: "パチンコ店舗エントランス",
+    talent: "加藤 九郎",
+    estimateAmount: "¥670,000",
+    status: "proposed",
+    salesPersonName: "加藤 九郎",
+    requestDate: "2026/04/01",
+    hallName: "パチンコワールド大宮店",
+    projectStatus: "見積送付完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "リニューアルオープン記念③",
+    eventDate: "2026/05/25",
+    estimatedBillingAmount: 670000,
+    ...getCompanyAndHallInfo("パチンコワールド大宮店"),
+  },
+  // 案件No 18
+  {
+    id: 52,
+    projectNumber: "18",
+    projectName: "クリスマスキャンペーン①",
+    clientName: "パチンコワールド大宮店",
+    date: "2026/12/24",
+    venue: "パチンコ店舗フロア",
+    talent: "加藤 九郎",
+    estimateAmount: "¥630,000",
+    status: "proposed",
+    salesPersonName: "加藤 九郎",
+    requestDate: "2026/11/10",
+    hallName: "パチンコワールド大宮店",
+    projectStatus: "受注済み",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "クリスマスキャンペーン①",
+    eventDate: "2026/12/24",
+    estimatedBillingAmount: 630000,
+    ...getCompanyAndHallInfo("パチンコワールド大宮店"),
+  },
+  {
+    id: 53,
+    projectNumber: "18",
+    projectName: "クリスマスキャンペーン②",
+    clientName: "パチンコワールド大宮店",
+    date: "2026/12/26",
+    venue: "パチンコ店舗フロア",
+    talent: "加藤 九郎",
+    estimateAmount: "¥560,000",
+    status: "proposed",
+    salesPersonName: "加藤 九郎",
+    requestDate: "2026/11/10",
+    hallName: "パチンコワールド大宮店",
+    projectStatus: "手配中",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "クリスマスキャンペーン②",
+    eventDate: "2026/12/26",
+    estimatedBillingAmount: 560000,
+    ...getCompanyAndHallInfo("パチンコワールド大宮店"),
+  },
+  {
+    id: 54,
+    projectNumber: "18",
+    projectName: "クリスマスキャンペーン③",
+    clientName: "パチンコワールド大宮店",
+    date: "2026/12/28",
+    venue: "パチンコ店舗フロア",
+    talent: "加藤 九郎",
+    estimateAmount: "¥610,000",
+    status: "proposed",
+    salesPersonName: "加藤 九郎",
+    requestDate: "2026/11/10",
+    hallName: "パチンコワールド大宮店",
+    projectStatus: "手配完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "クリスマスキャンペーン③",
+    eventDate: "2026/12/28",
+    estimatedBillingAmount: 610000,
+    ...getCompanyAndHallInfo("パチンコワールド大宮店"),
+  },
+  // ビッグパチンコ千葉店 - 松本 十郎
+  // 案件No 19
+  {
+    id: 55,
+    projectNumber: "19",
+    projectName: "開店記念イベント①",
+    clientName: "ビッグパチンコ千葉店",
+    date: "2026/06/10",
+    venue: "パチンコ店舗エントランス",
+    talent: "松本 十郎",
+    estimateAmount: "¥640,000",
+    status: "proposed",
+    salesPersonName: "松本 十郎",
+    requestDate: "2026/05/01",
+    hallName: "ビッグパチンコ千葉店",
+    projectStatus: "見込み入力完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "開店記念イベント①",
+    eventDate: "2026/06/10",
+    estimatedBillingAmount: 640000,
+    ...getCompanyAndHallInfo("ビッグパチンコ千葉店"),
+  },
+  {
+    id: 56,
+    projectNumber: "19",
+    projectName: "開店記念イベント②",
+    clientName: "ビッグパチンコ千葉店",
+    date: "2026/06/15",
+    venue: "パチンコ店舗エントランス",
+    talent: "松本 十郎",
+    estimateAmount: "¥570,000",
+    status: "proposed",
+    salesPersonName: "松本 十郎",
+    requestDate: "2026/05/01",
+    hallName: "ビッグパチンコ千葉店",
+    projectStatus: "見積作成完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "開店記念イベント②",
+    eventDate: "2026/06/15",
+    estimatedBillingAmount: 570000,
+    ...getCompanyAndHallInfo("ビッグパチンコ千葉店"),
+  },
+  {
+    id: 57,
+    projectNumber: "19",
+    projectName: "開店記念イベント③",
+    clientName: "ビッグパチンコ千葉店",
+    date: "2026/06/20",
+    venue: "パチンコ店舗エントランス",
+    talent: "松本 十郎",
+    estimateAmount: "¥600,000",
+    status: "proposed",
+    salesPersonName: "松本 十郎",
+    requestDate: "2026/05/01",
+    hallName: "ビッグパチンコ千葉店",
+    projectStatus: "見積送付完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "開店記念イベント③",
+    eventDate: "2026/06/20",
+    estimatedBillingAmount: 600000,
+    ...getCompanyAndHallInfo("ビッグパチンコ千葉店"),
+  },
+  // 案件No 20
+  {
+    id: 58,
+    projectNumber: "20",
+    projectName: "年末年始イベント①",
+    clientName: "ビッグパチンコ千葉店",
+    date: "2026/12/30",
+    venue: "パチンコ店舗フロア",
+    talent: "松本 十郎",
+    estimateAmount: "¥550,000",
+    status: "proposed",
+    salesPersonName: "松本 十郎",
+    requestDate: "2026/11/20",
+    hallName: "ビッグパチンコ千葉店",
+    projectStatus: "受注済み",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "年末年始イベント①",
+    eventDate: "2026/12/30",
+    estimatedBillingAmount: 550000,
+    ...getCompanyAndHallInfo("ビッグパチンコ千葉店"),
+  },
+  {
+    id: 59,
+    projectNumber: "20",
+    projectName: "年末年始イベント②",
+    clientName: "ビッグパチンコ千葉店",
+    date: "2027/01/03",
+    venue: "パチンコ店舗フロア",
+    talent: "松本 十郎",
+    estimateAmount: "¥720,000",
+    status: "proposed",
+    salesPersonName: "松本 十郎",
+    requestDate: "2026/11/20",
+    hallName: "ビッグパチンコ千葉店",
+    projectStatus: "手配中",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "年末年始イベント②",
+    eventDate: "2027/01/03",
+    estimatedBillingAmount: 720000,
+    ...getCompanyAndHallInfo("ビッグパチンコ千葉店"),
+  },
+  {
+    id: 60,
+    projectNumber: "20",
+    projectName: "年末年始イベント③",
+    clientName: "ビッグパチンコ千葉店",
+    date: "2027/01/05",
+    venue: "パチンコ店舗フロア",
+    talent: "松本 十郎",
+    estimateAmount: "¥660,000",
+    status: "proposed",
+    salesPersonName: "松本 十郎",
+    requestDate: "2026/11/20",
+    hallName: "ビッグパチンコ千葉店",
+    projectStatus: "手配完了",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "年末年始イベント③",
+    eventDate: "2027/01/05",
+    estimatedBillingAmount: 660000,
+    ...getCompanyAndHallInfo("ビッグパチンコ千葉店"),
+  },
+]
+
+export function ProjectProvider({ children }: { children: ReactNode }) {
+  const [currentRole, setCurrentRole] = useState<Role>("Sales")
+  const [notifications, setNotifications] = useState<string[]>([])
+  const { toast } = useToast()
+
+  // 案件データを独立したstateとして管理（仮想DB）
+  const [projects, setProjects] = useState<Project[]>(initialProjects)
+  
+  // ホールデータを独立したstateとして管理（仮想DB）
+  const [halls, setHalls] = useState<HallData[]>(initialHalls)
+  
+  // 法人データを独立したstateとして管理（仮想DB）
+  const [companies, setCompanies] = useState<CompanyData[]>(initialCompanies)
+
+  const [projectData, setProjectData] = useState<ProjectData>({
+    projectName: "",
+    clientName: "",
+    date: "",
+    venue: "",
+    talent: "",
+    talentStatus: "available",
+    quoteItems: [],
+    emailDraft: "",
+    contractAmount: "",
+    billingAddress: "",
+    status: "proposed",
+    validationErrors: [],
+    correctionRequest: "",
+    projects: projects, // 参照として設定
+  })
+
+  // 案件データが更新されたらprojectDataも更新
+  useEffect(() => {
+    setProjectData((prev) => ({
+      ...prev,
+      projects: projects,
+    }))
+  }, [projects])
+
+  const addNotification = (message: string) => {
+    setNotifications((prev) => [message, ...prev])
+    toast({
+      title: "通知",
+      description: message,
+    })
+  }
+
+  // 仮想DB操作関数
+  const getProjects = useCallback(() => {
+    return projects
+  }, [projects])
+
+  // 案件Noを生成する関数（数字のみ、1からインクリメント）
+  const generateProjectNumber = useCallback((existingProjects: Project[]): string => {
+    // 既存の案件Noから最大値を取得
+    let maxNumber = 0
+    existingProjects.forEach(p => {
+      if (p.projectNumber) {
+        // 数字のみの形式を想定
+        const num = parseInt(p.projectNumber)
+        if (!isNaN(num) && num > maxNumber) {
+          maxNumber = num
+        }
+      }
+    })
+    
+    const nextNumber = maxNumber + 1
+    return String(nextNumber)
+  }, [])
+
+  const createProject = useCallback((project: Omit<Project, "id">): Project => {
+    const existingProjects = projects
+    const maxId = existingProjects.length > 0 
+      ? Math.max(...existingProjects.map(p => typeof p.id === 'number' ? p.id : 0))
+      : 0
+    
+    // 案件Noが指定されていない場合は自動生成
+    const projectNumber = project.projectNumber || generateProjectNumber(existingProjects)
+    
+    const newProject: Project = {
+      ...project,
+      id: maxId + 1,
+      projectNumber,
+    } as Project
+    setProjects((prev) => {
+      const updated = [...prev, newProject]
+      setProjectData((pd) => ({ ...pd, projects: updated }))
+      return updated
+    })
+    return newProject
+  }, [projects, generateProjectNumber])
+
+  const createProjects = useCallback((newProjects: Omit<Project, "id">[]): Project[] => {
+    const existingProjects = projects
+    const maxId = existingProjects.length > 0 
+      ? Math.max(...existingProjects.map(p => typeof p.id === 'number' ? p.id : 0))
+      : 0
+    
+    // 各案件に案件Noを割り当て
+    let currentProjects = [...existingProjects]
+    const projectsWithIds: Project[] = newProjects.map((project, index) => {
+      const projectNumber = project.projectNumber || generateProjectNumber(currentProjects)
+      const newProject: Project = {
+        ...project,
+        id: maxId + index + 1,
+        projectNumber,
+      } as Project
+      currentProjects = [...currentProjects, newProject]
+      return newProject
+    })
+    
+    setProjects((prev) => {
+      const updated = [...prev, ...projectsWithIds]
+      setProjectData((pd) => ({ ...pd, projects: updated }))
+      return updated
+    })
+    return projectsWithIds
+  }, [projects, generateProjectNumber])
+
+  const updateProject = useCallback((id: number, updates: Partial<Project>): Project | null => {
+    let updatedProject: Project | null = null
+    setProjects((prev) => {
+      const updated = prev.map((p) => {
+        if (p.id === id) {
+          updatedProject = { ...p, ...updates } as Project
+          return updatedProject
+        }
+        return p
+      })
+      setProjectData((pd) => ({ ...pd, projects: updated }))
+      return updated
+    })
+    return updatedProject
+  }, [])
+
+  const deleteProject = useCallback((id: number): boolean => {
+    let deleted = false
+    setProjects((prev) => {
+      const filtered = prev.filter((p) => {
+        if (p.id === id) {
+          deleted = true
+          return false
+        }
+        return true
+      })
+      setProjectData((pd) => ({ ...pd, projects: filtered }))
+      return filtered
+    })
+    return deleted
+  }, [])
+
+  const getProjectById = useCallback((id: number): Project | null => {
+    return projects.find((p) => p.id === id) || null
+  }, [projects])
+
+  // ホールデータ操作関数
+  const getHalls = useCallback(() => {
+    return halls
+  }, [halls])
+
+  const getHallByName = useCallback((name: string): HallData | null => {
+    return halls.find((h) => h.name === name) || null
+  }, [halls])
+
+  const searchHalls = useCallback((query: string, companyId?: number): HallData[] => {
+    let filteredHalls = halls
+    // 法人IDでフィルタリング
+    if (companyId !== undefined) {
+      filteredHalls = filteredHalls.filter((h) => h.companyId === companyId)
+    }
+    // クエリでフィルタリング
+    if (!query) return filteredHalls
+    const lowerQuery = query.toLowerCase()
+    return filteredHalls.filter((h) => h.name.toLowerCase().includes(lowerQuery))
+  }, [halls])
+
+  // 法人データ操作関数
+  const getCompanies = useCallback(() => {
+    return companies
+  }, [companies])
+
+  const getCompanyById = useCallback((id: number): CompanyData | null => {
+    return companies.find((c) => c.id === id) || null
+  }, [companies])
+
+  const getCompanyByCompanyId = useCallback((companyId: string): CompanyData | null => {
+    return companies.find((c) => c.companyId === companyId) || null
+  }, [companies])
+
+  const searchCompanies = useCallback((query: string): CompanyData[] => {
+    if (!query) return companies
+    const lowerQuery = query.toLowerCase()
+    return companies.filter((c) => 
+      c.name.toLowerCase().includes(lowerQuery) || 
+      c.companyId.toLowerCase().includes(lowerQuery)
+    )
+  }, [companies])
+
+  const getHallsByCompanyId = useCallback((companyId: number): HallData[] => {
+    return halls.filter((h) => h.companyId === companyId)
+  }, [halls])
+
+  return (
+    <ProjectContext.Provider
+      value={{
+        projectData,
+        setProjectData,
+        currentRole,
+        setCurrentRole,
+        notifications,
+        addNotification,
+        getProjects,
+        createProject,
+        createProjects,
+        updateProject,
+        deleteProject,
+        getProjectById,
+        generateProjectNumber,
+        getHalls,
+        getHallByName,
+        searchHalls,
+        getCompanies,
+        getCompanyById,
+        getCompanyByCompanyId,
+        searchCompanies,
+        getHallsByCompanyId,
+      }}
+    >
+      {children}
+    </ProjectContext.Provider>
+  )
+}
+
+export function useProject() {
+  const context = useContext(ProjectContext)
+  if (context === undefined) {
+    throw new Error("useProject must be used within a ProjectProvider")
+  }
+  return context
+}

@@ -1,21 +1,23 @@
 "use client"
 
+// screen-6のコピーです
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle2, AlertCircle } from "lucide-react"
-import type { ProjectData } from "@/app/page"
+import type { ProjectData } from "@/types/project"
 import { useState } from "react"
 
-type Screen6Props = {
+type ProjectCorrectionProps = {
   projectData: ProjectData
   setProjectData: (data: ProjectData) => void
   onResubmit: () => void
 }
 
-export function Screen6({ projectData, setProjectData, onResubmit }: Screen6Props) {
+export function ProjectCorrection({ projectData, setProjectData, onResubmit }: ProjectCorrectionProps) {
   const [localBillingAddress, setLocalBillingAddress] = useState(projectData.billingAddress)
   const [localContractAmount, setLocalContractAmount] = useState(projectData.contractAmount)
 

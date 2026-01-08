@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "next build",
-    "dev": "next dev",
+    "build": "bun run next build",
+    "dev": "bun run next dev",
     "lint": "eslint .",
-    "start": "next start"
+    "start": "bun run next start",
+    "zip": "zip -r ../demo-jai.zip . -x \"node_modules/*\" \".next/*\" \".git/*\""
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -68,6 +69,7 @@
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",
     "tw-animate-css": "1.3.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "@types/bun": "latest"
   }
 }

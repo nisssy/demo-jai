@@ -1,5 +1,7 @@
 "use client"
 
+// screen-2のコピーです
+
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -7,52 +9,41 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Sparkles, FileText, Mail, ArrowLeft, Download, ArrowRight, Send } from "lucide-react"
-import type { ProjectData } from "@/app/page"
+import type { ProjectData } from "@/types/project"
 import { useState } from "react"
 
-type Screen2Props = {
+type QuoteCreationProps = {
   projectData: ProjectData
   setProjectData: (data: ProjectData) => void
   onNext: () => void
   onBack: () => void
 }
 
-export function Screen2({ projectData, setProjectData, onNext, onBack }: Screen2Props) {
+export function QuoteCreation({ projectData, setProjectData, onNext, onBack }: QuoteCreationProps) {
   const [showPDF, setShowPDF] = useState(false)
   const [quoteGenerated, setQuoteGenerated] = useState(false)
   const [emailGenerated, setEmailGenerated] = useState(false)
   const [activeTab, setActiveTab] = useState<"quote" | "email">("quote")
   const [isLoadingSend, setIsLoadingSend] = useState(false)
 
-  const [talentFee, setTalentFee] = useState(300000)
-  const [directorFee, setDirectorFee] = useState(200000)
-  const [transportFee, setTransportFee] = useState(50000)
-  const [accommodationFee, setAccommodationFee] = useState(30000)
-  const [managementFee, setManagementFee] = useState(20000)
-
-  const handleAutoFill = () => {
-    setTalentFee(300000)
-    setDirectorFee(200000)
-    setTransportFee(50000)
-    setAccommodationFee(30000)
-    setManagementFee(20000)
-  }
-
   const handleGenerateQuote = () => {
-    const autoFilledItems = [
-      {
-        item: "出演料",
-        amount: talentFee + directorFee,
-        subitems: [
-          { item: "　タレント", amount: talentFee },
-          { item: "　ディレクター", amount: directorFee },
-        ],
-      },
-      { item: "交通費", amount: transportFee },
-      { item: "宿泊費", amount: accommodationFee },
-      { item: "管理費", amount: managementFee },
-    ]
-    setProjectData({ ...projectData, quoteItems: autoFilledItems })
+    // projectData.quoteItemsが既に存在する場合はそれを使用、存在しない場合はデフォルト値を生成
+    if (!projectData.quoteItems || projectData.quoteItems.length === 0) {
+      const defaultItems = [
+        {
+          item: "出演料",
+          amount: 500000,
+          subitems: [
+            { item: "　タレント", amount: 300000 },
+            { item: "　ディレクター", amount: 200000 },
+          ],
+        },
+        { item: "交通費", amount: 50000 },
+        { item: "宿泊費", amount: 30000 },
+        { item: "管理費", amount: 20000 },
+      ]
+      setProjectData({ ...projectData, quoteItems: defaultItems })
+    }
     setQuoteGenerated(true)
     setActiveTab("quote")
   }
@@ -91,7 +82,7 @@ DMM 営業部`
     }, 500)
   }
 
-  const totalAmount = talentFee + directorFee + transportFee + accommodationFee + managementFee
+  const totalAmount = projectData.quoteItems?.reduce((sum, item) => sum + item.amount, 0) || 0
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -115,98 +106,6 @@ DMM 営業部`
           <p className="text-slate-600">AIを活用して見積書を自動生成し、送付します</p>
         </div>
       </div>
-
-      {/* Step 3: Quote Details */}
-      <Card className="border-purple-200 bg-purple-50/50">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-purple-600" />
-              <CardTitle>Step 3: 見積明細入力（AI自動入力）</CardTitle>
-            </div>
-            <Button onClick={handleAutoFill} variant="outline" className="gap-2 bg-transparent">
-              <Sparkles className="h-4 w-4" />
-              過去データから自動入力
-            </Button>
-          </div>
-          <CardDescription>過去の類似案件から明細を自動生成できます</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="text-left p-3 text-sm font-medium text-slate-700">項目</th>
-                    <th className="text-right p-3 text-sm font-medium text-slate-700">金額</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {/* Performance Fee with breakdown */}
-                  <tr>
-                    <td className="p-3 text-sm font-medium">出演料</td>
-                    <td className="p-3 text-sm text-right font-medium">
-                      ¥{(talentFee + directorFee).toLocaleString()}
-                    </td>
-                  </tr>
-                  <tr className="bg-slate-50/50">
-                    <td className="p-3 pl-8 text-sm text-slate-600">　タレント</td>
-                    <td className="p-3 text-sm text-right text-slate-600">¥{talentFee.toLocaleString()}</td>
-                  </tr>
-                  <tr className="bg-slate-50/50">
-                    <td className="p-3 pl-8 text-sm text-slate-600">　ディレクター</td>
-                    <td className="p-3 text-sm text-right text-slate-600">¥{directorFee.toLocaleString()}</td>
-                  </tr>
-
-                  {/* Editable fields */}
-                  <tr>
-                    <td className="p-3 text-sm">交通費</td>
-                    <td className="p-3 text-right">
-                      <Input
-                        type="number"
-                        value={transportFee}
-                        onChange={(e) => setTransportFee(Number(e.target.value) || 0)}
-                        className="w-32 text-right text-sm ml-auto"
-                        min="0"
-                      />
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="p-3 text-sm">宿泊費</td>
-                    <td className="p-3 text-right">
-                      <Input
-                        type="number"
-                        value={accommodationFee}
-                        onChange={(e) => setAccommodationFee(Number(e.target.value) || 0)}
-                        className="w-32 text-right text-sm ml-auto"
-                        min="0"
-                      />
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="p-3 text-sm">管理費</td>
-                    <td className="p-3 text-right">
-                      <Input
-                        type="number"
-                        value={managementFee}
-                        onChange={(e) => setManagementFee(Number(e.target.value) || 0)}
-                        className="w-32 text-right text-sm ml-auto"
-                        min="0"
-                      />
-                    </td>
-                  </tr>
-                </tbody>
-                <tfoot className="bg-slate-50 border-t-2 border-slate-300">
-                  <tr>
-                    <td className="p-3 text-sm font-bold">合計</td>
-                    <td className="p-3 text-sm text-right font-bold text-blue-600">¥{totalAmount.toLocaleString()}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Step 4 & 5: PDF & Email */}
       <Card className="border-purple-200 bg-purple-50/50">
@@ -325,7 +224,7 @@ DMM 営業部`
                                 <td className="p-3 text-sm font-medium">{item.item}</td>
                                 <td className="p-3 text-sm text-right font-medium">¥{item.amount.toLocaleString()}</td>
                               </tr>
-                              {item.subitems?.map((subitem, subIdx) => (
+                              {item.subitems?.map((subitem: { item: string; amount: number }, subIdx: number) => (
                                 <tr key={`${idx}-${subIdx}`} className="border-b border-slate-100 bg-slate-50/50">
                                   <td className="p-2 pl-6 text-sm text-slate-600">{subitem.item}</td>
                                   <td className="p-2 text-sm text-right text-slate-600">

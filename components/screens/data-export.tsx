@@ -1,20 +1,22 @@
 "use client"
 
+// screen-9のコピーです
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Sparkles, Search, CheckCircle, Download, ArrowRight, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import type { ProjectData } from "@/app/page"
+import type { ProjectData } from "@/types/project"
 
-interface Screen9Props {
+interface DataExportProps {
   projectData: ProjectData
   onNext?: () => void
   onBack: () => void
 }
 
-export function Screen9({ projectData, onBack }: Screen9Props) {
+export function DataExport({ projectData, onBack }: DataExportProps) {
   const [reportUrl, setReportUrl] = useState("")
   const [isScanning, setIsScanning] = useState(false)
   const [publicationChecked, setPublicationChecked] = useState(false)

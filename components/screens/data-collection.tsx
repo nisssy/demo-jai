@@ -1,19 +1,21 @@
 "use client"
 
+// screen-8のコピーです
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Sparkles, Send, FileCheck, Database, FolderOpen, CheckCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import type { ProjectData } from "@/app/page"
+import type { ProjectData } from "@/types/project"
 
-interface Screen8Props {
+interface DataCollectionProps {
   projectData: ProjectData
   onNext: () => void
   onBack: () => void
 }
 
-export function Screen8({ projectData, onNext, onBack }: Screen8Props) {
+export function DataCollection({ projectData, onNext, onBack }: DataCollectionProps) {
   const [expenseData, setExpenseData] = useState({ submitted: 7, total: 10 })
   const [surveyData, setSurveyData] = useState({ submitted: 42, total: 50 })
   const [reminderSent, setReminderSent] = useState(false)
