@@ -38,9 +38,12 @@ import {
   Database,
   ArrowRight,
   Download,
+  Plus,
 } from "lucide-react"
-import type { ProjectData } from "@/app/page"
-import { useState } from "react"
+import type { ProjectData, Role } from "@/types/project"
+import { useState, useMemo } from "react"
+import { useProject } from "@/contexts/project-context"
+import { useRouter } from "next/navigation"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,20 +51,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import type { Role } from "@/types/role" // Added import for Role type
 
-type Screen3Props = {
+type ProjectListProps = {
   projectData: ProjectData
   setProjectData: (data: ProjectData) => void
   onNext: () => void
   onBack: () => void
   addNotification: (message: string) => void
   role: Role
-  setCurrentScreen: (screen: number) => void // Added setCurrentScreen prop
+  setCurrentScreen: (screen: number) => void
+  onCreateNewProject: () => void
 }
 
 type ProjectItem = {
-  id: string
+  id: number | string
   projectName: string
   clientName: string
   talent: string
@@ -69,6 +72,14 @@ type ProjectItem = {
   venue: string
   status: "proposed" | "ordered"
   estimateAmount: string
+  salesPersonName?: string
+  requestDate?: string
+  hallName?: string
+  projectStatus?: string
+  category?: string
+  eventType?: string
+  eventProductName?: string
+  eventDate?: string
 }
 
 const mockProjects: ProjectItem[] = [
@@ -81,6 +92,14 @@ const mockProjects: ProjectItem[] = [
     venue: "パチンコ店舗フロア",
     status: "proposed",
     estimateAmount: "¥600,000",
+    salesPersonName: "山田 太郎",
+    requestDate: "2025/11/01",
+    hallName: "マルハン渋谷店",
+    projectStatus: "営業確認待ち",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "新台入替キャンペーン",
+    eventDate: "2025/12/10",
   },
   {
     id: "2",
@@ -91,6 +110,14 @@ const mockProjects: ProjectItem[] = [
     venue: "パチンコ店舗エントランス",
     status: "proposed",
     estimateAmount: "¥450,000",
+    salesPersonName: "佐藤 次郎",
+    requestDate: "2025/12/01",
+    hallName: "ダイナム新宿店",
+    projectStatus: "営業依頼中",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "グランドオープン記念",
+    eventDate: "2026/01/15",
   },
   {
     id: "3",
@@ -101,6 +128,14 @@ const mockProjects: ProjectItem[] = [
     venue: "パチンコ店舗2F特設会場",
     status: "proposed",
     estimateAmount: "¥380,000",
+    salesPersonName: "鈴木 三郎",
+    requestDate: "2026/01/05",
+    hallName: "ガイア池袋店",
+    projectStatus: "手配中",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "周年イベント",
+    eventDate: "2026/02/20",
   },
 ]
 
@@ -109,7 +144,7 @@ type ValidationResult = {
   errors: string[]
 }
 
-export function Screen3({
+export function ProjectList({
   projectData,
   setProjectData,
   onNext,
@@ -117,8 +152,28 @@ export function Screen3({
   addNotification,
   role,
   setCurrentScreen,
-}: Screen3Props) {
-  const projects = projectData.projects || []
+  onCreateNewProject,
+}: ProjectListProps) {
+  const router = useRouter()
+  const { getProjects, updateProject } = useProject()
+  const allProjects = getProjects()
+  
+  // 依頼日の降順でソート
+  const projects = useMemo(() => {
+    return [...allProjects].sort((a, b) => {
+      const dateA = a.requestDate || a.date || ""
+      const dateB = b.requestDate || b.date || ""
+      
+      // 日付文字列を比較（YYYY/MM/DD形式またはYYYY-MM-DD形式に対応）
+      const normalizedA = dateA.replace(/-/g, "/")
+      const normalizedB = dateB.replace(/-/g, "/")
+      
+      // 降順（新しい日付が先）
+      if (normalizedA > normalizedB) return -1
+      if (normalizedA < normalizedB) return 1
+      return 0
+    })
+  }, [allProjects])
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isValidationModalOpen, setIsValidationModalOpen] = useState(false)
@@ -178,10 +233,10 @@ export function Screen3({
       })
       setIsModalOpen(true)
     } else {
-      setProjectData({
-        ...projectData,
-        projects: projects.map((p) => (p.id === project.id ? { ...p, status: "proposed" as const } : p)),
-      })
+      // 仮想DBで案件を更新
+      if (typeof project.id === 'number') {
+        updateProject(project.id, { status: "proposed" })
+      }
     }
   }
 
@@ -191,6 +246,7 @@ export function Screen3({
     setIsLoadingConfirmOrder(true)
 
     setTimeout(() => {
+      // projectDataを更新
       setProjectData({
         ...projectData,
         projectName: selectedProject.projectName,
@@ -200,8 +256,12 @@ export function Screen3({
         contractAmount: formData.contractAmount,
         billingAddress: formData.billingAddress,
         status: "ordered",
-        projects: projects.map((p) => (p.id === selectedProject.id ? { ...p, status: "ordered" as const } : p)),
       })
+
+      // 仮想DBで案件を更新
+      if (typeof selectedProject.id === 'number') {
+        updateProject(selectedProject.id, { status: "ordered" })
+      }
 
       addNotification(`案件「${selectedProject.projectName}」を受注確定しました`)
       setIsModalOpen(false)
@@ -303,9 +363,9 @@ Co・Dir担当`
       ...projectData,
       projectName: project.projectName,
       clientName: project.clientName,
-      eventDate: project.date,
+      date: project.date,
       venue: project.venue,
-      talentName: project.talent,
+      talent: project.talent,
     })
     onNext()
   }
@@ -417,118 +477,166 @@ Co・Dir担当`
         </div>
       )}
 
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={onBack}>
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">進行中の案件リスト</h1>
-          <p className="text-slate-600">提案中の案件を受注に切り替えて、確定情報を入力します</p>
-        </div>
-        <Button variant="ghost" size="icon" onClick={() => setCurrentScreen(4)}>
-          <ChevronRight className="h-5 w-5" />
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-3xl font-bold text-slate-900">案件一覧</h1>
+        <Button onClick={onCreateNewProject} className="gap-2">
+          <Plus className="h-4 w-4" />
+          新規案件作成
         </Button>
       </div>
 
       <div className="space-y-4">
-        {projects.map((project) => (
-          <Card key={project.id} className="hover:shadow-md transition-shadow p-6">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-lg font-semibold text-slate-900">{project.projectName}</h3>
-                    <Badge variant={project.status === "ordered" ? "default" : "secondary"}>
-                      {project.status === "ordered" ? "受注（契約手続中）" : "提案中"}
-                    </Badge>
+        {projects.map((project) => {
+          const projectItem: ProjectItem = {
+            id: project.id,
+            projectName: project.projectName,
+            clientName: project.clientName,
+            talent: project.talent,
+            date: project.date,
+            venue: project.venue,
+            status: project.status,
+            estimateAmount: project.estimateAmount,
+            salesPersonName: (project as any).salesPersonName,
+            requestDate: (project as any).requestDate,
+            hallName: (project as any).hallName,
+            projectStatus: (project as any).projectStatus,
+            category: (project as any).category,
+            eventType: (project as any).eventType,
+            eventProductName: (project as any).eventProductName,
+            eventDate: (project as any).eventDate,
+          }
+          return (
+            <Card 
+              key={project.id} 
+              className="hover:shadow-md transition-shadow p-6"
+            >
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div 
+                    className="flex-1 space-y-3 cursor-pointer"
+                    onClick={() => router.push(`/project/${project.id}`)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-lg font-semibold text-slate-900">{projectItem.eventProductName || project.projectName}</h3>
+                      <Badge variant={project.status === "ordered" ? "default" : "secondary"}>
+                        {projectItem.projectStatus || (project.status === "ordered" ? "受注（契約手続中）" : "提案中")}
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                      <div className="flex items-center gap-2 text-slate-600">
+                        <User className="h-4 w-4" />
+                        <span>
+                          ホール担当営業: <span className="font-medium text-slate-900">{projectItem.salesPersonName || "-"}</span>
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-600">
+                        <Calendar className="h-4 w-4" />
+                        <span>
+                          依頼日: <span className="font-medium text-slate-900">{projectItem.requestDate || "-"}</span>
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-600">
+                        <MapPin className="h-4 w-4" />
+                        <span>
+                          ホール名: <span className="font-medium text-slate-900">{projectItem.hallName || project.venue || "-"}</span>
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-600">
+                        <span>
+                          ステータス: <span className="font-medium text-slate-900">{projectItem.projectStatus || "-"}</span>
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-600">
+                        <span>
+                          商材カテゴリ: <span className="font-medium text-slate-900">{projectItem.category || "-"}</span>
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-600">
+                        <span>
+                          イベント区分: <span className="font-medium text-slate-900">{projectItem.eventType || "-"}</span>
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-600">
+                        <span>
+                          イベント商材名: <span className="font-medium text-slate-900">{projectItem.eventProductName || "-"}</span>
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-600">
+                        <Calendar className="h-4 w-4" />
+                        <span>
+                          開催日: <span className="font-medium text-slate-900">{projectItem.eventDate || project.date || "-"}</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200">
+                      <span className="text-sm text-slate-600">見積金額: </span>
+                      <span className="text-lg font-semibold text-blue-600">
+                        {(project as any).estimatedBillingAmount !== undefined
+                          ? `¥${(project as any).estimatedBillingAmount.toLocaleString()}`
+                          : project.estimateAmount}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                    <div className="flex items-center gap-2 text-slate-600">
-                      <User className="h-4 w-4" />
-                      <span>
-                        顧客: <span className="font-medium text-slate-900">{project.clientName}</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-600">
-                      <User className="h-4 w-4" />
-                      <span>
-                        タレント: <span className="font-medium text-slate-900">{project.talent}</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-600">
-                      <Calendar className="h-4 w-4" />
-                      <span>
-                        開催日: <span className="font-medium text-slate-900">{project.date}</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-600">
-                      <MapPin className="h-4 w-4" />
-                      <span>
-                        会場: <span className="font-medium text-slate-900">{project.venue}</span>
-                      </span>
-                    </div>
-                  </div>
+                  <div 
+                    className="flex flex-col items-end gap-3"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {project.status === "ordered" && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem onClick={() => handleProceedToArrangement(projectItem)}>
+                            <Truck className="h-4 w-4 mr-2" />
+                            手配へ進む
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleOpenPRModal(project)}>
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            広報へ進む
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleOpenCostModal(project)}>
+                            <DollarSign className="h-4 w-4 mr-2" />
+                            コスト管理
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleOpenDataCollectionModal(projectItem)}>
+                            <FileSpreadsheet className="h-4 w-4 mr-2" />
+                            データ回収
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleOpenDataExportModal(projectItem)}>
+                            <Upload className="h-4 w-4 mr-2" />
+                            データ出力
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleOpenValidationModal(projectItem)}>
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            案件確認
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
 
-                  <div className="pt-2 border-t border-slate-200">
-                    <span className="text-sm text-slate-600">見積金額: </span>
-                    <span className="text-lg font-semibold text-blue-600">{project.estimateAmount}</span>
+                    <div className="flex items-center gap-2 pt-2">
+                      <Label htmlFor={`status-${project.id}`} className="text-sm">
+                        {project.status === "ordered" ? "受注済み" : "受注に切替"}
+                      </Label>
+                      <Switch
+                        id={`status-${project.id}`}
+                        checked={project.status === "ordered"}
+                        onCheckedChange={(checked) => handleStatusToggle(projectItem, checked)}
+                      />
+                    </div>
                   </div>
                 </div>
-
-                <div className="flex flex-col items-end gap-3">
-                  {project.status === "ordered" && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem onClick={() => handleProceedToArrangement(project)}>
-                          <Truck className="h-4 w-4 mr-2" />
-                          手配へ進む
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleOpenPRModal(project)}>
-                          <Sparkles className="h-4 w-4 mr-2" />
-                          広報へ進む
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleOpenCostModal(project)}>
-                          <DollarSign className="h-4 w-4 mr-2" />
-                          コスト管理
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleOpenDataCollectionModal(project)}>
-                          <FileSpreadsheet className="h-4 w-4 mr-2" />
-                          データ回収
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleOpenDataExportModal(project)}>
-                          <Upload className="h-4 w-4 mr-2" />
-                          データ出力
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleOpenValidationModal(project)}>
-                          <Sparkles className="h-4 w-4 mr-2" />
-                          案件確認
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-
-                  <div className="flex items-center gap-2 pt-2">
-                    <Label htmlFor={`status-${project.id}`} className="text-sm">
-                      {project.status === "ordered" ? "受注済み" : "受注に切替"}
-                    </Label>
-                    <Switch
-                      id={`status-${project.id}`}
-                      checked={project.status === "ordered"}
-                      onCheckedChange={(checked) => handleStatusToggle(project, checked)}
-                    />
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -542,21 +650,41 @@ Co・Dir担当`
             <div className="bg-slate-50 p-4 rounded-lg space-y-2">
               <h4 className="font-medium text-sm text-slate-900 mb-2">案件サマリー</h4>
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-slate-600">案件名:</span>
-                  <span className="ml-2 font-medium">{selectedProject?.projectName}</span>
+                <div className="flex items-center gap-2 text-slate-600">
+                  <User className="h-4 w-4" />
+                  <span>ホール担当営業:</span>
+                  <span className="ml-2 font-medium text-slate-900">{selectedProject?.salesPersonName || "-"}</span>
                 </div>
-                <div>
-                  <span className="text-slate-600">顧客:</span>
-                  <span className="ml-2 font-medium">{selectedProject?.clientName}</span>
+                <div className="flex items-center gap-2 text-slate-600">
+                  <Calendar className="h-4 w-4" />
+                  <span>依頼日:</span>
+                  <span className="ml-2 font-medium text-slate-900">{selectedProject?.requestDate || "-"}</span>
                 </div>
-                <div>
-                  <span className="text-slate-600">タレント:</span>
-                  <span className="ml-2 font-medium">{selectedProject?.talent}</span>
+                <div className="flex items-center gap-2 text-slate-600">
+                  <MapPin className="h-4 w-4" />
+                  <span>ホール名:</span>
+                  <span className="ml-2 font-medium text-slate-900">{selectedProject?.hallName || selectedProject?.venue || "-"}</span>
                 </div>
-                <div>
-                  <span className="text-slate-600">開催日:</span>
-                  <span className="ml-2 font-medium">{selectedProject?.date}</span>
+                <div className="flex items-center gap-2 text-slate-600">
+                  <span>ステータス:</span>
+                  <span className="ml-2 font-medium text-slate-900">{selectedProject?.projectStatus || "-"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-600">
+                  <span>商材カテゴリ:</span>
+                  <span className="ml-2 font-medium text-slate-900">{selectedProject?.category || "-"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-600">
+                  <span>イベント区分:</span>
+                  <span className="ml-2 font-medium text-slate-900">{selectedProject?.eventType || "-"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-600">
+                  <span>イベント商材名:</span>
+                  <span className="ml-2 font-medium text-slate-900">{selectedProject?.eventProductName || selectedProject?.projectName || "-"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-600">
+                  <Calendar className="h-4 w-4" />
+                  <span>開催日:</span>
+                  <span className="ml-2 font-medium text-slate-900">{selectedProject?.eventDate || selectedProject?.date || "-"}</span>
                 </div>
               </div>
             </div>
@@ -1346,3 +1474,4 @@ Co・Dir担当`
     </div>
   )
 }
+

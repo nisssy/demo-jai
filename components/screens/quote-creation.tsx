@@ -1,5 +1,7 @@
 "use client"
 
+// screen-2のコピーです
+
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -7,17 +9,17 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Sparkles, FileText, Mail, ArrowLeft, Download, ArrowRight, Send } from "lucide-react"
-import type { ProjectData } from "@/app/page"
+import type { ProjectData } from "@/types/project"
 import { useState } from "react"
 
-type Screen2Props = {
+type QuoteCreationProps = {
   projectData: ProjectData
   setProjectData: (data: ProjectData) => void
   onNext: () => void
   onBack: () => void
 }
 
-export function Screen2({ projectData, setProjectData, onNext, onBack }: Screen2Props) {
+export function QuoteCreation({ projectData, setProjectData, onNext, onBack }: QuoteCreationProps) {
   const [showPDF, setShowPDF] = useState(false)
   const [quoteGenerated, setQuoteGenerated] = useState(false)
   const [emailGenerated, setEmailGenerated] = useState(false)
@@ -325,7 +327,7 @@ DMM 営業部`
                                 <td className="p-3 text-sm font-medium">{item.item}</td>
                                 <td className="p-3 text-sm text-right font-medium">¥{item.amount.toLocaleString()}</td>
                               </tr>
-                              {item.subitems?.map((subitem, subIdx) => (
+                              {item.subitems?.map((subitem: { item: string; amount: number }, subIdx: number) => (
                                 <tr key={`${idx}-${subIdx}`} className="border-b border-slate-100 bg-slate-50/50">
                                   <td className="p-2 pl-6 text-sm text-slate-600">{subitem.item}</td>
                                   <td className="p-2 text-sm text-right text-slate-600">

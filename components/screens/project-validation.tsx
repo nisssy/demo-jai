@@ -1,5 +1,7 @@
 "use client"
 
+// screen-5のコピーです
+
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -9,15 +11,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, Send, Loader2, Sparkles, AlertTriangle } from "lucide-react"
-import type { ProjectData } from "@/app/page"
+import type { ProjectData } from "@/types/project"
 
-type Screen5Props = {
+type ProjectValidationProps = {
   projectData: ProjectData
   setProjectData: (data: ProjectData) => void
   onSendCorrection: () => void
 }
 
-export function Screen5({ projectData, setProjectData, onSendCorrection }: Screen5Props) {
+export function ProjectValidation({ projectData, setProjectData, onSendCorrection }: ProjectValidationProps) {
   const [localBillingAddress, setLocalBillingAddress] = useState(projectData.billingAddress)
   const [localContractAmount, setLocalContractAmount] = useState(projectData.contractAmount)
   const [isValidating, setIsValidating] = useState(true)

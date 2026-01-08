@@ -1,5 +1,7 @@
 "use client"
 
+// screen-7のコピーです
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -7,15 +9,15 @@ import { Input } from "@/components/ui/input"
 import { Sparkles, FileText, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import type { ProjectData } from "@/app/page"
+import type { ProjectData } from "@/types/project"
 
-interface Screen7Props {
+interface OperationsManagementProps {
   projectData: ProjectData
   onNext: () => void
   onBack: () => void
 }
 
-export function Screen7({ projectData, onNext, onBack }: Screen7Props) {
+export function OperationsManagement({ projectData, onNext, onBack }: OperationsManagementProps) {
   const [prGenerated, setPrGenerated] = useState(false)
   const [prText, setPrText] = useState("")
   const [costsAutoFilled, setCostsAutoFilled] = useState(false)
