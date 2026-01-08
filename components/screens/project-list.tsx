@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
+  Building2,
   Send,
   Calendar,
   MapPin,
@@ -39,6 +40,8 @@ import {
   ArrowRight,
   Download,
   Plus,
+  FileText,
+  Mail,
 } from "lucide-react"
 import type { ProjectData, Role } from "@/types/project"
 import { useState, useMemo } from "react"
@@ -51,6 +54,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Check, ChevronsUpDown } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 type ProjectListProps = {
   projectData: ProjectData
@@ -65,6 +73,7 @@ type ProjectListProps = {
 
 type ProjectItem = {
   id: number | string
+  projectNumber?: string
   projectName: string
   clientName: string
   talent: string
@@ -155,11 +164,43 @@ export function ProjectList({
   onCreateNewProject,
 }: ProjectListProps) {
   const router = useRouter()
-  const { getProjects, updateProject } = useProject()
+  const { getProjects, updateProject, getHalls, searchHalls, searchCompanies, getCompanyByCompanyId } = useProject()
   const allProjects = getProjects()
   
+  // 見積書PDFを生成する関数（簡易版）
+  const generateQuotePDF = (quoteData: ProjectData, projectNumber: string): string => {
+    // 実際のPDF生成ライブラリを使用する場合は、ここで実装
+    // 今回は簡易版として、PDFの構造をテキストで返す
+    const pdfText = `
+見積書
+案件No: ${projectNumber}
+発行日: ${new Date().toLocaleDateString("ja-JP")}
+
+${quoteData.clientName} 御中
+
+下記の通りお見積もりいたします。
+
+案件名: ${quoteData.projectName}
+開催日: ${quoteData.date}
+会場: ${quoteData.venue}
+担当営業: ${quoteData.talent}
+
+見積明細:
+${quoteData.quoteItems.map(item => `${item.item}: ¥${item.amount.toLocaleString()}`).join('\n')}
+
+合計金額（税込）: ¥${quoteData.quoteItems.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
+`
+    return pdfText
+  }
+  
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchType, setSearchType] = useState<"hall" | "company">("company")
+  const [selectedHallName, setSelectedHallName] = useState<string | null>(null)
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null)
+  
   // 依頼日の降順でソート
-  const projects = useMemo(() => {
+  const sortedProjects = useMemo(() => {
     return [...allProjects].sort((a, b) => {
       const dateA = a.requestDate || a.date || ""
       const dateB = b.requestDate || b.date || ""
@@ -174,6 +215,41 @@ export function ProjectList({
       return 0
     })
   }, [allProjects])
+
+  // 選択されたホール名または法人IDでフィルタリング
+  const filteredProjects = useMemo(() => {
+    if (!selectedHallName && !selectedCompanyId) {
+      return sortedProjects
+    }
+    
+    return sortedProjects.filter((project) => {
+      if (selectedHallName) {
+        const hallName = (project as any).hallName || project.clientName || ""
+        return hallName === selectedHallName
+      }
+      if (selectedCompanyId) {
+        const companyId = (project as any).companyId || ""
+        return companyId === selectedCompanyId
+      }
+      return true
+    })
+  }, [sortedProjects, selectedHallName, selectedCompanyId])
+
+  // 案件Noごとにグループ化
+  const projectsByProjectNumber = useMemo(() => {
+    const grouped: { [projectNumber: string]: typeof sortedProjects } = {}
+    
+    filteredProjects.forEach((project) => {
+      const projectNumber = (project as any).projectNumber || "未分類"
+      if (!grouped[projectNumber]) {
+        grouped[projectNumber] = []
+      }
+      grouped[projectNumber].push(project)
+    })
+    
+    return grouped
+  }, [filteredProjects])
+
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isValidationModalOpen, setIsValidationModalOpen] = useState(false)
@@ -195,13 +271,98 @@ export function ProjectList({
 
   const [isPRModalOpen, setIsPRModalOpen] = useState(false)
   const [isCostModalOpen, setIsCostModalOpen] = useState(false)
-  const [selectedModalProject, setSelectedModalProject] = useState<(typeof projects)[0] | null>(null)
+  const [selectedModalProject, setSelectedModalProject] = useState<(typeof sortedProjects)[0] | null>(null)
 
   const [prGenerated, setPrGenerated] = useState(false)
   const [prText, setPrText] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
 
   const [costsAutoFilled, setCostsAutoFilled] = useState(false)
+
+  // 見積書作成モーダル関連
+  const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false)
+  const [selectedProjectForQuote, setSelectedProjectForQuote] = useState<{ projectNumber: string; products: typeof sortedProjects } | null>(null)
+  const [selectedProductsForQuote, setSelectedProductsForQuote] = useState<Set<number>>(new Set())
+  const [quoteStep, setQuoteStep] = useState<"select" | "template" | "quote" | "email">("select")
+  const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null)
+  
+  // 見積書テンプレート定義
+  const quoteTemplates = [
+    {
+      id: 1,
+      name: "標準テンプレート",
+      description: "出演料・交通費・宿泊費・管理費",
+      items: [
+        {
+          item: "出演料",
+          amount: 500000,
+          subitems: [
+            { item: "　タレント", amount: 300000 },
+            { item: "　ディレクター", amount: 200000 },
+          ],
+        },
+        { item: "交通費", amount: 50000 },
+        { item: "宿泊費", amount: 30000 },
+        { item: "管理費", amount: 20000 },
+      ],
+    },
+    {
+      id: 2,
+      name: "テンプレートB",
+      description: "人件費・移動費・滞在費・運営費",
+      items: [
+        {
+          item: "人件費",
+          amount: 500000,
+          subitems: [
+            { item: "　コンパニオン", amount: 300000 },
+            { item: "　ディレクター", amount: 200000 },
+          ],
+        },
+        { item: "移動費", amount: 50000 },
+        { item: "滞在費", amount: 30000 },
+        { item: "運営費", amount: 20000 },
+      ],
+    },
+    {
+      id: 3,
+      name: "テンプレートC",
+      description: "スタッフ費用・旅費・宿泊代・事務費",
+      items: [
+        {
+          item: "スタッフ費用",
+          amount: 500000,
+          subitems: [
+            { item: "　キャスト", amount: 300000 },
+            { item: "　演出", amount: 200000 },
+          ],
+        },
+        { item: "旅費", amount: 50000 },
+        { item: "宿泊代", amount: 30000 },
+        { item: "事務費", amount: 20000 },
+      ],
+    },
+  ]
+  const [showPDF, setShowPDF] = useState(false)
+  const [quoteGenerated, setQuoteGenerated] = useState(false)
+  const [emailGenerated, setEmailGenerated] = useState(false)
+  const [activeTab, setActiveTab] = useState<"quote" | "email">("quote")
+  const [isLoadingSend, setIsLoadingSend] = useState(false)
+  const [quoteProjectData, setQuoteProjectData] = useState<ProjectData>({
+    projectName: "",
+    clientName: "",
+    date: "",
+    venue: "",
+    talent: "",
+    talentStatus: "available",
+    quoteItems: [],
+    emailDraft: "",
+    contractAmount: "",
+    billingAddress: "",
+    status: "proposed",
+    validationErrors: [],
+    correctionRequest: "",
+  })
   const [costs, setCosts] = useState([
     { item: "コンパニオン出演料", amount: "" },
     { item: "交通費", amount: "" },
@@ -258,9 +419,12 @@ export function ProjectList({
         status: "ordered",
       })
 
-      // 仮想DBで案件を更新
+      // 仮想DBで案件を更新（statusとprojectStatusの両方を更新）
       if (typeof selectedProject.id === 'number') {
-        updateProject(selectedProject.id, { status: "ordered" })
+        updateProject(selectedProject.id, { 
+          status: "ordered",
+          projectStatus: "受注済み"
+        } as any)
       }
 
       addNotification(`案件「${selectedProject.projectName}」を受注確定しました`)
@@ -370,12 +534,12 @@ Co・Dir担当`
     onNext()
   }
 
-  const handleOpenPRModal = (project: (typeof projects)[0]) => {
+  const handleOpenPRModal = (project: (typeof sortedProjects)[0]) => {
     setSelectedModalProject(project)
     setIsPRModalOpen(true)
   }
 
-  const handleOpenCostModal = (project: (typeof projects)[0]) => {
+  const handleOpenCostModal = (project: (typeof sortedProjects)[0]) => {
     setSelectedModalProject(project)
     setIsCostModalOpen(true)
   }
@@ -485,159 +649,368 @@ Co・Dir担当`
         </Button>
       </div>
 
-      <div className="space-y-4">
-        {projects.map((project) => {
-          const projectItem: ProjectItem = {
-            id: project.id,
-            projectName: project.projectName,
-            clientName: project.clientName,
-            talent: project.talent,
-            date: project.date,
-            venue: project.venue,
-            status: project.status,
-            estimateAmount: project.estimateAmount,
-            salesPersonName: (project as any).salesPersonName,
-            requestDate: (project as any).requestDate,
-            hallName: (project as any).hallName,
-            projectStatus: (project as any).projectStatus,
-            category: (project as any).category,
-            eventType: (project as any).eventType,
-            eventProductName: (project as any).eventProductName,
-            eventDate: (project as any).eventDate,
-          }
+      {/* 検索UI */}
+      <div className="flex items-center gap-2">
+        <div className="flex-1 flex items-center gap-2">
+          <Popover open={searchOpen} onOpenChange={setSearchOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={searchOpen}
+                className="flex-1 justify-between"
+              >
+                {searchType === "company" 
+                  ? (selectedCompanyId ? (getCompanyByCompanyId(selectedCompanyId)?.name || "法人名を検索...") : "法人名を検索...")
+                  : (selectedHallName || "ホール名を検索...")
+                }
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[400px] p-0" align="start">
+              <Command>
+                <CommandInput 
+                  placeholder={searchType === "hall" ? "ホール名を検索..." : "法人名を検索..."}
+                  value={searchQuery}
+                  onValueChange={setSearchQuery}
+                />
+                <CommandList>
+                  {searchType === "hall" ? (
+                    <>
+                      <CommandEmpty>ホールが見つかりませんでした</CommandEmpty>
+                      <CommandGroup>
+                        {searchHalls(searchQuery).map((hall) => (
+                          <CommandItem
+                            key={hall.id}
+                            value={hall.name}
+                            onSelect={() => {
+                              setSelectedHallName(hall.name)
+                              setSelectedCompanyId(null)
+                              setSearchOpen(false)
+                              setSearchQuery("")
+                            }}
+                          >
+                            <Check
+                              className={`mr-2 h-4 w-4 ${selectedHallName === hall.name ? "opacity-100" : "opacity-0"}`}
+                            />
+                            <div className="flex flex-col">
+                              <span>{hall.name}</span>
+                              <span className="text-xs text-slate-500">担当: {hall.salesPersonName}</span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </>
+                  ) : (
+                    <>
+                      <CommandEmpty>法人が見つかりませんでした</CommandEmpty>
+                      <CommandGroup>
+                        {searchCompanies(searchQuery).map((company) => (
+                          <CommandItem
+                            key={company.id}
+                            value={company.name}
+                            onSelect={() => {
+                              setSelectedCompanyId(company.companyId)
+                              setSelectedHallName(null)
+                              setSearchOpen(false)
+                              setSearchQuery("")
+                            }}
+                          >
+                            <Check
+                              className={`mr-2 h-4 w-4 ${selectedCompanyId === company.companyId ? "opacity-100" : "opacity-0"}`}
+                            />
+                            <div className="flex flex-col">
+                              <span>{company.name}</span>
+                              <span className="text-xs text-slate-500">法人ID: {company.companyId}</span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </>
+                  )}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+          <Tabs value={searchType} onValueChange={(value) => {
+            setSearchType(value as "hall" | "company")
+            setSelectedHallName(null)
+            setSelectedCompanyId(null)
+            setSearchQuery("")
+          }}>
+            <TabsList className="h-10">
+              <TabsTrigger value="company" className="px-3">法人</TabsTrigger>
+              <TabsTrigger value="hall" className="px-3">ホール</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+        {(selectedHallName || selectedCompanyId) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSelectedHallName(null)
+              setSelectedCompanyId(null)
+              setSearchQuery("")
+            }}
+            className="gap-2"
+          >
+            クリア
+          </Button>
+        )}
+      </div>
+
+      {Object.keys(projectsByProjectNumber).length === 0 ? (
+        <div className="text-center py-12 text-slate-500">
+          {(selectedHallName || selectedCompanyId) ? "検索結果が見つかりませんでした" : "案件がありません"}
+        </div>
+      ) : (
+      <div className="space-y-6">
+        {Object.entries(projectsByProjectNumber).map(([projectNumber, projectProducts]) => {
+          const firstProduct = projectProducts[0]
+          const hallName = (firstProduct as any).hallName || firstProduct.clientName || "未分類"
+          const salesPersonName = (firstProduct as any).salesPersonName || "-"
+          const requestDate = (firstProduct as any).requestDate || "-"
+          const companyName = (firstProduct as any).companyName || "-"
+          const companyId = (firstProduct as any).companyId || "-"
+          const hallId = (firstProduct as any).hallId || "-"
+          
           return (
-            <Card 
-              key={project.id} 
-              className="hover:shadow-md transition-shadow p-6"
-            >
+            <Card key={projectNumber} className="hover:shadow-md transition-shadow">
               <CardContent className="p-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div 
-                    className="flex-1 space-y-3 cursor-pointer"
-                    onClick={() => router.push(`/project/${project.id}`)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-semibold text-slate-900">{projectItem.eventProductName || project.projectName}</h3>
-                      <Badge variant={project.status === "ordered" ? "default" : "secondary"}>
-                        {projectItem.projectStatus || (project.status === "ordered" ? "受注（契約手続中）" : "提案中")}
+                {/* 案件ヘッダー */}
+                <div className="mb-4 pb-4 border-b-2 border-slate-300">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <h2 className="text-3xl font-bold text-slate-900 whitespace-nowrap">案件No: {projectNumber}</h2>
+                      <Badge variant="outline" className="ml-2 whitespace-nowrap">
+                        {projectProducts.length}件の商材
                       </Badge>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                      <div className="flex items-center gap-2 text-slate-600">
-                        <User className="h-4 w-4" />
-                        <span>
-                          ホール担当営業: <span className="font-medium text-slate-900">{projectItem.salesPersonName || "-"}</span>
-                        </span>
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        <span>法人名: <span className="font-medium text-slate-900">{companyName}</span></span>
                       </div>
-                      <div className="flex items-center gap-2 text-slate-600">
-                        <Calendar className="h-4 w-4" />
-                        <span>
-                          依頼日: <span className="font-medium text-slate-900">{projectItem.requestDate || "-"}</span>
-                        </span>
+                      <div className="flex items-center gap-2">
+                        <span>法人ID: <span className="font-medium text-slate-900">{companyId}</span></span>
                       </div>
-                      <div className="flex items-center gap-2 text-slate-600">
+                      <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4" />
-                        <span>
-                          ホール名: <span className="font-medium text-slate-900">{projectItem.hallName || project.venue || "-"}</span>
-                        </span>
+                        <span>ホール名: <span className="font-medium text-slate-900">{hallName}</span></span>
                       </div>
-                      <div className="flex items-center gap-2 text-slate-600">
-                        <span>
-                          ステータス: <span className="font-medium text-slate-900">{projectItem.projectStatus || "-"}</span>
-                        </span>
+                      <div className="flex items-center gap-2">
+                        <span>ホールID: <span className="font-medium text-slate-900">{hallId}</span></span>
                       </div>
-                      <div className="flex items-center gap-2 text-slate-600">
-                        <span>
-                          商材カテゴリ: <span className="font-medium text-slate-900">{projectItem.category || "-"}</span>
-                        </span>
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        <span>担当営業: <span className="font-medium text-slate-900">{salesPersonName}</span></span>
                       </div>
-                      <div className="flex items-center gap-2 text-slate-600">
-                        <span>
-                          イベント区分: <span className="font-medium text-slate-900">{projectItem.eventType || "-"}</span>
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-slate-600">
-                        <span>
-                          イベント商材名: <span className="font-medium text-slate-900">{projectItem.eventProductName || "-"}</span>
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-slate-600">
+                      <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
-                        <span>
-                          開催日: <span className="font-medium text-slate-900">{projectItem.eventDate || project.date || "-"}</span>
-                        </span>
+                        <span>依頼日: <span className="font-medium text-slate-900">{requestDate}</span></span>
                       </div>
                     </div>
-
-                    <div className="pt-2 border-t border-slate-200">
-                      <span className="text-sm text-slate-600">見積金額: </span>
-                      <span className="text-lg font-semibold text-blue-600">
-                        {(project as any).estimatedBillingAmount !== undefined
-                          ? `¥${(project as any).estimatedBillingAmount.toLocaleString()}`
-                          : project.estimateAmount}
-                      </span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={() => {
+                          setSelectedProjectForQuote({ projectNumber, products: projectProducts })
+                          setSelectedProductsForQuote(new Set(projectProducts.map(p => p.id as number)))
+                          setQuoteStep("select")
+                          setIsQuoteModalOpen(true)
+                        }}
+                        variant="outline"
+                        className="gap-2"
+                      >
+                        <FileText className="h-4 w-4" />
+                        見積書作成
+                      </Button>
+                      {/* 見積書が生成されている場合はダウンロードボタンを表示 */}
+                      {projectProducts.some(p => (p as any).quoteGenerated) && (
+                        <Button
+                          onClick={() => {
+                            // 見積書PDFをダウンロード
+                            const quoteData = projectProducts.find(p => (p as any).quoteGenerated)
+                            if (quoteData) {
+                              const quoteProjectData = (quoteData as any).quoteData
+                              // PDF生成のロジック（簡易版）
+                              const pdfContent = generateQuotePDF(quoteProjectData, projectNumber)
+                              const blob = new Blob([pdfContent], { type: 'application/pdf' })
+                              const url = URL.createObjectURL(blob)
+                              const a = document.createElement('a')
+                              a.href = url
+                              a.download = `quote_${projectNumber}.pdf`
+                              document.body.appendChild(a)
+                              a.click()
+                              document.body.removeChild(a)
+                              URL.revokeObjectURL(url)
+                            }
+                          }}
+                          variant="outline"
+                          className="gap-2"
+                        >
+                          <Download className="h-4 w-4" />
+                          見積書ダウンロード
+                        </Button>
+                      )}
+                      <Button
+                        onClick={() => router.push(`/project/${firstProduct.id}/product/new`)}
+                        variant="outline"
+                        className="gap-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        商材を追加
+                      </Button>
                     </div>
                   </div>
+                </div>
 
-                  <div 
-                    className="flex flex-col items-end gap-3"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {project.status === "ordered" && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem onClick={() => handleProceedToArrangement(projectItem)}>
-                            <Truck className="h-4 w-4 mr-2" />
-                            手配へ進む
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleOpenPRModal(project)}>
-                            <Sparkles className="h-4 w-4 mr-2" />
-                            広報へ進む
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleOpenCostModal(project)}>
-                            <DollarSign className="h-4 w-4 mr-2" />
-                            コスト管理
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleOpenDataCollectionModal(projectItem)}>
-                            <FileSpreadsheet className="h-4 w-4 mr-2" />
-                            データ回収
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleOpenDataExportModal(projectItem)}>
-                            <Upload className="h-4 w-4 mr-2" />
-                            データ出力
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleOpenValidationModal(projectItem)}>
-                            <Sparkles className="h-4 w-4 mr-2" />
-                            案件確認
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
+                {/* 商材一覧 */}
+                <div className="space-y-3">
+                  {projectProducts.map((project, index) => {
+                    const projectItem: ProjectItem = {
+                      id: project.id,
+                      projectNumber: (project as any).projectNumber,
+                      projectName: project.projectName,
+                      clientName: project.clientName,
+                      talent: project.talent,
+                      date: project.date,
+                      venue: project.venue,
+                      status: project.status,
+                      estimateAmount: project.estimateAmount,
+                      salesPersonName: (project as any).salesPersonName,
+                      requestDate: (project as any).requestDate,
+                      hallName: (project as any).hallName,
+                      projectStatus: (project as any).projectStatus,
+                      category: (project as any).category,
+                      eventType: (project as any).eventType,
+                      eventProductName: (project as any).eventProductName,
+                      eventDate: (project as any).eventDate,
+                    }
+                    
+                    return (
+                      <div
+                        key={project.id}
+                        className="border-l-4 border-slate-300 rounded-r-lg bg-slate-50/50 hover:bg-slate-200 transition-colors"
+                      >
+                        <div className="p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div 
+                              className="flex-1 space-y-3 cursor-pointer"
+                              onClick={() => router.push(`/project/${project.id}`)}
+                            >
+                              <div className="flex items-center gap-3">
+                                <h3 className="text-lg font-semibold text-slate-900">
+                                  {projectItem.eventProductName || project.projectName}
+                                </h3>
+                                <Badge variant={project.status === "ordered" ? "default" : "secondary"}>
+                                  {projectItem.projectStatus || (project.status === "ordered" ? "受注（契約手続中）" : "提案中")}
+                                </Badge>
+                              </div>
 
-                    <div className="flex items-center gap-2 pt-2">
-                      <Label htmlFor={`status-${project.id}`} className="text-sm">
-                        {project.status === "ordered" ? "受注済み" : "受注に切替"}
-                      </Label>
-                      <Switch
-                        id={`status-${project.id}`}
-                        checked={project.status === "ordered"}
-                        onCheckedChange={(checked) => handleStatusToggle(projectItem, checked)}
-                      />
-                    </div>
-                  </div>
+                              <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                                <div className="flex items-center gap-2 text-slate-600">
+                                  <span>
+                                    ステータス: <span className="font-medium text-slate-900">{projectItem.projectStatus || "-"}</span>
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-slate-600">
+                                  <span>
+                                    商材カテゴリ: <span className="font-medium text-slate-900">{projectItem.category || "-"}</span>
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-slate-600">
+                                  <span>
+                                    イベント区分: <span className="font-medium text-slate-900">{projectItem.eventType || "-"}</span>
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-slate-600">
+                                  <span>
+                                    イベント商材名: <span className="font-medium text-slate-900">{projectItem.eventProductName || "-"}</span>
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-slate-600">
+                                  <Calendar className="h-4 w-4" />
+                                  <span>
+                                    開催日: <span className="font-medium text-slate-900">{projectItem.eventDate || project.date || "-"}</span>
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="pt-2 border-t border-slate-200">
+                                <span className="text-sm text-slate-600">見積金額: </span>
+                                <span className="text-lg font-semibold text-blue-600">
+                                  {(project as any).estimatedBillingAmount !== undefined
+                                    ? `¥${(project as any).estimatedBillingAmount.toLocaleString()}`
+                                    : project.estimateAmount}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div 
+                              className="flex flex-col items-end gap-3"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {project.status === "ordered" && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuItem onClick={() => handleProceedToArrangement(projectItem)}>
+                                      <Truck className="h-4 w-4 mr-2" />
+                                      手配へ進む
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleOpenPRModal(project)}>
+                                      <Sparkles className="h-4 w-4 mr-2" />
+                                      広報へ進む
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleOpenCostModal(project)}>
+                                      <DollarSign className="h-4 w-4 mr-2" />
+                                      コスト管理
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleOpenDataCollectionModal(projectItem)}>
+                                      <FileSpreadsheet className="h-4 w-4 mr-2" />
+                                      データ回収
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleOpenDataExportModal(projectItem)}>
+                                      <Upload className="h-4 w-4 mr-2" />
+                                      データ出力
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => handleOpenValidationModal(projectItem)}>
+                                      <Sparkles className="h-4 w-4 mr-2" />
+                                      案件確認
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+
+                              <div className="flex items-center gap-2 pt-2">
+                                <Label htmlFor={`status-${project.id}`} className="text-sm">
+                                  {project.status === "ordered" ? "受注済み" : "受注に切替"}
+                                </Label>
+                                <Switch
+                                  id={`status-${project.id}`}
+                                  checked={project.status === "ordered"}
+                                  onCheckedChange={(checked) => handleStatusToggle(projectItem, checked)}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </CardContent>
             </Card>
           )
         })}
       </div>
+      )}
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-2xl">
@@ -649,7 +1022,30 @@ Co・Dir担当`
           <div className="space-y-4 py-4">
             <div className="bg-slate-50 p-4 rounded-lg space-y-2">
               <h4 className="font-medium text-sm text-slate-900 mb-2">案件サマリー</h4>
+              <div className="mb-3 pb-3 border-b border-slate-300">
+                <div className="text-2xl font-bold text-slate-900">
+                  案件No: {selectedProject?.projectNumber || "-"}
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="flex items-center gap-2 text-slate-600">
+                  <Building2 className="h-4 w-4" />
+                  <span>法人名:</span>
+                  <span className="ml-2 font-medium text-slate-900">{(selectedProject as any)?.companyName || "-"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-600">
+                  <span>法人ID:</span>
+                  <span className="ml-2 font-medium text-slate-900">{(selectedProject as any)?.companyId || "-"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-600">
+                  <MapPin className="h-4 w-4" />
+                  <span>ホール名:</span>
+                  <span className="ml-2 font-medium text-slate-900">{selectedProject?.hallName || selectedProject?.venue || "-"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-600">
+                  <span>ホールID:</span>
+                  <span className="ml-2 font-medium text-slate-900">{(selectedProject as any)?.hallId || "-"}</span>
+                </div>
                 <div className="flex items-center gap-2 text-slate-600">
                   <User className="h-4 w-4" />
                   <span>ホール担当営業:</span>
@@ -659,11 +1055,6 @@ Co・Dir担当`
                   <Calendar className="h-4 w-4" />
                   <span>依頼日:</span>
                   <span className="ml-2 font-medium text-slate-900">{selectedProject?.requestDate || "-"}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-600">
-                  <MapPin className="h-4 w-4" />
-                  <span>ホール名:</span>
-                  <span className="ml-2 font-medium text-slate-900">{selectedProject?.hallName || selectedProject?.venue || "-"}</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-600">
                   <span>ステータス:</span>
@@ -1468,6 +1859,460 @@ Co・Dir担当`
                 )}
               </div>
             </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 見積書作成モーダル */}
+      <Dialog
+        open={isQuoteModalOpen}
+        onOpenChange={(open) => {
+          setIsQuoteModalOpen(open)
+          if (!open) {
+            // モーダルを閉じる時に状態をリセット
+            setQuoteStep("select")
+            setQuoteGenerated(false)
+            setEmailGenerated(false)
+            setSelectedProductsForQuote(new Set())
+            setSelectedProjectForQuote(null)
+            setShowPDF(false)
+            setIsLoadingSend(false)
+            setSelectedTemplate(null)
+          }
+        }}
+      >
+        <DialogContent className="!max-w-[1000px] sm:!max-w-[1000px] !w-[75vw] max-h-[85vh] overflow-hidden flex flex-col">
+          <div className="relative flex-1 overflow-hidden flex flex-col min-h-0">
+            {/* スライドコンテナ */}
+            <div
+              className="flex transition-transform duration-500 ease-in-out"
+              style={{ 
+                transform: `translateX(-${
+                  quoteStep === "template" ? 100 : 
+                  quoteStep === "quote" ? 200 : 
+                  quoteStep === "email" ? 300 : 0
+                }%)` 
+              }}
+            >
+              {/* 商材選択画面 */}
+              <div className="min-w-full flex-shrink-0 px-1 w-full h-full flex flex-col">
+                <DialogHeader className="pb-4 pt-2">
+                  <DialogTitle>見積書作成・送付</DialogTitle>
+                  <DialogDescription>
+                    {selectedProjectForQuote && `案件No: ${selectedProjectForQuote.projectNumber} の見積書を作成します`}
+                  </DialogDescription>
+                </DialogHeader>
+
+                {selectedProjectForQuote && (
+                  <div className="space-y-4 py-4">
+                    <div className="bg-slate-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-sm text-slate-900 mb-3">見積に含める商材を選択してください</h4>
+                      <div className="space-y-2">
+                        {selectedProjectForQuote.products.map((product) => {
+                          const productName = (product as any).eventProductName || product.projectName
+                          const eventDate = (product as any).eventDate || product.date
+                          const estimatedAmount = (product as any).estimatedBillingAmount
+                            ? `¥${(product as any).estimatedBillingAmount.toLocaleString()}`
+                            : product.estimateAmount
+                          
+                          return (
+                            <div
+                              key={product.id}
+                              className="flex items-center space-x-3 p-3 bg-white rounded-lg border border-slate-200 hover:bg-slate-50"
+                            >
+                              <Checkbox
+                                checked={selectedProductsForQuote.has(product.id as number)}
+                                onCheckedChange={(checked) => {
+                                  const newSet = new Set(selectedProductsForQuote)
+                                  if (checked) {
+                                    newSet.add(product.id as number)
+                                  } else {
+                                    newSet.delete(product.id as number)
+                                  }
+                                  setSelectedProductsForQuote(newSet)
+                                }}
+                              />
+                              <div className="flex-1">
+                                <div className="font-medium text-slate-900">{productName}</div>
+                                <div className="text-sm text-slate-600">
+                                  開催日: {eventDate} | 見積金額: {estimatedAmount}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <div className="mt-4 flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setIsQuoteModalOpen(false)}>
+                          キャンセル
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            if (selectedProductsForQuote.size > 0) {
+                              // 選択された商材の情報を集約
+                              const selectedProducts = selectedProjectForQuote.products.filter(p =>
+                                selectedProductsForQuote.has(p.id as number)
+                              )
+                              const firstProduct = selectedProducts[0]
+                              const hallName = (firstProduct as any).hallName || firstProduct.clientName
+                              const totalAmount = selectedProducts.reduce((sum, p) => {
+                                return sum + ((p as any).estimatedBillingAmount || 0)
+                              }, 0)
+                              
+                              // 見積項目を自動生成
+                              const defaultItems = [
+                                {
+                                  item: "出演料",
+                                  amount: 500000,
+                                  subitems: [
+                                    { item: "　タレント", amount: 300000 },
+                                    { item: "　ディレクター", amount: 200000 },
+                                  ],
+                                },
+                                { item: "交通費", amount: 50000 },
+                                { item: "宿泊費", amount: 30000 },
+                                { item: "管理費", amount: 20000 },
+                              ]
+                              
+                              const quoteData = {
+                                projectName: selectedProducts.map(p => (p as any).eventProductName || p.projectName).join("、"),
+                                clientName: hallName,
+                                date: selectedProducts.map(p => (p as any).eventDate || p.date).join("、"),
+                                venue: hallName,
+                                talent: (firstProduct as any).salesPersonName || firstProduct.talent,
+                                talentStatus: "available",
+                                quoteItems: defaultItems,
+                                emailDraft: "",
+                                contractAmount: "",
+                                billingAddress: "",
+                                status: "proposed",
+                                validationErrors: [],
+                                correctionRequest: "",
+                              }
+                              
+                              setQuoteProjectData(quoteData)
+                              setQuoteGenerated(true)
+                              setQuoteStep("template")
+                            }
+                          }}
+                          disabled={selectedProductsForQuote.size === 0}
+                        >
+                          次へ
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* テンプレート選択画面（2枚目） */}
+              <div className="min-w-full flex-shrink-0 px-1 w-full h-full flex flex-col">
+                <DialogHeader className="pb-4 pt-2 flex-shrink-0">
+                  <DialogTitle>見積書テンプレート選択</DialogTitle>
+                  <DialogDescription>
+                    {selectedProjectForQuote && `案件No: ${selectedProjectForQuote.projectNumber} の見積書テンプレートを選択してください`}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="flex-1 overflow-y-auto py-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {quoteTemplates.map((template) => (
+                      <div
+                        key={template.id}
+                        className={`p-6 border-2 rounded-lg cursor-pointer transition-all ${
+                          selectedTemplate === template.id
+                            ? "border-blue-600 bg-blue-50"
+                            : "border-slate-200 hover:border-slate-300 bg-white"
+                        }`}
+                        onClick={() => setSelectedTemplate(template.id)}
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h3 className="font-semibold text-lg text-slate-900 mb-1">
+                              {template.name}
+                            </h3>
+                            <p className="text-sm text-slate-600">{template.description}</p>
+                          </div>
+                          {selectedTemplate === template.id && (
+                            <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center">
+                              <Check className="h-4 w-4 text-white" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="mt-4 space-y-2 text-sm">
+                          {template.items.map((item, idx) => (
+                            <div key={idx} className="flex justify-between text-slate-700">
+                              <span>{item.item}</span>
+                              <span className="font-medium">¥{item.amount.toLocaleString()}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-4 flex justify-end gap-2 border-t pt-4 flex-shrink-0">
+                  <Button variant="outline" onClick={() => setQuoteStep("select")}>
+                    戻る
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      if (selectedTemplate !== null) {
+                        const template = quoteTemplates.find(t => t.id === selectedTemplate)
+                        if (template) {
+                          // 選択されたテンプレートで見積データを更新
+                          const updatedQuoteData = {
+                            ...quoteProjectData,
+                            quoteItems: template.items,
+                          }
+                          setQuoteProjectData(updatedQuoteData)
+                          
+                          // 選択された商材に見積書生成フラグを設定
+                          if (selectedProjectForQuote) {
+                            const selectedProducts = selectedProjectForQuote.products.filter(p =>
+                              selectedProductsForQuote.has(p.id as number)
+                            )
+                            selectedProducts.forEach(product => {
+                              updateProject(product.id as number, {
+                                ...product,
+                                quoteGenerated: true,
+                                quoteData: updatedQuoteData
+                              } as any)
+                            })
+                          }
+                          
+                          setQuoteStep("quote")
+                        }
+                      }
+                    }}
+                    disabled={selectedTemplate === null}
+                  >
+                    次へ
+                  </Button>
+                </div>
+              </div>
+
+              {/* 見積プレビュー画面（3枚目） */}
+              <div className="min-w-full flex-shrink-0 px-1 w-full h-full flex flex-col">
+                <DialogHeader className="pb-4 pt-2 flex-shrink-0">
+                  <DialogTitle>見積書プレビュー</DialogTitle>
+                  <DialogDescription>
+                    {selectedProjectForQuote && `案件No: ${selectedProjectForQuote.projectNumber} の見積書`}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="flex-1 overflow-y-auto py-4" style={{ maxHeight: 'calc(85vh - 250px)', minHeight: 0 }}>
+                  {quoteGenerated && (
+                    <>
+                      {/* PDF Preview */}
+                      <div className="bg-white border-2 border-slate-300 rounded-lg shadow-lg">
+                        <div className="bg-slate-100 p-2 text-center text-xs text-slate-600 border-b border-slate-300 flex-shrink-0">
+                          PDFプレビュー - quote_{selectedProjectForQuote?.projectNumber || "000"}.pdf
+                        </div>
+                        <div className="p-8 space-y-6">
+                          <div className="text-center space-y-2 pb-6 border-b-2 border-slate-200">
+                            <h2 className="text-2xl font-bold text-slate-900">御見積書</h2>
+                            <p className="text-sm text-slate-600">Quote No. {selectedProjectForQuote?.projectNumber || "000"}</p>
+                            <p className="text-sm text-slate-600">発行日: {new Date().toLocaleDateString("ja-JP")}</p>
+                          </div>
+
+                          <div className="space-y-3">
+                            <div className="space-y-1">
+                              <p className="text-lg font-bold text-slate-900">{quoteProjectData.clientName} 御中</p>
+                              <p className="text-sm text-slate-600">下記の通りお見積もりいたします。</p>
+                            </div>
+
+                            <div className="bg-slate-50 p-4 rounded-lg space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-slate-600">案件名:</span>
+                                <span className="font-medium">{quoteProjectData.projectName}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-slate-600">開催日:</span>
+                                <span className="font-medium">{quoteProjectData.date}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-slate-600">会場:</span>
+                                <span className="font-medium">{quoteProjectData.venue}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-slate-600">担当営業:</span>
+                                <span className="font-medium">{quoteProjectData.talent}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <h3 className="font-bold text-slate-900">見積明細</h3>
+                            <table className="w-full border border-slate-300">
+                              <thead className="bg-slate-100">
+                                <tr>
+                                  <th className="text-left p-3 text-sm font-medium text-slate-700 border-b border-slate-300">
+                                    項目
+                                  </th>
+                                  <th className="text-right p-3 text-sm font-medium text-slate-700 border-b border-slate-300">
+                                    金額
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {quoteProjectData.quoteItems.map((item, idx) => (
+                                  <>
+                                    <tr key={idx} className="border-b border-slate-200">
+                                      <td className="p-3 text-sm font-medium">{item.item}</td>
+                                      <td className="p-3 text-sm text-right font-medium">¥{item.amount.toLocaleString()}</td>
+                                    </tr>
+                                    {item.subitems?.map((subitem: { item: string; amount: number }, subIdx: number) => (
+                                      <tr key={`${idx}-${subIdx}`} className="border-b border-slate-100 bg-slate-50/50">
+                                        <td className="p-2 pl-6 text-sm text-slate-600">{subitem.item}</td>
+                                        <td className="p-2 text-sm text-right text-slate-600">
+                                          ¥{subitem.amount.toLocaleString()}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </>
+                                ))}
+                              </tbody>
+                              <tfoot className="bg-slate-100 border-t-2 border-slate-400">
+                                <tr>
+                                  <td className="p-3 text-sm font-bold">合計金額（税込）</td>
+                                  <td className="p-3 text-sm text-right font-bold text-blue-600 text-lg">
+                                    ¥{(quoteProjectData.quoteItems?.reduce((sum, item) => sum + item.amount, 0) || 0).toLocaleString()}
+                                  </td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+
+                          <div className="pt-6 border-t border-slate-200 space-y-3 text-sm text-slate-600">
+                            <div className="space-y-1">
+                              <p className="font-medium text-slate-900">お支払い条件</p>
+                              <p>- 請求書発行後30日以内にお支払いください</p>
+                              <p>- 振込手数料は貴社ご負担でお願いいたします</p>
+                            </div>
+                            <div className="space-y-1 pt-4">
+                              <p className="font-medium text-slate-900">発行元</p>
+                              <p>DMM 株式会社</p>
+                              <p>〒150-0001 東京都渋谷区神宮前1-1-1</p>
+                              <p>TEL: 03-1234-5678 / Email: sales@dmm.co.jp</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="mt-4 flex justify-end gap-2 border-t pt-4 flex-shrink-0">
+                  <Button variant="outline" onClick={() => setQuoteStep("template")}>
+                    戻る
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      // メール文面を自動生成
+                      const email = `${quoteProjectData.clientName} 御中
+
+平素より大変お世話になっております。
+DMM の営業担当でございます。
+
+このたびは「${quoteProjectData.projectName}」の件につきまして、
+お見積書をお送りいたします。
+
+ご検討のほど、何卒よろしくお願い申し上げます。
+
+【案件概要】
+案件名: ${quoteProjectData.projectName}
+開催日: ${quoteProjectData.date}
+会場: ${quoteProjectData.venue}
+担当営業: ${quoteProjectData.talent}
+
+ご不明な点がございましたら、お気軽にお問い合わせください。
+
+DMM 営業部`
+                      setQuoteProjectData({ ...quoteProjectData, emailDraft: email })
+                      setEmailGenerated(true)
+                      setQuoteStep("email")
+                    }}
+                  >
+                    次へ
+                  </Button>
+                </div>
+              </div>
+
+              {/* メールプレビュー画面（3枚目） */}
+              <div className="min-w-full flex-shrink-0 px-1 w-full h-full flex flex-col">
+                <DialogHeader className="pb-4 pt-2">
+                  <DialogTitle>メール送付</DialogTitle>
+                  <DialogDescription>
+                    {selectedProjectForQuote && `案件No: ${selectedProjectForQuote.projectNumber} の見積書を送付します`}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="flex-1 overflow-y-auto py-4">
+                  {isLoadingSend && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+                      <div className="bg-white rounded-lg p-6 shadow-xl">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                          <p className="text-sm font-medium text-slate-700">見積書を送付中...</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {emailGenerated && (
+                    <>
+                      <div className="bg-white border-2 border-slate-300 rounded-lg shadow-lg p-4">
+                        <Label className="text-sm font-medium text-slate-700 mb-2 block">送付メール文面</Label>
+                        <Textarea
+                          value={quoteProjectData.emailDraft}
+                          onChange={(e) => setQuoteProjectData({ ...quoteProjectData, emailDraft: e.target.value })}
+                          rows={16}
+                          className="font-mono text-sm"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="mt-4 flex justify-end gap-2 border-t pt-4">
+                  <Button variant="outline" onClick={() => setQuoteStep("quote")}>
+                    戻る
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setIsLoadingSend(true)
+                      setTimeout(() => {
+                        // 選択された商材のステータスを「見積送付完了」に更新
+                        if (selectedProjectForQuote && selectedProductsForQuote.size > 0) {
+                          selectedProjectForQuote.products
+                            .filter(p => selectedProductsForQuote.has(p.id as number))
+                            .forEach(product => {
+                              updateProject(product.id as number, {
+                                ...product,
+                                projectStatus: "見積送付完了"
+                              } as any)
+                            })
+                        }
+                        
+                        setIsLoadingSend(false)
+                        setIsQuoteModalOpen(false)
+                        setQuoteStep("select")
+                        setQuoteGenerated(false)
+                        setEmailGenerated(false)
+                        addNotification("見積書を送付しました")
+                      }, 500)
+                    }}
+                    className="gap-2"
+                    disabled={!emailGenerated}
+                  >
+                    <Send className="h-4 w-4" />
+                    見積書送付
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

@@ -22,6 +22,9 @@ import {
 } from "@/components/ui/dialog"
 import { useRouter } from "next/navigation"
 import { useProject } from "@/contexts/project-context"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Check, ChevronsUpDown } from "lucide-react"
 
 type ProjectRegistrationProps = {
   projectData: ProjectData
@@ -30,6 +33,8 @@ type ProjectRegistrationProps = {
   onBack: () => void
   addNotification: (message: string) => void
   projectId?: number | null
+  isProductAddMode?: boolean
+  isProductEditMode?: boolean
 }
 
 export function ProjectRegistration({
@@ -39,10 +44,20 @@ export function ProjectRegistration({
   onBack,
   addNotification,
   projectId,
+  isProductAddMode = false,
+  isProductEditMode = false,
 }: ProjectRegistrationProps) {
   const router = useRouter()
-  const { createProjects, createProject, getProjectById, updateProject } = useProject()
+  const { createProjects, createProject, getProjectById, updateProject, getHalls, getHallByName, searchHalls, getProjects, generateProjectNumber, getCompanies, getCompanyById, getCompanyByCompanyId, searchCompanies, getHallsByCompanyId } = useProject()
   const isEditMode = projectId !== undefined && projectId !== null
+  const isProductMode = isProductAddMode || isProductEditMode
+  const [hallSearchOpen, setHallSearchOpen] = useState(false)
+  const [hallSearchQuery, setHallSearchQuery] = useState("")
+  const [companySearchOpen, setCompanySearchOpen] = useState(false)
+  const [companySearchQuery, setCompanySearchQuery] = useState("")
+  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null)
+  const [companyId, setCompanyId] = useState("")
+  const [companyName, setCompanyName] = useState("")
   const [showResourceSection, setShowResourceSection] = useState(false)
   const [acquirerName, setAcquirerName] = useState("")
   const [requestDate, setRequestDate] = useState(() => {
@@ -53,7 +68,7 @@ export function ProjectRegistration({
     return `${year}-${month}-${day}`
   })
   const [hallName, setHallName] = useState("")
-  const [status, setStatus] = useState("営業確認待ち")
+  const [hallId, setHallId] = useState("")
   
   // 商材情報の型定義
   type ProductInfo = {
@@ -62,8 +77,23 @@ export function ProjectRegistration({
     eventType: string
     eventProductName: string
     eventDate: string
+    mustSeeFlag: string // 必見フラグ (0か1)
+    mustSeePublication: string // 必見掲載 (要か不要)
+    publicationDate: string // 掲載日
+    publicationTime: string // 掲載時刻
     startTime: string
     endTime: string
+    status: string
+    companionCount: string
+    directorCount: string
+    mcCount: string
+    selectedCompanions: Set<string>
+    selectedDirectors: Set<string>
+    selectedMcs: Set<string>
+    transportationFeePerPerson: string
+    accommodationFeePerPerson: string
+    performanceFeeDiscount: string
+    eventBaseFeeDiscount: string
     isOpen: boolean
   }
 
@@ -79,8 +109,23 @@ export function ProjectRegistration({
       eventType: "トリニティガール",
       eventProductName: "",
       eventDate: `${year}-${month}-${day}`,
+      mustSeeFlag: "0",
+      mustSeePublication: "不要",
+      publicationDate: "",
+      publicationTime: "",
       startTime: "08:00",
       endTime: "15:00",
+      status: "見込み入力完了",
+      companionCount: "",
+      directorCount: "",
+      mcCount: "",
+      selectedCompanions: new Set(["未定"]),
+      selectedDirectors: new Set(["未定"]),
+      selectedMcs: new Set(["未定"]),
+      transportationFeePerPerson: "",
+      accommodationFeePerPerson: "",
+      performanceFeeDiscount: "",
+      eventBaseFeeDiscount: "",
       isOpen: true,
     }
   }
@@ -142,12 +187,126 @@ export function ProjectRegistration({
 
     return `${hours}時間${minutes.toString().padStart(2, "0")}分`
   }
-  const [selectedCompanions, setSelectedCompanions] = useState<Set<string>>(new Set())
-  const [selectedDirectors, setSelectedDirectors] = useState<Set<string>>(new Set())
-  const [selectedMcs, setSelectedMcs] = useState<Set<string>>(new Set())
-  const [transportationFeePerPerson, setTransportationFeePerPerson] = useState("")
-  const [accommodationFeePerPerson, setAccommodationFeePerPerson] = useState("")
-  const [eventBaseFee, setEventBaseFee] = useState("")
+
+  // 時間数を時間に変換する関数（各商材情報用）
+  const getDurationInHoursForProduct = (start: string, end: string): number => {
+    if (!start || !end) {
+      return 0
+    }
+
+    const [startHour, startMinute] = start.split(":").map(Number)
+    const [endHour, endMinute] = end.split(":").map(Number)
+
+    const startTotalMinutes = startHour * 60 + startMinute
+    const endTotalMinutes = endHour * 60 + endMinute
+
+    if (endTotalMinutes < startTotalMinutes) {
+      return 0
+    }
+
+    const diffMinutes = endTotalMinutes - startTotalMinutes
+    return diffMinutes / 60 // 時間に変換
+  }
+
+  // 選択状態の更新関数（各商材情報ごとに管理）
+  const updateSelectedCompanions = (index: number, name: string) => {
+    const productInfo = productInfos[index]
+    const newSelected = new Set(productInfo.selectedCompanions)
+    const maxCount = Number(productInfo.companionCount) || 0
+    
+    if (name === "未定") {
+      // 「未定」を選択する場合、他の選択肢をすべて解除
+      newSelected.clear()
+      newSelected.add("未定")
+    } else {
+      // 他の選択肢を選択する場合、「未定」を解除してから追加
+      newSelected.delete("未定")
+      if (newSelected.has(name)) {
+        newSelected.delete(name)
+        // すべて解除された場合は「未定」を選択
+        if (newSelected.size === 0) {
+          newSelected.add("未定")
+        }
+      } else {
+        // 人数制限をチェック（未定以外の選択数がmaxCountを超えないように）
+        const selectedWithoutUndecided = Array.from(newSelected).filter(n => n !== "未定")
+        if (maxCount > 0 && selectedWithoutUndecided.length >= maxCount) {
+          // 既に最大数に達している場合は追加しない
+          return
+        }
+        newSelected.add(name)
+      }
+    }
+    updateProductInfo(index, { selectedCompanions: newSelected })
+  }
+
+  const updateSelectedDirectors = (index: number, name: string) => {
+    const productInfo = productInfos[index]
+    const newSelected = new Set(productInfo.selectedDirectors)
+    const maxCount = Number(productInfo.directorCount) || 0
+    
+    if (name === "未定") {
+      // 「未定」を選択する場合、他の選択肢をすべて解除
+      newSelected.clear()
+      newSelected.add("未定")
+    } else {
+      // 他の選択肢を選択する場合、「未定」を解除してから追加
+      newSelected.delete("未定")
+      if (newSelected.has(name)) {
+        newSelected.delete(name)
+        // すべて解除された場合は「未定」を選択
+        if (newSelected.size === 0) {
+          newSelected.add("未定")
+        }
+      } else {
+        // 人数制限をチェック（未定以外の選択数がmaxCountを超えないように）
+        const selectedWithoutUndecided = Array.from(newSelected).filter(n => n !== "未定")
+        if (maxCount > 0 && selectedWithoutUndecided.length >= maxCount) {
+          // 既に最大数に達している場合は追加しない
+          return
+        }
+        newSelected.add(name)
+      }
+    }
+    updateProductInfo(index, { selectedDirectors: newSelected })
+  }
+
+  const updateSelectedMcs = (index: number, name: string) => {
+    const productInfo = productInfos[index]
+    const newSelected = new Set(productInfo.selectedMcs)
+    const maxCount = Number(productInfo.mcCount) || 0
+    
+    if (name === "未定") {
+      // 「未定」を選択する場合、他の選択肢をすべて解除
+      newSelected.clear()
+      newSelected.add("未定")
+    } else {
+      // 他の選択肢を選択する場合、「未定」を解除してから追加
+      newSelected.delete("未定")
+      if (newSelected.has(name)) {
+        newSelected.delete(name)
+        // すべて解除された場合は「未定」を選択
+        if (newSelected.size === 0) {
+          newSelected.add("未定")
+        }
+      } else {
+        // 人数制限をチェック（未定以外の選択数がmaxCountを超えないように）
+        const selectedWithoutUndecided = Array.from(newSelected).filter(n => n !== "未定")
+        if (maxCount > 0 && selectedWithoutUndecided.length >= maxCount) {
+          // 既に最大数に達している場合は追加しない
+          return
+        }
+        newSelected.add(name)
+      }
+    }
+    updateProductInfo(index, { selectedMcs: newSelected })
+  }
+  // 既存のstateを商材情報①と互換性を保つために残す（後方互換性のため）
+  const transportationFeePerPerson = productInfos[0]?.transportationFeePerPerson || ""
+  const accommodationFeePerPerson = productInfos[0]?.accommodationFeePerPerson || ""
+  const eventBaseFee = productInfos[0]?.eventBaseFee || ""
+  const performanceFeeDiscount = productInfos[0]?.performanceFeeDiscount || ""
+  const eventBaseFeeDiscount = productInfos[0]?.eventBaseFeeDiscount || ""
   const [calendarModalOpen, setCalendarModalOpen] = useState(false)
   const [modalPersonName, setModalPersonName] = useState("")
   const [modalPersonStatus, setModalPersonStatus] = useState<"available" | "busy">("available")
@@ -245,65 +404,46 @@ export function ProjectRegistration({
     "松本 MC": 7500,
   }
 
-  // 総コスト計算
-  const totalCompanionCost = useMemo(() => {
-    const durationHours = getDurationInHours()
-    return Array.from(selectedCompanions).reduce((total, name) => {
-      const hourlyRate = companionHourlyRates[name] || 0
-      return total + (hourlyRate * durationHours)
-    }, 0)
-  }, [selectedCompanions, startTime, endTime])
+  // 平均時給を計算する関数
+  const getAverageHourlyRate = (rates: { [key: string]: number }): number => {
+    const values = Object.values(rates)
+    if (values.length === 0) return 0
+    return values.reduce((sum, rate) => sum + rate, 0) / values.length
+  }
 
-  const totalDirectorCost = useMemo(() => {
-    const durationHours = getDurationInHours()
-    return Array.from(selectedDirectors).reduce((total, name) => {
-      const hourlyRate = directorHourlyRates[name] || 0
-      return total + (hourlyRate * durationHours)
-    }, 0)
-  }, [selectedDirectors, startTime, endTime])
+  const averageCompanionRate = getAverageHourlyRate(companionHourlyRates)
+  const averageDirectorRate = getAverageHourlyRate(directorHourlyRates)
+  const averageMcRate = getAverageHourlyRate(mcHourlyRates)
 
-  const totalMcCost = useMemo(() => {
-    const durationHours = getDurationInHours()
-    return Array.from(selectedMcs).reduce((total, name) => {
-      const hourlyRate = mcHourlyRates[name] || 0
-      return total + (hourlyRate * durationHours)
-    }, 0)
-  }, [selectedMcs, startTime, endTime])
+  // イベント区分に応じた基本料金を取得する関数
+  const getEventBaseFee = (eventType: string): number => {
+    switch (eventType) {
+      case "トリニティガール":
+        return 100000
+      default:
+        return 0
+    }
+  }
 
-  const totalCost = totalCompanionCost + totalDirectorCost + totalMcCost
-
-  // キャストの総人数
-  const totalCastCount = selectedCompanions.size + selectedDirectors.size + selectedMcs.size
-
-  // 交通費の合計
-  const totalTransportationFee = useMemo(() => {
-    const feePerPerson = Number(transportationFeePerPerson) || 0
-    return feePerPerson * totalCastCount
-  }, [transportationFeePerPerson, totalCastCount])
-
-  // 宿泊費の合計
-  const totalAccommodationFee = useMemo(() => {
-    const feePerPerson = Number(accommodationFeePerPerson) || 0
-    return feePerPerson * totalCastCount
-  }, [accommodationFeePerPerson, totalCastCount])
-
-  // 請求予定金額の合計
-  const totalBillingAmount = totalCost + totalTransportationFee + totalAccommodationFee + (Number(eventBaseFee) || 0)
+  // コスト計算は各商材情報ごとに行うため、ここでは削除
 
   const validateForm = (): boolean => {
     const newErrors: { [key: string]: string } = {}
     
-    if (!acquirerName.trim()) {
-      newErrors.acquirerName = "ホール担当営業を入力してください"
-    }
-    if (!requestDate) {
-      newErrors.requestDate = "依頼日を入力してください"
-    }
-    if (!hallName.trim()) {
-      newErrors.hallName = "ホール名を入力してください"
-    }
-    if (!status) {
-      newErrors.status = "ステータスを選択してください"
+    // 商材追加/編集モードでは基本情報のバリデーションをスキップ
+    if (!isProductMode) {
+      if (!companyName.trim()) {
+        newErrors.companyName = "法人名を入力してください"
+      }
+      if (!acquirerName.trim()) {
+        newErrors.acquirerName = "ホール担当営業を入力してください"
+      }
+      if (!requestDate) {
+        newErrors.requestDate = "依頼日を入力してください"
+      }
+      if (!hallName.trim()) {
+        newErrors.hallName = "ホール名を入力してください"
+      }
     }
     
     // 商材情報のバリデーション
@@ -313,6 +453,9 @@ export function ProjectRegistration({
       }
       if (!productInfo.eventDate) {
         newErrors[`eventDate-${index}`] = `商材情報${index + 1 === 1 ? "①" : index + 1 === 2 ? "②" : index + 1 === 3 ? "③" : index + 1 === 4 ? "④" : "⑤"}の開催日を入力してください`
+      }
+      if (!productInfo.status) {
+        newErrors[`status-${index}`] = `商材情報${index + 1 === 1 ? "①" : index + 1 === 2 ? "②" : index + 1 === 3 ? "③" : index + 1 === 4 ? "④" : "⑤"}のステータスを選択してください`
       }
     })
     
@@ -325,12 +468,374 @@ export function ProjectRegistration({
       return
     }
     
-    if (isEditMode && projectId) {
-      // 編集モード: 既存案件を更新
+    if (isProductAddMode && projectId) {
+      // 商材追加モード: 既存案件に新しい商材を追加
+      const productInfo = productInfos[0]
+      const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
+      // コンパニオンのコスト計算
+      const companionCost = (() => {
+        const selectedWithoutUndecided = Array.from(productInfo.selectedCompanions).filter(n => n !== "未定")
+        const hasUndecided = productInfo.selectedCompanions.has("未定")
+        const count = Number(productInfo.companionCount) || 0
+        
+        // 選択されているキャストのコスト
+        let cost = selectedWithoutUndecided.reduce((total, name) => {
+          const hourlyRate = companionHourlyRates[name] || 0
+          return total + (hourlyRate * durationHours)
+        }, 0)
+        
+        // 人数が入力されている場合、選択数が人数より少ない分の推定金額を計算
+        if (count > 0) {
+          const selectedCount = selectedWithoutUndecided.length
+          const undecidedCount = count - selectedCount
+          if (undecidedCount > 0) {
+            cost += averageCompanionRate * durationHours * undecidedCount
+          }
+        }
+        
+        return Math.round(cost)
+      })()
+      
+      // ディレクターのコスト計算
+      const directorCost = (() => {
+        const selectedWithoutUndecided = Array.from(productInfo.selectedDirectors).filter(n => n !== "未定")
+        const hasUndecided = productInfo.selectedDirectors.has("未定")
+        const count = Number(productInfo.directorCount) || 0
+        
+        // 選択されているキャストのコスト
+        let cost = selectedWithoutUndecided.reduce((total, name) => {
+          const hourlyRate = directorHourlyRates[name] || 0
+          return total + (hourlyRate * durationHours)
+        }, 0)
+        
+        // 人数が入力されている場合、選択数が人数より少ない分の推定金額を計算
+        if (count > 0) {
+          const selectedCount = selectedWithoutUndecided.length
+          const undecidedCount = count - selectedCount
+          if (undecidedCount > 0) {
+            cost += averageDirectorRate * durationHours * undecidedCount
+          }
+        }
+        
+        return Math.round(cost)
+      })()
+      
+      // MCのコスト計算
+      const mcCost = (() => {
+        const selectedWithoutUndecided = Array.from(productInfo.selectedMcs).filter(n => n !== "未定")
+        const hasUndecided = productInfo.selectedMcs.has("未定")
+        const count = Number(productInfo.mcCount) || 0
+        
+        // 選択されているキャストのコスト
+        let cost = selectedWithoutUndecided.reduce((total, name) => {
+          const hourlyRate = mcHourlyRates[name] || 0
+          return total + (hourlyRate * durationHours)
+        }, 0)
+        
+        // 「未定」が選択されている場合、人数から推定金額を計算
+        if (hasUndecided && count > 0) {
+          const selectedCount = selectedWithoutUndecided.length
+          const undecidedCount = count - selectedCount
+          if (undecidedCount > 0) {
+            cost += averageMcRate * durationHours * undecidedCount
+          }
+        }
+        
+        return cost
+      })()
+      const totalCost = companionCost + directorCost + mcCost
+      // 交通費・宿泊費の計算用：入力された人数の合計（未定を含む）
+      const totalCastCount = 
+        (Number(productInfo.companionCount) || 0) +
+        (Number(productInfo.directorCount) || 0) +
+        (Number(productInfo.mcCount) || 0)
+      const performanceFeeDiscountValue = Number(productInfo.performanceFeeDiscount) || 0
+      const performanceFeeAfterDiscount = Math.max(0, totalCost - performanceFeeDiscountValue)
+      const transportationFeePerPersonValue = Number(productInfo.transportationFeePerPerson) || 0
+      const totalTransportationFee = transportationFeePerPersonValue * totalCastCount
+      const accommodationFeePerPersonValue = Number(productInfo.accommodationFeePerPerson) || 0
+      const totalAccommodationFee = accommodationFeePerPersonValue * totalCastCount
+      const eventBaseFeeValue = getEventBaseFee(productInfo.eventType)
+      // ホールの割引金額を取得
+      const hall = hallName ? getHallByName(hallName) : null
+      const hallDiscountAmount = hall?.discountAmount || 0
+      // 手動入力の割引とホールの割引を合計
+      const manualDiscountValue = Number(productInfo.eventBaseFeeDiscount) || 0
+      const eventBaseFeeDiscountValue = hallDiscountAmount + manualDiscountValue
+      const eventBaseFeeAfterDiscount = Math.round(Math.max(0, eventBaseFeeValue - eventBaseFeeDiscountValue))
+      const estimatedBillingAmount = Math.round(performanceFeeAfterDiscount + totalTransportationFee + totalAccommodationFee + eventBaseFeeAfterDiscount)
+      
+      const existingProject = getProjectById(projectId)
+      if (!existingProject) {
+        addNotification("案件が見つかりませんでした")
+        return
+      }
+      
+      // 新しい商材として案件を作成（同じホール情報と案件Noを使用）
+      const existingProjectNumber = (existingProject as any).projectNumber
+      const newProductProject = {
+        projectName: productInfo.eventProductName || `${(existingProject as any).hallName || existingProject.clientName} - ${productInfo.category}`,
+        clientName: (existingProject as any).hallName || existingProject.clientName,
+        date: productInfo.eventDate.replace(/-/g, "/"),
+        venue: (existingProject as any).hallName || existingProject.clientName,
+        talent: (existingProject as any).salesPersonName || existingProject.talent,
+        estimateAmount: `¥${estimatedBillingAmount.toLocaleString()}`,
+        status: "proposed" as const,
+        salesPersonName: (existingProject as any).salesPersonName,
+        requestDate: (existingProject as any).requestDate,
+        hallName: (existingProject as any).hallName || existingProject.clientName,
+        projectStatus: productInfo.status,
+        category: productInfo.category,
+        eventType: productInfo.eventType,
+        eventProductName: productInfo.eventProductName,
+        eventDate: productInfo.eventDate.replace(/-/g, "/"),
+        mustSeeFlag: productInfo.mustSeeFlag,
+        mustSeePublication: productInfo.mustSeePublication,
+        publicationDate: productInfo.publicationDate ? productInfo.publicationDate.replace(/-/g, "/") : "",
+        publicationTime: productInfo.publicationTime,
+        estimatedBillingAmount: estimatedBillingAmount,
+        projectNumber: existingProjectNumber, // 既存の案件Noを使用
+        companyId: companyId || (existingProject as any).companyId, // 法人ID
+        companyName: companyName || (existingProject as any).companyName, // 法人名
+        hallId: hallId || (existingProject as any).hallId, // ホールID
+      } as any
+      
+      createProject(newProductProject)
+      addNotification("商材を追加しました")
+      router.push("/")
+    } else if (isProductEditMode && projectId) {
+      // 商材編集モード: 既存商材を更新
+      // 各商材情報ごとの請求予定金額を計算
+      const productInfo = productInfos[0]
+      const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
+      // コンパニオンのコスト計算
+      const companionCost = (() => {
+        const selectedWithoutUndecided = Array.from(productInfo.selectedCompanions).filter(n => n !== "未定")
+        const hasUndecided = productInfo.selectedCompanions.has("未定")
+        const count = Number(productInfo.companionCount) || 0
+        
+        // 選択されているキャストのコスト
+        let cost = selectedWithoutUndecided.reduce((total, name) => {
+          const hourlyRate = companionHourlyRates[name] || 0
+          return total + (hourlyRate * durationHours)
+        }, 0)
+        
+        // 人数が入力されている場合、選択数が人数より少ない分の推定金額を計算
+        if (count > 0) {
+          const selectedCount = selectedWithoutUndecided.length
+          const undecidedCount = count - selectedCount
+          if (undecidedCount > 0) {
+            cost += averageCompanionRate * durationHours * undecidedCount
+          }
+        }
+        
+        return Math.round(cost)
+      })()
+      
+      // ディレクターのコスト計算
+      const directorCost = (() => {
+        const selectedWithoutUndecided = Array.from(productInfo.selectedDirectors).filter(n => n !== "未定")
+        const hasUndecided = productInfo.selectedDirectors.has("未定")
+        const count = Number(productInfo.directorCount) || 0
+        
+        // 選択されているキャストのコスト
+        let cost = selectedWithoutUndecided.reduce((total, name) => {
+          const hourlyRate = directorHourlyRates[name] || 0
+          return total + (hourlyRate * durationHours)
+        }, 0)
+        
+        // 人数が入力されている場合、選択数が人数より少ない分の推定金額を計算
+        if (count > 0) {
+          const selectedCount = selectedWithoutUndecided.length
+          const undecidedCount = count - selectedCount
+          if (undecidedCount > 0) {
+            cost += averageDirectorRate * durationHours * undecidedCount
+          }
+        }
+        
+        return Math.round(cost)
+      })()
+      
+      // MCのコスト計算
+      const mcCost = (() => {
+        const selectedWithoutUndecided = Array.from(productInfo.selectedMcs).filter(n => n !== "未定")
+        const hasUndecided = productInfo.selectedMcs.has("未定")
+        const count = Number(productInfo.mcCount) || 0
+        
+        // 選択されているキャストのコスト
+        let cost = selectedWithoutUndecided.reduce((total, name) => {
+          const hourlyRate = mcHourlyRates[name] || 0
+          return total + (hourlyRate * durationHours)
+        }, 0)
+        
+        // 人数が入力されている場合、選択数が人数より少ない分の推定金額を計算
+        if (count > 0) {
+          const selectedCount = selectedWithoutUndecided.length
+          const undecidedCount = count - selectedCount
+          if (undecidedCount > 0) {
+            cost += averageMcRate * durationHours * undecidedCount
+          }
+        }
+        
+        return Math.round(cost)
+      })()
+      const totalCost = Math.round(companionCost + directorCost + mcCost)
+      const castCount = 
+        (productInfo.selectedCompanions.has("未定") ? 0 : productInfo.selectedCompanions.size) +
+        (productInfo.selectedDirectors.has("未定") ? 0 : productInfo.selectedDirectors.size) +
+        (productInfo.selectedMcs.has("未定") ? 0 : productInfo.selectedMcs.size)
+      const performanceFeeDiscountValue = Number(productInfo.performanceFeeDiscount) || 0
+      const performanceFeeAfterDiscount = Math.round(Math.max(0, totalCost - performanceFeeDiscountValue))
+      const transportationFeePerPersonValue = Number(productInfo.transportationFeePerPerson) || 0
+      const totalTransportationFee = Math.round(transportationFeePerPersonValue * castCount)
+      const accommodationFeePerPersonValue = Number(productInfo.accommodationFeePerPerson) || 0
+      const totalAccommodationFee = Math.round(accommodationFeePerPersonValue * castCount)
+      const eventBaseFeeValue = getEventBaseFee(productInfo.eventType)
+      // ホールの割引金額を取得
+      const hall = hallName ? getHallByName(hallName) : null
+      const hallDiscountAmount = hall?.discountAmount || 0
+      // 手動入力の割引とホールの割引を合計
+      const manualDiscountValue = Number(productInfo.eventBaseFeeDiscount) || 0
+      const eventBaseFeeDiscountValue = hallDiscountAmount + manualDiscountValue
+      const eventBaseFeeAfterDiscount = Math.round(Math.max(0, eventBaseFeeValue - eventBaseFeeDiscountValue))
+      const totalBillingAmount = Math.round(performanceFeeAfterDiscount + totalTransportationFee + totalAccommodationFee + eventBaseFeeAfterDiscount)
+      
+      const existingProject = getProjectById(projectId)
+      if (!existingProject) {
+        addNotification("案件が見つかりませんでした")
+        return
+      }
+      
       const updatedProject = {
-        projectName: productInfos[0]?.eventProductName || `${hallName} - ${productInfos[0]?.category || "イベント"}`,
+        projectName: productInfo.eventProductName || `${(existingProject as any).hallName || existingProject.clientName} - ${productInfo.category}`,
+        clientName: (existingProject as any).hallName || existingProject.clientName,
+        date: productInfo.eventDate.replace(/-/g, "/"),
+        venue: (existingProject as any).hallName || existingProject.clientName,
+        talent: (existingProject as any).salesPersonName || existingProject.talent,
+        estimateAmount: `¥${totalBillingAmount.toLocaleString()}`,
+        status: existingProject.status,
+        salesPersonName: (existingProject as any).salesPersonName,
+        requestDate: (existingProject as any).requestDate,
+        hallName: (existingProject as any).hallName || existingProject.clientName,
+        projectStatus: productInfo.status,
+        category: productInfo.category,
+        eventType: productInfo.eventType,
+        eventProductName: productInfo.eventProductName,
+        eventDate: productInfo.eventDate.replace(/-/g, "/"),
+        mustSeeFlag: productInfo.mustSeeFlag,
+        mustSeePublication: productInfo.mustSeePublication,
+        publicationDate: productInfo.publicationDate ? productInfo.publicationDate.replace(/-/g, "/") : "",
+        publicationTime: productInfo.publicationTime,
+        estimatedBillingAmount: totalBillingAmount,
+        companyId: companyId || (existingProject as any).companyId, // 法人ID
+        companyName: companyName || (existingProject as any).companyName, // 法人名
+        hallId: hallId || (existingProject as any).hallId, // ホールID
+      } as any
+      
+      updateProject(projectId, updatedProject)
+      addNotification("商材を更新しました")
+      router.push("/")
+    } else if (isEditMode && projectId) {
+      // 編集モード: 既存案件を更新
+      // 各商材情報ごとの請求予定金額を計算
+      const productInfo = productInfos[0]
+      const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
+      // コンパニオンのコスト計算
+      const companionCost = (() => {
+        const selectedWithoutUndecided = Array.from(productInfo.selectedCompanions).filter(n => n !== "未定")
+        const hasUndecided = productInfo.selectedCompanions.has("未定")
+        const count = Number(productInfo.companionCount) || 0
+        
+        // 選択されているキャストのコスト
+        let cost = selectedWithoutUndecided.reduce((total, name) => {
+          const hourlyRate = companionHourlyRates[name] || 0
+          return total + (hourlyRate * durationHours)
+        }, 0)
+        
+        // 人数が入力されている場合、選択数が人数より少ない分の推定金額を計算
+        if (count > 0) {
+          const selectedCount = selectedWithoutUndecided.length
+          const undecidedCount = count - selectedCount
+          if (undecidedCount > 0) {
+            cost += averageCompanionRate * durationHours * undecidedCount
+          }
+        }
+        
+        return Math.round(cost)
+      })()
+      
+      // ディレクターのコスト計算
+      const directorCost = (() => {
+        const selectedWithoutUndecided = Array.from(productInfo.selectedDirectors).filter(n => n !== "未定")
+        const hasUndecided = productInfo.selectedDirectors.has("未定")
+        const count = Number(productInfo.directorCount) || 0
+        
+        // 選択されているキャストのコスト
+        let cost = selectedWithoutUndecided.reduce((total, name) => {
+          const hourlyRate = directorHourlyRates[name] || 0
+          return total + (hourlyRate * durationHours)
+        }, 0)
+        
+        // 人数が入力されている場合、選択数が人数より少ない分の推定金額を計算
+        if (count > 0) {
+          const selectedCount = selectedWithoutUndecided.length
+          const undecidedCount = count - selectedCount
+          if (undecidedCount > 0) {
+            cost += averageDirectorRate * durationHours * undecidedCount
+          }
+        }
+        
+        return Math.round(cost)
+      })()
+      
+      // MCのコスト計算
+      const mcCost = (() => {
+        const selectedWithoutUndecided = Array.from(productInfo.selectedMcs).filter(n => n !== "未定")
+        const hasUndecided = productInfo.selectedMcs.has("未定")
+        const count = Number(productInfo.mcCount) || 0
+        
+        // 選択されているキャストのコスト
+        let cost = selectedWithoutUndecided.reduce((total, name) => {
+          const hourlyRate = mcHourlyRates[name] || 0
+          return total + (hourlyRate * durationHours)
+        }, 0)
+        
+        // 人数が入力されている場合、選択数が人数より少ない分の推定金額を計算
+        if (count > 0) {
+          const selectedCount = selectedWithoutUndecided.length
+          const undecidedCount = count - selectedCount
+          if (undecidedCount > 0) {
+            cost += averageMcRate * durationHours * undecidedCount
+          }
+        }
+        
+        return Math.round(cost)
+      })()
+      const totalCost = Math.round(companionCost + directorCost + mcCost)
+      const castCount = 
+        (productInfo.selectedCompanions.has("未定") ? 0 : productInfo.selectedCompanions.size) +
+        (productInfo.selectedDirectors.has("未定") ? 0 : productInfo.selectedDirectors.size) +
+        (productInfo.selectedMcs.has("未定") ? 0 : productInfo.selectedMcs.size)
+      const performanceFeeDiscountValue = Number(productInfo.performanceFeeDiscount) || 0
+      const performanceFeeAfterDiscount = Math.round(Math.max(0, totalCost - performanceFeeDiscountValue))
+      const transportationFeePerPersonValue = Number(productInfo.transportationFeePerPerson) || 0
+      const totalTransportationFee = Math.round(transportationFeePerPersonValue * castCount)
+      const accommodationFeePerPersonValue = Number(productInfo.accommodationFeePerPerson) || 0
+      const totalAccommodationFee = Math.round(accommodationFeePerPersonValue * castCount)
+      const eventBaseFeeValue = getEventBaseFee(productInfo.eventType)
+      // ホールの割引金額を取得
+      const hall = hallName ? getHallByName(hallName) : null
+      const hallDiscountAmount = hall?.discountAmount || 0
+      // 手動入力の割引とホールの割引を合計
+      const manualDiscountValue = Number(productInfo.eventBaseFeeDiscount) || 0
+      const eventBaseFeeDiscountValue = hallDiscountAmount + manualDiscountValue
+      const eventBaseFeeAfterDiscount = Math.round(Math.max(0, eventBaseFeeValue - eventBaseFeeDiscountValue))
+      const totalBillingAmount = Math.round(performanceFeeAfterDiscount + totalTransportationFee + totalAccommodationFee + eventBaseFeeAfterDiscount)
+      
+      const updatedProject = {
+        projectName: productInfo.eventProductName || `${hallName} - ${productInfo.category}`,
         clientName: hallName,
-        date: productInfos[0]?.eventDate.replace(/-/g, "/") || "",
+        date: productInfo.eventDate.replace(/-/g, "/"),
         venue: hallName,
         talent: acquirerName,
         estimateAmount: `¥${totalBillingAmount.toLocaleString()}`,
@@ -338,26 +843,115 @@ export function ProjectRegistration({
         salesPersonName: acquirerName,
         requestDate: requestDate.replace(/-/g, "/"),
         hallName: hallName,
-        projectStatus: status,
-        category: productInfos[0]?.category || "イベント",
-        eventType: productInfos[0]?.eventType || "トリニティガール",
-        eventProductName: productInfos[0]?.eventProductName || "",
-        eventDate: productInfos[0]?.eventDate.replace(/-/g, "/") || "",
+        projectStatus: productInfo.status,
+        category: productInfo.category,
+        eventType: productInfo.eventType,
+        eventProductName: productInfo.eventProductName,
+        eventDate: productInfo.eventDate.replace(/-/g, "/"),
         estimatedBillingAmount: totalBillingAmount,
-      }
+        companyId: companyId, // 法人ID
+        companyName: companyName, // 法人名
+        hallId: hallId, // ホールID
+      } as any
       
       updateProject(projectId, updatedProject)
       addNotification("案件を更新しました")
       router.push("/")
     } else {
-      // 新規作成モード: 各商材情報ごとに案件を作成
+      // 新規作成モード: 同じ基本情報を持つ商材には同じ案件Noを付与
+      // まず、案件Noを1つ生成（同じ基本情報なので1つの案件として扱う）
+      const allProjects = getProjects()
+      const newProjectNumber = generateProjectNumber(allProjects)
+      
       const newProjectsData = productInfos.map((productInfo) => {
         // 各商材情報の請求予定金額を計算
-        // 注意: 現在の実装では各商材情報ごとに独立したキャスティング情報を持っていないため、
-        // 暫定的に商材情報①の請求予定金額を使用（将来的には各商材情報ごとに計算する必要がある）
-        const estimatedBillingAmount = productInfo.id === productInfos[0].id 
-          ? totalBillingAmount 
-          : 0 // 暫定値として0を設定（将来的には各商材情報ごとに計算）
+        const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
+                // コンパニオンのコスト計算
+                const companionCost = (() => {
+                  const selectedWithoutUndecided = Array.from(productInfo.selectedCompanions).filter(n => n !== "未定")
+                  const hasUndecided = productInfo.selectedCompanions.has("未定")
+                  const count = Number(productInfo.companionCount) || 0
+                  
+                  // 選択されているキャストのコスト
+                  let cost = selectedWithoutUndecided.reduce((total, name) => {
+                    const hourlyRate = companionHourlyRates[name] || 0
+                    return total + (hourlyRate * durationHours)
+                  }, 0)
+                  
+                  // 「未定」が選択されている場合、人数から推定金額を計算
+                  if (hasUndecided && count > 0) {
+                    const selectedCount = selectedWithoutUndecided.length
+                    const undecidedCount = count - selectedCount
+                    if (undecidedCount > 0) {
+                      cost += averageCompanionRate * durationHours * undecidedCount
+                    }
+                  }
+                  
+                  return cost
+                })()
+                
+                // ディレクターのコスト計算
+                const directorCost = (() => {
+                  const selectedWithoutUndecided = Array.from(productInfo.selectedDirectors).filter(n => n !== "未定")
+                  const hasUndecided = productInfo.selectedDirectors.has("未定")
+                  const count = Number(productInfo.directorCount) || 0
+                  
+                  // 選択されているキャストのコスト
+                  let cost = selectedWithoutUndecided.reduce((total, name) => {
+                    const hourlyRate = directorHourlyRates[name] || 0
+                    return total + (hourlyRate * durationHours)
+                  }, 0)
+                  
+                  // 「未定」が選択されている場合、人数から推定金額を計算
+                  if (hasUndecided && count > 0) {
+                    const selectedCount = selectedWithoutUndecided.length
+                    const undecidedCount = count - selectedCount
+                    if (undecidedCount > 0) {
+                      cost += averageDirectorRate * durationHours * undecidedCount
+                    }
+                  }
+                  
+                  return cost
+                })()
+                
+                // MCのコスト計算
+                const mcCost = (() => {
+                  const selectedWithoutUndecided = Array.from(productInfo.selectedMcs).filter(n => n !== "未定")
+                  const hasUndecided = productInfo.selectedMcs.has("未定")
+                  const count = Number(productInfo.mcCount) || 0
+                  
+                  // 選択されているキャストのコスト
+                  let cost = selectedWithoutUndecided.reduce((total, name) => {
+                    const hourlyRate = mcHourlyRates[name] || 0
+                    return total + (hourlyRate * durationHours)
+                  }, 0)
+                  
+                  // 「未定」が選択されている場合、人数から推定金額を計算
+                  if (hasUndecided && count > 0) {
+                    const selectedCount = selectedWithoutUndecided.length
+                    const undecidedCount = count - selectedCount
+                    if (undecidedCount > 0) {
+                      cost += averageMcRate * durationHours * undecidedCount
+                    }
+                  }
+                  
+                  return cost
+                })()
+        const totalCost = companionCost + directorCost + mcCost
+        const castCount = 
+        (productInfo.selectedCompanions.has("未定") ? 0 : productInfo.selectedCompanions.size) +
+        (productInfo.selectedDirectors.has("未定") ? 0 : productInfo.selectedDirectors.size) +
+        (productInfo.selectedMcs.has("未定") ? 0 : productInfo.selectedMcs.size)
+        const performanceFeeDiscountValue = Number(productInfo.performanceFeeDiscount) || 0
+        const performanceFeeAfterDiscount = Math.max(0, totalCost - performanceFeeDiscountValue)
+        const transportationFeePerPersonValue = Number(productInfo.transportationFeePerPerson) || 0
+        const totalTransportationFee = transportationFeePerPersonValue * castCount
+        const accommodationFeePerPersonValue = Number(productInfo.accommodationFeePerPerson) || 0
+        const totalAccommodationFee = accommodationFeePerPersonValue * castCount
+        const eventBaseFeeValue = Number(productInfo.eventBaseFee) || 0
+        const eventBaseFeeDiscountValue = Number(productInfo.eventBaseFeeDiscount) || 0
+        const eventBaseFeeAfterDiscount = Math.max(0, eventBaseFeeValue - eventBaseFeeDiscountValue)
+        const estimatedBillingAmount = Math.round(performanceFeeAfterDiscount + totalTransportationFee + totalAccommodationFee + eventBaseFeeAfterDiscount)
         
         return {
           projectName: productInfo.eventProductName || `${hallName} - ${productInfo.category}`,
@@ -371,18 +965,26 @@ export function ProjectRegistration({
           salesPersonName: acquirerName,
           requestDate: requestDate.replace(/-/g, "/"),
           hallName: hallName,
-          projectStatus: status,
+          projectStatus: productInfo.status,
           category: productInfo.category,
           eventType: productInfo.eventType,
           eventProductName: productInfo.eventProductName,
           eventDate: productInfo.eventDate.replace(/-/g, "/"),
+          mustSeeFlag: productInfo.mustSeeFlag,
+          mustSeePublication: productInfo.mustSeePublication,
+          publicationDate: productInfo.publicationDate ? productInfo.publicationDate.replace(/-/g, "/") : "",
+          publicationTime: productInfo.publicationTime,
           estimatedBillingAmount: estimatedBillingAmount,
-        }
+          projectNumber: newProjectNumber, // 同じ案件Noを付与
+          companyId: companyId, // 法人ID
+          companyName: companyName, // 法人名
+          hallId: hallId, // ホールID
+        } as any
       })
       
       // 仮想DBに案件を作成
       createProjects(newProjectsData)
-      addNotification(`${newProjectsData.length}件の案件を作成しました`)
+      addNotification(`案件No ${newProjectNumber} で ${newProjectsData.length}件の商材を作成しました`)
       router.push("/")
     }
   }
@@ -438,18 +1040,51 @@ export function ProjectRegistration({
 
   // 編集モードで既存データを読み込む
   useEffect(() => {
-    if (isEditMode && projectId && getProjectById) {
+    if (isEditMode && projectId && getProjectById && getHallByName) {
       const project = getProjectById(projectId)
       if (project) {
         // 基本情報を読み込み
-        if (project.salesPersonName) setAcquirerName(project.salesPersonName)
         if (project.requestDate) {
           // YYYY/MM/DD形式をYYYY-MM-DD形式に変換
           const dateStr = project.requestDate.replace(/\//g, "-")
           setRequestDate(dateStr)
         }
-        if (project.hallName) setHallName(project.hallName)
-        if (project.projectStatus) setStatus(project.projectStatus)
+        // 法人情報を読み込み
+        if ((project as any).companyId) {
+          const company = getCompanyByCompanyId((project as any).companyId)
+          if (company) {
+            setCompanyId(company.companyId)
+            setCompanyName(company.name)
+            setSelectedCompanyId(company.id)
+          }
+        }
+        if (project.hallName) {
+          setHallName(project.hallName)
+          // ホール名からホール担当営業を自動設定
+          const hall = getHallByName(project.hallName)
+          if (hall) {
+            setHallId(hall.hallId)
+            setAcquirerName(hall.salesPersonName)
+            // ホールから法人IDを取得
+            if (hall.companyId && !selectedCompanyId) {
+              const company = getCompanyById(hall.companyId)
+              if (company) {
+                setCompanyId(company.companyId)
+                setCompanyName(company.name)
+                setSelectedCompanyId(company.id)
+              }
+            }
+          } else if (project.salesPersonName) {
+            // ホールデータにない場合は既存の値を保持
+            setAcquirerName(project.salesPersonName)
+            // 既存のホールIDがあれば設定
+            if ((project as any).hallId) {
+              setHallId((project as any).hallId)
+            }
+          }
+        } else if (project.salesPersonName) {
+          setAcquirerName(project.salesPersonName)
+        }
         
         // 商材情報を読み込み
         if (project.category && project.eventType && project.eventProductName && project.eventDate) {
@@ -460,14 +1095,29 @@ export function ProjectRegistration({
             eventType: project.eventType,
             eventProductName: project.eventProductName,
             eventDate: eventDateStr,
+            mustSeeFlag: (project as any).mustSeeFlag || "0",
+            mustSeePublication: (project as any).mustSeePublication || "不要",
+            publicationDate: (project as any).publicationDate ? (project as any).publicationDate.replace(/\//g, "-") : "",
+            publicationTime: (project as any).publicationTime || "",
             startTime: "08:00", // デフォルト値（将来的には保存する必要がある）
             endTime: "15:00", // デフォルト値（将来的には保存する必要がある）
+            status: project.projectStatus || "見込み入力完了",
+            companionCount: "",
+            directorCount: "",
+            mcCount: "",
+            selectedCompanions: new Set(["未定"]),
+            selectedDirectors: new Set(["未定"]),
+            selectedMcs: new Set(["未定"]),
+            transportationFeePerPerson: "",
+            accommodationFeePerPerson: "",
+            performanceFeeDiscount: "",
+            eventBaseFeeDiscount: "",
             isOpen: true,
           }])
         }
       }
     }
-  }, [isEditMode, projectId, getProjectById])
+  }, [isEditMode, projectId, getProjectById, getHallByName])
 
   useEffect(() => {
     if (projectData.date) {
@@ -579,7 +1229,7 @@ export function ProjectRegistration({
     return `${modalCurrentWeekStart.getMonth() + 1}/${modalCurrentWeekStart.getDate()} - ${endDate.getMonth() + 1}/${endDate.getDate()}, ${modalCurrentWeekStart.getFullYear()}`
   }, [modalCurrentWeekStart])
 
-  const handleOpenCalendarModal = (personName: string, status: "available" | "busy", personType: "companion" | "director" | "mc") => {
+  const handleOpenCalendarModal = (personName: string, status: "available" | "busy", personType: "companion" | "director" | "mc", productIndex: number = 0) => {
     setModalPersonName(personName)
     setModalPersonStatus(status)
     setModalPersonType(personType)
@@ -903,16 +1553,157 @@ export function ProjectRegistration({
         >
           <ChevronLeft className="h-5 w-5" />
         </Button>
-        <h1 className="text-3xl font-bold text-slate-900">{isEditMode ? "案件編集" : "新規案件作成"}</h1>
+        <h1 className="text-3xl font-bold text-slate-900">
+          {isProductAddMode ? "商材追加" : isProductEditMode ? "商材編集" : isEditMode ? "案件編集" : "新規案件作成"}
+        </h1>
       </div>
 
       {/* Step 1: Basic Info */}
+      {!isProductMode && (
       <Card>
       <CardHeader>
           <h3 className="text-lg font-semibold text-slate-900">基本情報</h3>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="companyName">法人名</Label>
+              <Popover open={companySearchOpen} onOpenChange={setCompanySearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={companySearchOpen}
+                    className={`w-full justify-between ${errors.companyName ? "border-red-500" : ""}`}
+                  >
+                    {companyName || "法人名を検索..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0" align="start">
+                  <Command>
+                    <CommandInput 
+                      placeholder="法人名を検索..." 
+                      value={companySearchQuery}
+                      onValueChange={setCompanySearchQuery}
+                    />
+                    <CommandList>
+                      <CommandEmpty>法人が見つかりませんでした</CommandEmpty>
+                      <CommandGroup>
+                        {searchCompanies(companySearchQuery).map((company) => (
+                          <CommandItem
+                            key={company.id}
+                            value={company.name}
+                            onSelect={() => {
+                              setCompanyName(company.name)
+                              setCompanyId(company.companyId)
+                              setSelectedCompanyId(company.id)
+                              setCompanySearchOpen(false)
+                              setCompanySearchQuery("")
+                              // 法人を変更したらホール名をリセット
+                              setHallName("")
+                              setAcquirerName("")
+                              if (errors.companyName) {
+                                setErrors({ ...errors, companyName: "" })
+                              }
+                            }}
+                          >
+                            <Check
+                              className={`mr-2 h-4 w-4 ${companyName === company.name ? "opacity-100" : "opacity-0"}`}
+                            />
+                            <div className="flex flex-col">
+                              <span>{company.name}</span>
+                              <span className="text-xs text-slate-500">法人ID: {company.companyId}</span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {errors.companyName && (
+                <p className="text-sm text-red-600">{errors.companyName}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="companyId">法人ID</Label>
+              <Input
+                id="companyId"
+                value={companyId}
+                disabled
+                className="bg-slate-50"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="hallName">ホール名</Label>
+              <Popover open={hallSearchOpen} onOpenChange={setHallSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={hallSearchOpen}
+                    className={`w-full justify-between ${errors.hallName ? "border-red-500" : ""}`}
+                  >
+                    {hallName || "ホール名を検索..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0" align="start">
+                  <Command>
+                    <CommandInput 
+                      placeholder="ホール名を検索..." 
+                      value={hallSearchQuery}
+                      onValueChange={setHallSearchQuery}
+                    />
+                    <CommandList>
+                      <CommandEmpty>ホールが見つかりませんでした</CommandEmpty>
+                      <CommandGroup>
+                        {searchHalls(hallSearchQuery, selectedCompanyId || undefined).map((hall) => (
+                          <CommandItem
+                            key={hall.id}
+                            value={hall.name}
+                            onSelect={() => {
+                              setHallName(hall.name)
+                              setHallId(hall.hallId)
+                              setAcquirerName(hall.salesPersonName)
+                              setHallSearchOpen(false)
+                              setHallSearchQuery("")
+                              if (errors.hallName) {
+                                setErrors({ ...errors, hallName: "" })
+                              }
+                              if (errors.acquirerName) {
+                                setErrors({ ...errors, acquirerName: "" })
+                              }
+                            }}
+                          >
+                            <Check
+                              className={`mr-2 h-4 w-4 ${hallName === hall.name ? "opacity-100" : "opacity-0"}`}
+                            />
+                            <div className="flex flex-col">
+                              <span>{hall.name}</span>
+                              <span className="text-xs text-slate-500">担当: {hall.salesPersonName}</span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {errors.hallName && (
+                <p className="text-sm text-red-600">{errors.hallName}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="hallId">ホールID</Label>
+              <Input
+                id="hallId"
+                value={hallId}
+                disabled
+                className="bg-slate-50"
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="acquirerName">ホール担当営業</Label>
               <Input
@@ -949,53 +1740,10 @@ export function ProjectRegistration({
                 <p className="text-sm text-red-600">{errors.requestDate}</p>
               )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="hallName">ホール名</Label>
-              <Input
-                id="hallName"
-                value={hallName}
-                onChange={(e) => {
-                  setHallName(e.target.value)
-                  if (errors.hallName) {
-                    setErrors({ ...errors, hallName: "" })
-                  }
-                }}
-                placeholder="例: マルハン渋谷店"
-                className={errors.hallName ? "border-red-500" : ""}
-              />
-              {errors.hallName && (
-                <p className="text-sm text-red-600">{errors.hallName}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="status">ステータス</Label>
-              <Select
-                value={status}
-                onValueChange={(value) => {
-                  setStatus(value)
-                  if (errors.status) {
-                    setErrors({ ...errors, status: "" })
-                  }
-                }}
-              >
-                <SelectTrigger id="status" className={errors.status ? "border-red-500" : ""}>
-                  <SelectValue placeholder="ステータスを選択してください" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="営業確認待ち">営業確認待ち</SelectItem>
-                  <SelectItem value="営業依頼中">営業依頼中</SelectItem>
-                  <SelectItem value="手配中">手配中</SelectItem>
-                  <SelectItem value="手配完了">手配完了</SelectItem>
-                  <SelectItem value="キャンセル">キャンセル</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.status && (
-                <p className="text-sm text-red-600">{errors.status}</p>
-              )}
-            </div>
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* 商材情報 */}
       {productInfos.map((productInfo, index) => {
@@ -1180,6 +1928,84 @@ export function ProjectRegistration({
                 className="bg-slate-50"
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor={`mustSeeFlag-${productInfo.id}`}>必見フラグ</Label>
+              <Select
+                value={productInfo.mustSeeFlag}
+                onValueChange={(value) => updateProductInfo(index, { mustSeeFlag: value })}
+              >
+                <SelectTrigger id={`mustSeeFlag-${productInfo.id}`}>
+                  <SelectValue placeholder="選択してください" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">0</SelectItem>
+                  <SelectItem value="1">1</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`mustSeePublication-${productInfo.id}`}>必見掲載</Label>
+              <Select
+                value={productInfo.mustSeePublication}
+                onValueChange={(value) => updateProductInfo(index, { mustSeePublication: value })}
+              >
+                <SelectTrigger id={`mustSeePublication-${productInfo.id}`}>
+                  <SelectValue placeholder="選択してください" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="要">要</SelectItem>
+                  <SelectItem value="不要">不要</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`publicationDate-${productInfo.id}`}>必見掲載日</Label>
+              <Input
+                id={`publicationDate-${productInfo.id}`}
+                type="date"
+                value={productInfo.publicationDate}
+                onChange={(e) => updateProductInfo(index, { publicationDate: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`publicationTime-${productInfo.id}`}>必見掲載時刻</Label>
+              <Input
+                id={`publicationTime-${productInfo.id}`}
+                type="time"
+                value={productInfo.publicationTime}
+                onChange={(e) => updateProductInfo(index, { publicationTime: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`status-${productInfo.id}`}>ステータス</Label>
+              <Select
+                value={productInfo.status}
+                onValueChange={(value) => {
+                  updateProductInfo(index, { status: value })
+                  const errorKey = `status-${index}`
+                  if (errors[errorKey]) {
+                    const newErrors = { ...errors }
+                    delete newErrors[errorKey]
+                    setErrors(newErrors)
+                  }
+                }}
+              >
+                <SelectTrigger id={`status-${productInfo.id}`} className={errors[`status-${index}`] ? "border-red-500" : ""}>
+                  <SelectValue placeholder="ステータスを選択してください" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="見込み入力完了">見込み入力完了</SelectItem>
+                  <SelectItem value="見積送付完了">見積送付完了</SelectItem>
+                  <SelectItem value="受注済み">受注済み</SelectItem>
+                  <SelectItem value="手配中">手配中</SelectItem>
+                  <SelectItem value="手配完了">手配完了</SelectItem>
+                  <SelectItem value="キャンセル">キャンセル</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors[`status-${index}`] && (
+                <p className="text-sm text-red-600">{errors[`status-${index}`]}</p>
+              )}
+            </div>
           </div>
           </div>
           <div className="space-y-4">
@@ -1190,14 +2016,68 @@ export function ProjectRegistration({
             <div className="space-y-4 pt-2">
               {/* コンパニオン */}
               <div className="space-y-4 bg-rose-50/50 border border-rose-200/50 rounded-lg p-4">
-                <Label className="text-base font-semibold">コンパニオン</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">コンパニオン</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor={`companionCount-${productInfo.id}`} className="text-sm text-slate-700">
+                      人数:
+                    </Label>
+                    <Input
+                      id={`companionCount-${productInfo.id}`}
+                      type="number"
+                      min="0"
+                      value={productInfo.companionCount}
+                      onChange={(e) => {
+                        const count = e.target.value
+                        updateProductInfo(index, { companionCount: count })
+                        // 人数が0になった場合、選択をクリア
+                        if (count === "0" || count === "") {
+                          updateProductInfo(index, { selectedCompanions: new Set(["未定"]) })
+                        }
+                      }}
+                      className="w-20"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
                 
+                {Number(productInfo.companionCount) > 0 && (
+                  <>
+                    {/* 未定選択肢 */}
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-3 gap-3">
+                    <div
+                      className={`p-4 border-2 rounded-lg transition-all cursor-pointer ${
+                        productInfo.selectedCompanions.has("未定")
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-slate-200 hover:border-slate-300"
+                      }`}
+                      onClick={() => {
+                        updateSelectedCompanions(index, "未定")
+                      }}
+                    >
+                      <div className="w-full text-left">
+                        <div className="flex items-center gap-2">
+                          <div className="font-medium text-slate-900">未定</div>
+                          {productInfo.selectedCompanions.has("未定") && (
+                            <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                          )}
+                        </div>
+                        <Badge variant="outline" className="mt-2">
+                          未定
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* 専属コンパニオン */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">専属</Label>
                   <div className="grid grid-cols-3 gap-3">
                     {talents.map((talent) => {
-                      const isSelected = selectedCompanions.has(talent.name)
+                      const isSelected = productInfo.selectedCompanions.has(talent.name)
+                      const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
                       return (
                         <div
                           key={talent.name}
@@ -1210,13 +2090,7 @@ export function ProjectRegistration({
                           }`}
                           onClick={() => {
                             if (talent.status === "busy") return // 埋まっている場合は選択不可
-                            const newSelected = new Set(selectedCompanions)
-                            if (isSelected) {
-                              newSelected.delete(talent.name)
-                            } else {
-                              newSelected.add(talent.name)
-                            }
-                            setSelectedCompanions(newSelected)
+                            updateSelectedCompanions(index, talent.name)
                           }}
                         >
                           <div className="w-full text-left">
@@ -1241,13 +2115,13 @@ export function ProjectRegistration({
                             </Badge>
                             <div className="mt-2 text-sm text-slate-900">
                               <span className="text-slate-600">予想金額: </span>
-                              <span className="font-semibold">¥{((companionHourlyRates[talent.name] || 0) * getDurationInHours()).toLocaleString()}</span>
+                              <span className="font-semibold">¥{((companionHourlyRates[talent.name] || 0) * durationHours).toLocaleString()}</span>
                             </div>
                           </div>
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
-                              handleOpenCalendarModal(talent.name, talent.status, "companion")
+                              handleOpenCalendarModal(talent.name, talent.status, "companion", index)
                             }}
                             className="mt-2 text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
                           >
@@ -1265,7 +2139,8 @@ export function ProjectRegistration({
                   <Label className="text-sm font-medium text-slate-700">外部</Label>
                   <div className="grid grid-cols-3 gap-3">
                     {externalCompanions.map((companion) => {
-                      const isSelected = selectedCompanions.has(companion)
+                      const isSelected = productInfo.selectedCompanions.has(companion)
+                      const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
                       return (
                         <div
                           key={companion}
@@ -1275,13 +2150,7 @@ export function ProjectRegistration({
                               : "border-slate-200 hover:border-slate-300"
                           }`}
                           onClick={() => {
-                            const newSelected = new Set(selectedCompanions)
-                            if (isSelected) {
-                              newSelected.delete(companion)
-                            } else {
-                              newSelected.add(companion)
-                            }
-                            setSelectedCompanions(newSelected)
+                            updateSelectedCompanions(index, companion)
                           }}
                         >
                           <div className="w-full text-left">
@@ -1296,7 +2165,7 @@ export function ProjectRegistration({
                             </Badge>
                             <div className="mt-2 text-sm text-slate-900">
                               <span className="text-slate-600">予想金額: </span>
-                              <span className="font-semibold">¥{((companionHourlyRates[companion] || 0) * getDurationInHours()).toLocaleString()}</span>
+                              <span className="font-semibold">¥{((companionHourlyRates[companion] || 0) * durationHours).toLocaleString()}</span>
                             </div>
                           </div>
                         </div>
@@ -1304,18 +2173,74 @@ export function ProjectRegistration({
                     })}
                   </div>
                 </div>
+                  </>
+                )}
               </div>
 
               {/* ディレクター */}
               <div className="space-y-4 bg-sky-50/50 border border-sky-200/50 rounded-lg p-4">
-                <Label className="text-base font-semibold">ディレクター</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">ディレクター</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor={`directorCount-${productInfo.id}`} className="text-sm text-slate-700">
+                      人数:
+                    </Label>
+                    <Input
+                      id={`directorCount-${productInfo.id}`}
+                      type="number"
+                      min="0"
+                      value={productInfo.directorCount}
+                      onChange={(e) => {
+                        const count = e.target.value
+                        updateProductInfo(index, { directorCount: count })
+                        // 人数が0になった場合、選択をクリア
+                        if (count === "0" || count === "") {
+                          updateProductInfo(index, { selectedDirectors: new Set(["未定"]) })
+                        }
+                      }}
+                      className="w-20"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
                 
+                {Number(productInfo.directorCount) > 0 && (
+                  <>
+                    {/* 未定選択肢 */}
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-3 gap-3">
+                    <div
+                      className={`p-4 border-2 rounded-lg transition-all cursor-pointer ${
+                        productInfo.selectedDirectors.has("未定")
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-slate-200 hover:border-slate-300"
+                      }`}
+                      onClick={() => {
+                        updateSelectedDirectors(index, "未定")
+                      }}
+                    >
+                      <div className="w-full text-left">
+                        <div className="flex items-center gap-2">
+                          <div className="font-medium text-slate-900">未定</div>
+                          {productInfo.selectedDirectors.has("未定") && (
+                            <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                          )}
+                        </div>
+                        <Badge variant="outline" className="mt-2">
+                          未定
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* 専属ディレクター */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">専属</Label>
                   <div className="grid grid-cols-3 gap-3">
                     {directors.map((director) => {
-                      const isSelected = selectedDirectors.has(director.name)
+                      const isSelected = productInfo.selectedDirectors.has(director.name)
+                      const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
                       return (
                         <div
                           key={director.name}
@@ -1328,13 +2253,7 @@ export function ProjectRegistration({
                           }`}
                           onClick={() => {
                             if (director.status === "busy") return // 埋まっている場合は選択不可
-                            const newSelected = new Set(selectedDirectors)
-                            if (isSelected) {
-                              newSelected.delete(director.name)
-                            } else {
-                              newSelected.add(director.name)
-                            }
-                            setSelectedDirectors(newSelected)
+                            updateSelectedDirectors(index, director.name)
                           }}
                         >
                           <div className="w-full text-left">
@@ -1359,13 +2278,13 @@ export function ProjectRegistration({
                             </Badge>
                             <div className="mt-2 text-sm text-slate-900">
                               <span className="text-slate-600">予想金額: </span>
-                              <span className="font-semibold">¥{((directorHourlyRates[director.name] || 0) * getDurationInHours()).toLocaleString()}</span>
+                              <span className="font-semibold">¥{((directorHourlyRates[director.name] || 0) * durationHours).toLocaleString()}</span>
                             </div>
                           </div>
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
-                              handleOpenCalendarModal(director.name, director.status, "director")
+                              handleOpenCalendarModal(director.name, director.status, "director", index)
                             }}
                             className="mt-2 text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
                           >
@@ -1383,7 +2302,8 @@ export function ProjectRegistration({
                   <Label className="text-sm font-medium text-slate-700">外部</Label>
                   <div className="grid grid-cols-3 gap-3">
                     {externalDirectors.map((director) => {
-                      const isSelected = selectedDirectors.has(director)
+                      const isSelected = productInfo.selectedDirectors.has(director)
+                      const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
                       return (
                         <div
                           key={director}
@@ -1393,13 +2313,7 @@ export function ProjectRegistration({
                               : "border-slate-200 hover:border-slate-300"
                           }`}
                           onClick={() => {
-                            const newSelected = new Set(selectedDirectors)
-                            if (isSelected) {
-                              newSelected.delete(director)
-                            } else {
-                              newSelected.add(director)
-                            }
-                            setSelectedDirectors(newSelected)
+                            updateSelectedDirectors(index, director)
                           }}
                         >
                           <div className="w-full text-left">
@@ -1414,7 +2328,7 @@ export function ProjectRegistration({
                             </Badge>
                             <div className="mt-2 text-sm text-slate-900">
                               <span className="text-slate-600">予想金額: </span>
-                              <span className="font-semibold">¥{((directorHourlyRates[director] || 0) * getDurationInHours()).toLocaleString()}</span>
+                              <span className="font-semibold">¥{((directorHourlyRates[director] || 0) * durationHours).toLocaleString()}</span>
                             </div>
                           </div>
                         </div>
@@ -1422,18 +2336,74 @@ export function ProjectRegistration({
                     })}
                   </div>
                 </div>
+                  </>
+                )}
               </div>
 
               {/* MC */}
               <div className="space-y-4 bg-emerald-50/50 border border-emerald-200/50 rounded-lg p-4">
-                <Label className="text-base font-semibold">MC</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">MC</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor={`mcCount-${productInfo.id}`} className="text-sm text-slate-700">
+                      人数:
+                    </Label>
+                    <Input
+                      id={`mcCount-${productInfo.id}`}
+                      type="number"
+                      min="0"
+                      value={productInfo.mcCount}
+                      onChange={(e) => {
+                        const count = e.target.value
+                        updateProductInfo(index, { mcCount: count })
+                        // 人数が0になった場合、選択をクリア
+                        if (count === "0" || count === "") {
+                          updateProductInfo(index, { selectedMcs: new Set(["未定"]) })
+                        }
+                      }}
+                      className="w-20"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
                 
+                {Number(productInfo.mcCount) > 0 && (
+                  <>
+                    {/* 未定選択肢 */}
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-3 gap-3">
+                    <div
+                      className={`p-4 border-2 rounded-lg transition-all cursor-pointer ${
+                        productInfo.selectedMcs.has("未定")
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-slate-200 hover:border-slate-300"
+                      }`}
+                      onClick={() => {
+                        updateSelectedMcs(index, "未定")
+                      }}
+                    >
+                      <div className="w-full text-left">
+                        <div className="flex items-center gap-2">
+                          <div className="font-medium text-slate-900">未定</div>
+                          {productInfo.selectedMcs.has("未定") && (
+                            <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                          )}
+                        </div>
+                        <Badge variant="outline" className="mt-2">
+                          未定
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* 専属MC */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">専属</Label>
                   <div className="grid grid-cols-3 gap-3">
                     {mcs.map((mc) => {
-                      const isSelected = selectedMcs.has(mc.name)
+                      const isSelected = productInfo.selectedMcs.has(mc.name)
+                      const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
                       return (
                         <div
                           key={mc.name}
@@ -1446,13 +2416,7 @@ export function ProjectRegistration({
                           }`}
                           onClick={() => {
                             if (mc.status === "busy") return // 埋まっている場合は選択不可
-                            const newSelected = new Set(selectedMcs)
-                            if (isSelected) {
-                              newSelected.delete(mc.name)
-                            } else {
-                              newSelected.add(mc.name)
-                            }
-                            setSelectedMcs(newSelected)
+                            updateSelectedMcs(index, mc.name)
                           }}
                         >
                           <div className="w-full text-left">
@@ -1477,13 +2441,13 @@ export function ProjectRegistration({
                             </Badge>
                             <div className="mt-2 text-sm text-slate-900">
                               <span className="text-slate-600">予想金額: </span>
-                              <span className="font-semibold">¥{((mcHourlyRates[mc.name] || 0) * getDurationInHours()).toLocaleString()}</span>
+                              <span className="font-semibold">¥{((mcHourlyRates[mc.name] || 0) * durationHours).toLocaleString()}</span>
                             </div>
                           </div>
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
-                              handleOpenCalendarModal(mc.name, mc.status, "mc")
+                              handleOpenCalendarModal(mc.name, mc.status, "mc", index)
                             }}
                             className="mt-2 text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
                           >
@@ -1501,7 +2465,8 @@ export function ProjectRegistration({
                   <Label className="text-sm font-medium text-slate-700">外部</Label>
                   <div className="grid grid-cols-3 gap-3">
                     {externalMcs.map((mc) => {
-                      const isSelected = selectedMcs.has(mc)
+                      const isSelected = productInfo.selectedMcs.has(mc)
+                      const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
                       return (
                         <div
                           key={mc}
@@ -1511,13 +2476,7 @@ export function ProjectRegistration({
                               : "border-slate-200 hover:border-slate-300"
                           }`}
                           onClick={() => {
-                            const newSelected = new Set(selectedMcs)
-                            if (isSelected) {
-                              newSelected.delete(mc)
-                            } else {
-                              newSelected.add(mc)
-                            }
-                            setSelectedMcs(newSelected)
+                            updateSelectedMcs(index, mc)
                           }}
                         >
                           <div className="w-full text-left">
@@ -1532,12 +2491,45 @@ export function ProjectRegistration({
                             </Badge>
                             <div className="mt-2 text-sm text-slate-900">
                               <span className="text-slate-600">予想金額: </span>
-                              <span className="font-semibold">¥{((mcHourlyRates[mc] || 0) * getDurationInHours()).toLocaleString()}</span>
+                              <span className="font-semibold">¥{((mcHourlyRates[mc] || 0) * durationHours).toLocaleString()}</span>
                             </div>
                           </div>
                         </div>
                       )
                     })}
+                  </div>
+                </div>
+                  </>
+                )}
+              </div>
+
+              {/* 交通費・宿泊費 */}
+              <div className="space-y-4 bg-slate-50/50 border border-slate-200/50 rounded-lg p-4">
+                <Label className="text-base font-semibold">交通費・宿泊費</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor={`transportationFeePerPerson-${productInfo.id}`} className="text-sm text-slate-700">
+                      一人当たりの交通費
+                    </Label>
+                    <Input
+                      id={`transportationFeePerPerson-${productInfo.id}`}
+                      type="number"
+                      value={productInfo.transportationFeePerPerson}
+                      onChange={(e) => updateProductInfo(index, { transportationFeePerPerson: e.target.value })}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`accommodationFeePerPerson-${productInfo.id}`} className="text-sm text-slate-700">
+                      一人当たりの宿泊費
+                    </Label>
+                    <Input
+                      id={`accommodationFeePerPerson-${productInfo.id}`}
+                      type="number"
+                      value={productInfo.accommodationFeePerPerson}
+                      onChange={(e) => updateProductInfo(index, { accommodationFeePerPerson: e.target.value })}
+                      placeholder="0"
+                    />
                   </div>
                 </div>
               </div>
@@ -1552,101 +2544,359 @@ export function ProjectRegistration({
               <div className="border-b border-slate-300 w-full"></div>
             </div>
             <div className="space-y-4 pt-2">
-              {/* 出演料 */}
-              <div className="bg-slate-50/50 border border-slate-200/50 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold text-slate-900">出演料</Label>
-                  <div className="text-xl font-bold text-slate-900">
-                    ¥{totalCost.toLocaleString()}
-                  </div>
-                </div>
-              </div>
-
-              {/* 一人当たりの交通費 */}
-              <div className="bg-slate-50/50 border border-slate-200/50 rounded-lg p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex-1">
-                    <Label htmlFor={`transportationFeePerPerson-${productInfo.id}`} className="text-base font-semibold text-slate-900">
-                      一人当たりの交通費
-                    </Label>
-                    <Input
-                      id={`transportationFeePerPerson-${productInfo.id}`}
-                      type="number"
-                      value={transportationFeePerPerson}
-                      onChange={(e) => setTransportationFeePerPerson(e.target.value)}
-                      placeholder="0"
-                      className="mt-2"
-                    />
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm text-slate-600 mb-1">合計</div>
-                    <div className="text-xl font-bold text-slate-900">
-                      ¥{totalTransportationFee.toLocaleString()}
+              {(() => {
+                // 各商材情報ごとのコスト計算
+                const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
+                // コンパニオンのコスト計算
+                const companionCost = (() => {
+                  const selectedWithoutUndecided = Array.from(productInfo.selectedCompanions).filter(n => n !== "未定")
+                  const hasUndecided = productInfo.selectedCompanions.has("未定")
+                  const count = Number(productInfo.companionCount) || 0
+                  
+                  // 選択されているキャストのコスト
+                  let cost = selectedWithoutUndecided.reduce((total, name) => {
+                    const hourlyRate = companionHourlyRates[name] || 0
+                    return total + (hourlyRate * durationHours)
+                  }, 0)
+                  
+                  // 人数が入力されている場合、選択数が人数より少ない分の推定金額を計算
+                  if (count > 0) {
+                    const selectedCount = selectedWithoutUndecided.length
+                    const undecidedCount = count - selectedCount
+                    if (undecidedCount > 0) {
+                      cost += averageCompanionRate * durationHours * undecidedCount
+                    }
+                  }
+                  
+                  return Math.round(cost)
+                })()
+                
+                // ディレクターのコスト計算
+                const directorCost = (() => {
+                  const selectedWithoutUndecided = Array.from(productInfo.selectedDirectors).filter(n => n !== "未定")
+                  const hasUndecided = productInfo.selectedDirectors.has("未定")
+                  const count = Number(productInfo.directorCount) || 0
+                  
+                  // 選択されているキャストのコスト
+                  let cost = selectedWithoutUndecided.reduce((total, name) => {
+                    const hourlyRate = directorHourlyRates[name] || 0
+                    return total + (hourlyRate * durationHours)
+                  }, 0)
+                  
+                  // 人数が入力されている場合、選択数が人数より少ない分の推定金額を計算
+                  if (count > 0) {
+                    const selectedCount = selectedWithoutUndecided.length
+                    const undecidedCount = count - selectedCount
+                    if (undecidedCount > 0) {
+                      cost += averageDirectorRate * durationHours * undecidedCount
+                    }
+                  }
+                  
+                  return Math.round(cost)
+                })()
+                
+                // MCのコスト計算
+                const mcCost = (() => {
+                  const selectedWithoutUndecided = Array.from(productInfo.selectedMcs).filter(n => n !== "未定")
+                  const hasUndecided = productInfo.selectedMcs.has("未定")
+                  const count = Number(productInfo.mcCount) || 0
+                  
+                  // 選択されているキャストのコスト
+                  let cost = selectedWithoutUndecided.reduce((total, name) => {
+                    const hourlyRate = mcHourlyRates[name] || 0
+                    return total + (hourlyRate * durationHours)
+                  }, 0)
+                  
+                  // 人数が入力されている場合、選択数が人数より少ない分の推定金額を計算
+                  if (count > 0) {
+                    const selectedCount = selectedWithoutUndecided.length
+                    const undecidedCount = count - selectedCount
+                    if (undecidedCount > 0) {
+                      cost += averageMcRate * durationHours * undecidedCount
+                    }
+                  }
+                  
+                  return Math.round(cost)
+                })()
+                const totalCost = Math.round(companionCost + directorCost + mcCost)
+                // 交通費・宿泊費の計算用：入力された人数の合計（未定を含む）
+                const totalCastCount = 
+                  (Number(productInfo.companionCount) || 0) +
+                  (Number(productInfo.directorCount) || 0) +
+                  (Number(productInfo.mcCount) || 0)
+                const performanceFeeDiscountValue = Number(productInfo.performanceFeeDiscount) || 0
+                const performanceFeeAfterDiscount = Math.round(Math.max(0, totalCost - performanceFeeDiscountValue))
+                const transportationFeePerPersonValue = Number(productInfo.transportationFeePerPerson) || 0
+                const totalTransportationFee = Math.round(transportationFeePerPersonValue * totalCastCount)
+                const accommodationFeePerPersonValue = Number(productInfo.accommodationFeePerPerson) || 0
+                const totalAccommodationFee = Math.round(accommodationFeePerPersonValue * totalCastCount)
+                const eventBaseFeeValue = getEventBaseFee(productInfo.eventType)
+                // ホールの割引金額を取得
+                const hall = hallName ? getHallByName(hallName) : null
+                const hallDiscountAmount = hall?.discountAmount || 0
+                // 手動入力の割引とホールの割引を合計
+                const manualDiscountValue = Number(productInfo.eventBaseFeeDiscount) || 0
+                const eventBaseFeeDiscountValue = hallDiscountAmount + manualDiscountValue
+                const eventBaseFeeAfterDiscount = Math.round(Math.max(0, eventBaseFeeValue - eventBaseFeeDiscountValue))
+                const totalBillingAmount = Math.round(performanceFeeAfterDiscount + totalTransportationFee + totalAccommodationFee + eventBaseFeeAfterDiscount)
+                
+                return (
+                  <>
+                    {/* 出演料 */}
+                    <div className="bg-slate-50/50 border border-slate-200/50 rounded-lg p-4">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-base font-semibold text-slate-900">出演料</Label>
+                          <div className="text-xl font-bold text-slate-900">
+                            ¥{totalCost.toLocaleString()}
+                          </div>
+                        </div>
+                        {/* 内訳 */}
+                        <div className="space-y-3 pt-2 border-t border-slate-200">
+                          {/* コンパニオン内訳 */}
+                          {Number(productInfo.companionCount) > 0 && (
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-slate-600 font-medium">コンパニオン</span>
+                                <span className="font-medium text-slate-900">¥{Math.round(companionCost).toLocaleString()}</span>
+                              </div>
+                            {(() => {
+                              const selectedWithoutUndecided = Array.from(productInfo.selectedCompanions).filter(n => n !== "未定")
+                              const selectedCount = selectedWithoutUndecided.length
+                              const count = Number(productInfo.companionCount) || 0
+                              const undecidedCount = count > 0 ? count - selectedCount : 0
+                              const selectedCost = selectedWithoutUndecided.reduce((total, name) => {
+                                const hourlyRate = companionHourlyRates[name] || 0
+                                return total + (hourlyRate * durationHours)
+                              }, 0)
+                              const undecidedCost = undecidedCount > 0 ? averageCompanionRate * durationHours * undecidedCount : 0
+                              
+                              return (
+                                <div className="pl-4 space-y-1 text-xs">
+                                  <div className="text-slate-500 mb-1">
+                                    稼働時間: {durationHours.toFixed(1)}時間
+                                  </div>
+                                  {selectedCount > 0 && (
+                                    <div className="flex items-center justify-between text-slate-500">
+                                      <span>選択済み ({selectedCount}人)</span>
+                                      <span>¥{Math.round(selectedCost).toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                  {undecidedCount > 0 && (
+                                    <div className="flex items-center justify-between text-slate-500">
+                                      <span>未確定 ({undecidedCount}人)</span>
+                                      <span>¥{Math.round(undecidedCost).toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })()}
+                            </div>
+                          )}
+                          
+                          {/* ディレクター内訳 */}
+                          {Number(productInfo.directorCount) > 0 && (
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-slate-600 font-medium">ディレクター</span>
+                                <span className="font-medium text-slate-900">¥{Math.round(directorCost).toLocaleString()}</span>
+                              </div>
+                            {(() => {
+                              const selectedWithoutUndecided = Array.from(productInfo.selectedDirectors).filter(n => n !== "未定")
+                              const selectedCount = selectedWithoutUndecided.length
+                              const count = Number(productInfo.directorCount) || 0
+                              const undecidedCount = count > 0 ? count - selectedCount : 0
+                              const selectedCost = selectedWithoutUndecided.reduce((total, name) => {
+                                const hourlyRate = directorHourlyRates[name] || 0
+                                return total + (hourlyRate * durationHours)
+                              }, 0)
+                              const undecidedCost = undecidedCount > 0 ? averageDirectorRate * durationHours * undecidedCount : 0
+                              
+                              return (
+                                <div className="pl-4 space-y-1 text-xs">
+                                  <div className="text-slate-500 mb-1">
+                                    稼働時間: {durationHours.toFixed(1)}時間
+                                  </div>
+                                  {selectedCount > 0 && (
+                                    <div className="flex items-center justify-between text-slate-500">
+                                      <span>選択済み ({selectedCount}人)</span>
+                                      <span>¥{Math.round(selectedCost).toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                  {undecidedCount > 0 && (
+                                    <div className="flex items-center justify-between text-slate-500">
+                                      <span>未確定 ({undecidedCount}人)</span>
+                                      <span>¥{Math.round(undecidedCost).toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })()}
+                            </div>
+                          )}
+                          
+                          {/* MC内訳 */}
+                          {Number(productInfo.mcCount) > 0 && (
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-slate-600 font-medium">MC</span>
+                                <span className="font-medium text-slate-900">¥{Math.round(mcCost).toLocaleString()}</span>
+                              </div>
+                            {(() => {
+                              const selectedWithoutUndecided = Array.from(productInfo.selectedMcs).filter(n => n !== "未定")
+                              const selectedCount = selectedWithoutUndecided.length
+                              const count = Number(productInfo.mcCount) || 0
+                              const undecidedCount = count > 0 ? count - selectedCount : 0
+                              const selectedCost = selectedWithoutUndecided.reduce((total, name) => {
+                                const hourlyRate = mcHourlyRates[name] || 0
+                                return total + (hourlyRate * durationHours)
+                              }, 0)
+                              const undecidedCost = undecidedCount > 0 ? averageMcRate * durationHours * undecidedCount : 0
+                              
+                              return (
+                                <div className="pl-4 space-y-1 text-xs">
+                                  <div className="text-slate-500 mb-1">
+                                    稼働時間: {durationHours.toFixed(1)}時間
+                                  </div>
+                                  {selectedCount > 0 && (
+                                    <div className="flex items-center justify-between text-slate-500">
+                                      <span>選択済み ({selectedCount}人)</span>
+                                      <span>¥{Math.round(selectedCost).toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                  {undecidedCount > 0 && (
+                                    <div className="flex items-center justify-between text-slate-500">
+                                      <span>未確定 ({undecidedCount}人)</span>
+                                      <span>¥{Math.round(undecidedCost).toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })()}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between gap-4 pt-2 border-t border-slate-200">
+                          <div className="flex-1">
+                            <Label htmlFor={`performanceFeeDiscount-${productInfo.id}`} className="text-sm text-slate-600">
+                              割引
+                            </Label>
+                            <Input
+                              id={`performanceFeeDiscount-${productInfo.id}`}
+                              type="number"
+                              value={productInfo.performanceFeeDiscount}
+                              onChange={(e) => updateProductInfo(index, { performanceFeeDiscount: e.target.value })}
+                              placeholder="0"
+                              className="mt-1"
+                            />
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-slate-600 mb-1">割引後</div>
+                            <div className="text-xl font-bold text-slate-900">
+                              ¥{performanceFeeAfterDiscount.toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-xs text-slate-500 mt-1">
-                      （{totalCastCount}名 × ¥{Number(transportationFeePerPerson) || 0}）
-                    </div>
-                  </div>
-                </div>
-              </div>
 
-              {/* 一人当たりの宿泊費 */}
-              <div className="bg-slate-50/50 border border-slate-200/50 rounded-lg p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex-1">
-                    <Label htmlFor={`accommodationFeePerPerson-${productInfo.id}`} className="text-base font-semibold text-slate-900">
-                      一人当たりの宿泊費
-                    </Label>
-                    <Input
-                      id={`accommodationFeePerPerson-${productInfo.id}`}
-                      type="number"
-                      value={accommodationFeePerPerson}
-                      onChange={(e) => setAccommodationFeePerPerson(e.target.value)}
-                      placeholder="0"
-                      className="mt-2"
-                    />
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm text-slate-600 mb-1">合計</div>
-                    <div className="text-xl font-bold text-slate-900">
-                      ¥{totalAccommodationFee.toLocaleString()}
+                    {/* 交通費合計 */}
+                    <div className="bg-slate-50/50 border border-slate-200/50 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-base font-semibold text-slate-900">交通費（合計）</Label>
+                        <div className="text-right">
+                          <div className="text-xl font-bold text-slate-900">
+                            ¥{Math.round(totalTransportationFee).toLocaleString()}
+                          </div>
+                          <div className="text-xs text-slate-500 mt-1">
+                            {totalCastCount > 0 ? `（${totalCastCount}名 × ¥${Math.round(transportationFeePerPersonValue).toLocaleString()}）` : ""}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-xs text-slate-500 mt-1">
-                      （{totalCastCount}名 × ¥{Number(accommodationFeePerPerson) || 0}）
+
+                    {/* 宿泊費合計 */}
+                    <div className="bg-slate-50/50 border border-slate-200/50 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-base font-semibold text-slate-900">宿泊費（合計）</Label>
+                        <div className="text-right">
+                          <div className="text-xl font-bold text-slate-900">
+                            ¥{Math.round(totalAccommodationFee).toLocaleString()}
+                          </div>
+                          <div className="text-xs text-slate-500 mt-1">
+                            {totalCastCount > 0 ? `（${totalCastCount}名 × ¥${Math.round(accommodationFeePerPersonValue).toLocaleString()}）` : ""}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </div>
 
-              {/* イベント基本料金 */}
-              <div className="bg-slate-50/50 border border-slate-200/50 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor={`eventBaseFee-${productInfo.id}`} className="text-base font-semibold text-slate-900">
-                    イベント基本料金
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id={`eventBaseFee-${productInfo.id}`}
-                      type="number"
-                      value={eventBaseFee}
-                      onChange={(e) => setEventBaseFee(e.target.value)}
-                      placeholder="0"
-                      className="w-32 text-right"
-                    />
-                    <span className="text-slate-600">円</span>
-                  </div>
-                </div>
-              </div>
+                    {/* イベント基本料金 */}
+                    <div className="bg-slate-50/50 border border-slate-200/50 rounded-lg p-4">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-base font-semibold text-slate-900">
+                            イベント基本料金
+                          </Label>
+                          <div className="text-right">
+                            <div className="text-xl font-bold text-slate-900">
+                              ¥{Math.round(eventBaseFeeValue).toLocaleString()}
+                            </div>
+                            <div className="text-xs text-slate-500 mt-1">
+                              （{productInfo.eventType}）
+                            </div>
+                          </div>
+                        </div>
+                        {hallDiscountAmount > 0 && (
+                          <div className="pt-2 border-t border-slate-200">
+                            <div className="flex items-center justify-between mb-2">
+                              <Label className="text-sm text-slate-600">
+                                ホール割引
+                              </Label>
+                              <div className="text-sm font-semibold text-slate-900">
+                                -¥{Math.round(hallDiscountAmount).toLocaleString()}
+                              </div>
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              （{hallName}）
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between gap-4 pt-2 border-t border-slate-200">
+                          <div className="flex-1">
+                            <Label htmlFor={`eventBaseFeeDiscount-${productInfo.id}`} className="text-sm text-slate-600">
+                              追加割引
+                            </Label>
+                            <Input
+                              id={`eventBaseFeeDiscount-${productInfo.id}`}
+                              type="number"
+                              value={productInfo.eventBaseFeeDiscount}
+                              onChange={(e) => updateProductInfo(index, { eventBaseFeeDiscount: e.target.value })}
+                              placeholder="0"
+                              className="mt-1"
+                            />
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-slate-600 mb-1">割引後</div>
+                            <div className="text-xl font-bold text-slate-900">
+                              ¥{Math.round(eventBaseFeeAfterDiscount).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-              {/* 請求予定金額の合計 */}
-              <div className="bg-blue-50/50 border-2 border-blue-200 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-lg font-semibold text-slate-900">請求予定金額（合計）</Label>
-                  <div className="text-2xl font-bold text-slate-900">
-                    ¥{totalBillingAmount.toLocaleString()}
-                  </div>
-                </div>
-              </div>
+                    {/* 請求予定金額の合計 */}
+                    <div className="bg-blue-50/50 border-2 border-blue-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-lg font-semibold text-slate-900">請求予定金額（合計）</Label>
+                        <div className="text-2xl font-bold text-slate-900">
+                          ¥{totalBillingAmount.toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )
+              })()}
             </div>
           </div>
                 </CardContent>
@@ -1658,7 +2908,7 @@ export function ProjectRegistration({
 
       {/* 商材を追加ボタンと案件を作成ボタン */}
       <div className="flex justify-center gap-4 mt-4">
-        {productInfos.length < 5 && (
+        {!isProductMode && productInfos.length < 5 && (
           <Button
             onClick={addProductInfo}
             variant="outline"
@@ -1672,7 +2922,7 @@ export function ProjectRegistration({
           onClick={handleCreateProjects}
           className="flex items-center gap-2"
         >
-          {isEditMode ? "案件を更新" : "案件を作成"}
+          {isProductAddMode ? "商材を追加" : isProductEditMode ? "商材を更新" : isEditMode ? "案件を更新" : "案件を作成"}
         </Button>
       </div>
 

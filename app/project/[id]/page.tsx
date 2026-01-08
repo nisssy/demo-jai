@@ -42,11 +42,12 @@ export default function ProjectEditPage() {
         setProjectData={setProjectData}
         projectId={projectId}
         onNext={() => {
-          router.push("/quote-creation")
-          addNotification("案件登録が完了しました。見積作成に進みます。")
+          router.push("/")
+          addNotification("商材を更新しました")
         }}
         onBack={() => router.push("/")}
         addNotification={addNotification}
+        isProductEditMode={true}
       />
     </main>
   )

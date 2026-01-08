@@ -16,6 +16,7 @@ export type ProjectData = {
   correctionRequest: string
   projects?: Array<{
     id: number
+    projectNumber?: string
     projectName: string
     clientName: string
     date: string
