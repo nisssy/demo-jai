@@ -33,6 +33,26 @@ export type ProjectData = {
     eventProductName?: string
     eventDate?: string
     estimatedBillingAmount?: number
+    startTime?: string
+    endTime?: string
+    companionCount?: string
+    directorCount?: string
+    mcCount?: string
+    selectedCompanions?: string[]
+    selectedDirectors?: string[]
+    selectedMcs?: string[]
+    correctionRequest?: string
+    correctionComment?: string
+    temporaryHoldFailureComment?: string
+    confirmedCompanions?: string[]
+    confirmedDirectors?: string[]
+    confirmedMcs?: string[]
+    companionCostumes?: { [companionName: string]: string }
+    mustSeeFlag?: string
+    mustSeePublication?: string // 必見掲載 (要か不要)
+    publicationDate?: string // 掲載日
+    publicationTime?: string // 掲載時刻
+    reportRequired?: string // レポート要否 (要か不要)
   }>
 }
 

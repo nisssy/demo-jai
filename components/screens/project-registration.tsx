@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, Sparkles, CheckCircle2, XCircle, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react"
@@ -35,6 +36,9 @@ type ProjectRegistrationProps = {
   projectId?: number | null
   isProductAddMode?: boolean
   isProductEditMode?: boolean
+  correctionComment?: string
+  onCorrectionCommentChange?: (comment: string) => void
+  correctionRequest?: string
 }
 
 export function ProjectRegistration({
@@ -46,6 +50,9 @@ export function ProjectRegistration({
   projectId,
   isProductAddMode = false,
   isProductEditMode = false,
+  correctionComment,
+  onCorrectionCommentChange,
+  correctionRequest,
 }: ProjectRegistrationProps) {
   const router = useRouter()
   const { createProjects, createProject, getProjectById, updateProject, getHalls, getHallByName, searchHalls, getProjects, generateProjectNumber, getCompanies, getCompanyById, getCompanyByCompanyId, searchCompanies, getHallsByCompanyId } = useProject()
@@ -81,6 +88,7 @@ export function ProjectRegistration({
     mustSeePublication: string // 必見掲載 (要か不要)
     publicationDate: string // 掲載日
     publicationTime: string // 掲載時刻
+    reportRequired: string // レポート要否 (要か不要)
     startTime: string
     endTime: string
     status: string
@@ -113,9 +121,10 @@ export function ProjectRegistration({
       mustSeePublication: "不要",
       publicationDate: "",
       publicationTime: "",
+      reportRequired: "不要",
       startTime: "08:00",
       endTime: "15:00",
-      status: "見込み入力完了",
+      status: "仮押さえ済み",
       companionCount: "",
       directorCount: "",
       mcCount: "",
@@ -415,6 +424,88 @@ export function ProjectRegistration({
   const averageDirectorRate = getAverageHourlyRate(directorHourlyRates)
   const averageMcRate = getAverageHourlyRate(mcHourlyRates)
 
+  // 専属キャストの定義
+  const exclusiveCompanions = new Set(["Rio", "Ayaka", "Nanaka"])
+  const exclusiveDirectors = new Set(["Takeshi", "Kenji", "Hiroshi"])
+  const exclusiveMcs = new Set(["Yuki", "Saki", "Mai"])
+
+  // ステータスを決定する関数
+  const determineProjectStatus = (productInfo: ProductInfo): string => {
+    // コンパニオンのチェック
+    const companionCountStr = productInfo.companionCount?.toString().trim() || ""
+    const companionCount = companionCountStr ? Number(companionCountStr) : 0
+    const selectedCompanions = Array.from(productInfo.selectedCompanions).filter(n => n !== "未定")
+    const hasUndecidedCompanion = productInfo.selectedCompanions.has("未定")
+    
+    // ディレクターのチェック
+    const directorCountStr = productInfo.directorCount?.toString().trim() || ""
+    const directorCount = directorCountStr ? Number(directorCountStr) : 0
+    const selectedDirectors = Array.from(productInfo.selectedDirectors).filter(n => n !== "未定")
+    const hasUndecidedDirector = productInfo.selectedDirectors.has("未定")
+    
+    // MCのチェック
+    const mcCountStr = productInfo.mcCount?.toString().trim() || ""
+    const mcCount = mcCountStr ? Number(mcCountStr) : 0
+    const selectedMcs = Array.from(productInfo.selectedMcs).filter(n => n !== "未定")
+    const hasUndecidedMc = productInfo.selectedMcs.has("未定")
+    
+    // キャスティングの合計人数を計算
+    const totalCount = companionCount + directorCount + mcCount
+    
+    // 合計が0名の場合は見込み入力完了
+    if (totalCount === 0) {
+      return "見込み入力完了"
+    }
+    
+    // 人数が入力されている場合のみチェック
+    if (companionCount > 0) {
+      // 人数が足りない、または「未定」が選択されている
+      if (companionCount !== selectedCompanions.length || hasUndecidedCompanion) {
+        return "仮押さえ依頼"
+      }
+      
+      // 専属以外のキャストが選択されている
+      const hasExternalCompanion = selectedCompanions.some(name => !exclusiveCompanions.has(name))
+      if (hasExternalCompanion) {
+        return "仮押さえ依頼"
+      }
+    } else if (selectedCompanions.length > 0 || hasUndecidedCompanion) {
+      // 人数が入力されていないが、キャストが選択されている場合は仮押さえ依頼
+      return "仮押さえ依頼"
+    }
+    
+    if (directorCount > 0) {
+      if (directorCount !== selectedDirectors.length || hasUndecidedDirector) {
+        return "仮押さえ依頼"
+      }
+      
+      const hasExternalDirector = selectedDirectors.some(name => !exclusiveDirectors.has(name))
+      if (hasExternalDirector) {
+        return "仮押さえ依頼"
+      }
+    } else if (selectedDirectors.length > 0 || hasUndecidedDirector) {
+      // 人数が入力されていないが、キャストが選択されている場合は仮押さえ依頼
+      return "仮押さえ依頼"
+    }
+    
+    if (mcCount > 0) {
+      if (mcCount !== selectedMcs.length || hasUndecidedMc) {
+        return "仮押さえ依頼"
+      }
+      
+      const hasExternalMc = selectedMcs.some(name => !exclusiveMcs.has(name))
+      if (hasExternalMc) {
+        return "仮押さえ依頼"
+      }
+    } else if (selectedMcs.length > 0 || hasUndecidedMc) {
+      // 人数が入力されていないが、キャストが選択されている場合は仮押さえ依頼
+      return "仮押さえ依頼"
+    }
+    
+    // すべて専属のみで人数分選択されている場合
+    return "仮押さえ済み"
+  }
+
   // イベント区分に応じた基本料金を取得する関数
   const getEventBaseFee = (eventType: string): number => {
     switch (eventType) {
@@ -453,9 +544,6 @@ export function ProjectRegistration({
       }
       if (!productInfo.eventDate) {
         newErrors[`eventDate-${index}`] = `商材情報${index + 1 === 1 ? "①" : index + 1 === 2 ? "②" : index + 1 === 3 ? "③" : index + 1 === 4 ? "④" : "⑤"}の開催日を入力してください`
-      }
-      if (!productInfo.status) {
-        newErrors[`status-${index}`] = `商材情報${index + 1 === 1 ? "①" : index + 1 === 2 ? "②" : index + 1 === 3 ? "③" : index + 1 === 4 ? "④" : "⑤"}のステータスを選択してください`
       }
     })
     
@@ -584,7 +672,7 @@ export function ProjectRegistration({
         salesPersonName: (existingProject as any).salesPersonName,
         requestDate: (existingProject as any).requestDate,
         hallName: (existingProject as any).hallName || existingProject.clientName,
-        projectStatus: productInfo.status,
+        projectStatus: determineProjectStatus(productInfo),
         category: productInfo.category,
         eventType: productInfo.eventType,
         eventProductName: productInfo.eventProductName,
@@ -593,11 +681,20 @@ export function ProjectRegistration({
         mustSeePublication: productInfo.mustSeePublication,
         publicationDate: productInfo.publicationDate ? productInfo.publicationDate.replace(/-/g, "/") : "",
         publicationTime: productInfo.publicationTime,
+        reportRequired: productInfo.reportRequired,
         estimatedBillingAmount: estimatedBillingAmount,
         projectNumber: existingProjectNumber, // 既存の案件Noを使用
         companyId: companyId || (existingProject as any).companyId, // 法人ID
         companyName: companyName || (existingProject as any).companyName, // 法人名
         hallId: hallId || (existingProject as any).hallId, // ホールID
+        startTime: productInfo.startTime,
+        endTime: productInfo.endTime,
+        companionCount: productInfo.companionCount,
+        directorCount: productInfo.directorCount,
+        mcCount: productInfo.mcCount,
+        selectedCompanions: Array.from(productInfo.selectedCompanions),
+        selectedDirectors: Array.from(productInfo.selectedDirectors),
+        selectedMcs: Array.from(productInfo.selectedMcs),
       } as any
       
       createProject(newProductProject)
@@ -706,6 +803,17 @@ export function ProjectRegistration({
         return
       }
       
+      // 手配進行中の場合はステータスを保持
+      const currentProjectStatus = (existingProject as any).projectStatus || ""
+      const shouldPreserveStatus = currentProjectStatus === "手配進行中"
+      
+      // 仮押さえ不可の案件（営業確認中でtemporaryHoldFailureCommentが存在）を更新する場合は、
+      // キャスティング情報を変更したので仮押さえ依頼に戻す
+      const isTemporaryHoldFailure = currentProjectStatus === "営業確認中" && (existingProject as any).temporaryHoldFailureComment
+      const newProjectStatus = isTemporaryHoldFailure 
+        ? "仮押さえ依頼" 
+        : (shouldPreserveStatus ? currentProjectStatus : determineProjectStatus(productInfo))
+
       const updatedProject = {
         projectName: productInfo.eventProductName || `${(existingProject as any).hallName || existingProject.clientName} - ${productInfo.category}`,
         clientName: (existingProject as any).hallName || existingProject.clientName,
@@ -717,7 +825,9 @@ export function ProjectRegistration({
         salesPersonName: (existingProject as any).salesPersonName,
         requestDate: (existingProject as any).requestDate,
         hallName: (existingProject as any).hallName || existingProject.clientName,
-        projectStatus: productInfo.status,
+        projectStatus: newProjectStatus,
+        // 仮押さえ不可の案件を更新する場合は、コメントをクリア
+        ...(isTemporaryHoldFailure && { temporaryHoldFailureComment: undefined }),
         category: productInfo.category,
         eventType: productInfo.eventType,
         eventProductName: productInfo.eventProductName,
@@ -726,10 +836,19 @@ export function ProjectRegistration({
         mustSeePublication: productInfo.mustSeePublication,
         publicationDate: productInfo.publicationDate ? productInfo.publicationDate.replace(/-/g, "/") : "",
         publicationTime: productInfo.publicationTime,
+        reportRequired: productInfo.reportRequired,
         estimatedBillingAmount: totalBillingAmount,
         companyId: companyId || (existingProject as any).companyId, // 法人ID
         companyName: companyName || (existingProject as any).companyName, // 法人名
         hallId: hallId || (existingProject as any).hallId, // ホールID
+        startTime: productInfo.startTime,
+        endTime: productInfo.endTime,
+        companionCount: productInfo.companionCount,
+        directorCount: productInfo.directorCount,
+        mcCount: productInfo.mcCount,
+        selectedCompanions: Array.from(productInfo.selectedCompanions),
+        selectedDirectors: Array.from(productInfo.selectedDirectors),
+        selectedMcs: Array.from(productInfo.selectedMcs),
       } as any
       
       updateProject(projectId, updatedProject)
@@ -832,6 +951,18 @@ export function ProjectRegistration({
       const eventBaseFeeAfterDiscount = Math.round(Math.max(0, eventBaseFeeValue - eventBaseFeeDiscountValue))
       const totalBillingAmount = Math.round(performanceFeeAfterDiscount + totalTransportationFee + totalAccommodationFee + eventBaseFeeAfterDiscount)
       
+      // 手配進行中の場合はステータスを保持
+      const existingProject = projectId ? getProjectById(projectId) : null
+      const currentProjectStatus = existingProject ? ((existingProject as any).projectStatus || "") : ""
+      const shouldPreserveStatus = currentProjectStatus === "手配進行中"
+      
+      // 仮押さえ不可の案件（営業確認中でtemporaryHoldFailureCommentが存在）を更新する場合は、
+      // キャスティング情報を変更したので仮押さえ依頼に戻す
+      const isTemporaryHoldFailure = existingProject && currentProjectStatus === "営業確認中" && (existingProject as any).temporaryHoldFailureComment
+      const newProjectStatus = isTemporaryHoldFailure 
+        ? "仮押さえ依頼" 
+        : (shouldPreserveStatus ? currentProjectStatus : determineProjectStatus(productInfo))
+      
       const updatedProject = {
         projectName: productInfo.eventProductName || `${hallName} - ${productInfo.category}`,
         clientName: hallName,
@@ -843,7 +974,9 @@ export function ProjectRegistration({
         salesPersonName: acquirerName,
         requestDate: requestDate.replace(/-/g, "/"),
         hallName: hallName,
-        projectStatus: productInfo.status,
+        projectStatus: newProjectStatus,
+        // 仮押さえ不可の案件を更新する場合は、コメントをクリア
+        ...(isTemporaryHoldFailure && { temporaryHoldFailureComment: undefined }),
         category: productInfo.category,
         eventType: productInfo.eventType,
         eventProductName: productInfo.eventProductName,
@@ -965,7 +1098,7 @@ export function ProjectRegistration({
           salesPersonName: acquirerName,
           requestDate: requestDate.replace(/-/g, "/"),
           hallName: hallName,
-          projectStatus: productInfo.status,
+          projectStatus: determineProjectStatus(productInfo),
           category: productInfo.category,
           eventType: productInfo.eventType,
           eventProductName: productInfo.eventProductName,
@@ -979,6 +1112,14 @@ export function ProjectRegistration({
           companyId: companyId, // 法人ID
           companyName: companyName, // 法人名
           hallId: hallId, // ホールID
+          startTime: productInfo.startTime,
+          endTime: productInfo.endTime,
+          companionCount: productInfo.companionCount,
+          directorCount: productInfo.directorCount,
+          mcCount: productInfo.mcCount,
+          selectedCompanions: Array.from(productInfo.selectedCompanions),
+          selectedDirectors: Array.from(productInfo.selectedDirectors),
+          selectedMcs: Array.from(productInfo.selectedMcs),
         } as any
       })
       
@@ -1089,6 +1230,17 @@ export function ProjectRegistration({
         // 商材情報を読み込み
         if (project.category && project.eventType && project.eventProductName && project.eventDate) {
           const eventDateStr = project.eventDate.replace(/\//g, "-")
+          // キャスティング情報を読み込み（配列からSetに変換）
+          const selectedCompanions = (project as any).selectedCompanions && Array.isArray((project as any).selectedCompanions)
+            ? new Set<string>((project as any).selectedCompanions)
+            : new Set<string>(["未定"])
+          const selectedDirectors = (project as any).selectedDirectors && Array.isArray((project as any).selectedDirectors)
+            ? new Set<string>((project as any).selectedDirectors)
+            : new Set<string>(["未定"])
+          const selectedMcs = (project as any).selectedMcs && Array.isArray((project as any).selectedMcs)
+            ? new Set<string>((project as any).selectedMcs)
+            : new Set<string>(["未定"])
+          
           setProductInfos([{
             id: 1,
             category: project.category,
@@ -1099,15 +1251,16 @@ export function ProjectRegistration({
             mustSeePublication: (project as any).mustSeePublication || "不要",
             publicationDate: (project as any).publicationDate ? (project as any).publicationDate.replace(/\//g, "-") : "",
             publicationTime: (project as any).publicationTime || "",
-            startTime: "08:00", // デフォルト値（将来的には保存する必要がある）
-            endTime: "15:00", // デフォルト値（将来的には保存する必要がある）
-            status: project.projectStatus || "見込み入力完了",
-            companionCount: "",
-            directorCount: "",
-            mcCount: "",
-            selectedCompanions: new Set(["未定"]),
-            selectedDirectors: new Set(["未定"]),
-            selectedMcs: new Set(["未定"]),
+            reportRequired: (project as any).reportRequired || "不要",
+            startTime: (project as any).startTime || "08:00",
+            endTime: (project as any).endTime || "15:00",
+            status: project.projectStatus || "仮押さえ済み",
+            companionCount: (project as any).companionCount || "",
+            directorCount: (project as any).directorCount || "",
+            mcCount: (project as any).mcCount || "",
+            selectedCompanions: selectedCompanions,
+            selectedDirectors: selectedDirectors,
+            selectedMcs: selectedMcs,
             transportationFeePerPerson: "",
             accommodationFeePerPerson: "",
             performanceFeeDiscount: "",
@@ -1558,6 +1711,20 @@ export function ProjectRegistration({
         </h1>
       </div>
 
+      {/* 修正依頼内容の表示（商材編集モードで修正依頼がある場合のみ） */}
+      {isProductEditMode && correctionRequest && (
+        <Card className="border-orange-200">
+          <CardHeader>
+            <CardTitle className="text-orange-900">修正依頼内容</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-orange-50 border border-orange-200 p-4 rounded-lg">
+              <p className="text-sm text-slate-700 whitespace-pre-wrap">{correctionRequest}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Step 1: Basic Info */}
       {!isProductMode && (
       <Card>
@@ -1825,7 +1992,6 @@ export function ProjectRegistration({
                     setErrors({ ...errors, eventType: "" })
                   }
                 }}
-                disabled
               >
                 <SelectTrigger id={`eventType-${productInfo.id}`} className={errors.eventType && index === 0 ? "border-red-500" : ""}>
                   <SelectValue placeholder="イベント種別を選択してください" />
@@ -1932,7 +2098,14 @@ export function ProjectRegistration({
               <Label htmlFor={`mustSeeFlag-${productInfo.id}`}>必見フラグ</Label>
               <Select
                 value={productInfo.mustSeeFlag}
-                onValueChange={(value) => updateProductInfo(index, { mustSeeFlag: value })}
+                onValueChange={(value) => {
+                  // 必見フラグに応じて必見掲載を自動設定
+                  const mustSeePublication = value === "1" ? "要" : "不要"
+                  updateProductInfo(index, { 
+                    mustSeeFlag: value,
+                    mustSeePublication: mustSeePublication
+                  })
+                }}
               >
                 <SelectTrigger id={`mustSeeFlag-${productInfo.id}`}>
                   <SelectValue placeholder="選択してください" />
@@ -1977,34 +2150,19 @@ export function ProjectRegistration({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor={`status-${productInfo.id}`}>ステータス</Label>
+              <Label htmlFor={`reportRequired-${productInfo.id}`}>レポート要否</Label>
               <Select
-                value={productInfo.status}
-                onValueChange={(value) => {
-                  updateProductInfo(index, { status: value })
-                  const errorKey = `status-${index}`
-                  if (errors[errorKey]) {
-                    const newErrors = { ...errors }
-                    delete newErrors[errorKey]
-                    setErrors(newErrors)
-                  }
-                }}
+                value={productInfo.reportRequired}
+                onValueChange={(value) => updateProductInfo(index, { reportRequired: value })}
               >
-                <SelectTrigger id={`status-${productInfo.id}`} className={errors[`status-${index}`] ? "border-red-500" : ""}>
-                  <SelectValue placeholder="ステータスを選択してください" />
+                <SelectTrigger id={`reportRequired-${productInfo.id}`}>
+                  <SelectValue placeholder="選択してください" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="見込み入力完了">見込み入力完了</SelectItem>
-                  <SelectItem value="見積送付完了">見積送付完了</SelectItem>
-                  <SelectItem value="受注済み">受注済み</SelectItem>
-                  <SelectItem value="手配中">手配中</SelectItem>
-                  <SelectItem value="手配完了">手配完了</SelectItem>
-                  <SelectItem value="キャンセル">キャンセル</SelectItem>
+                  <SelectItem value="要">要</SelectItem>
+                  <SelectItem value="不要">不要</SelectItem>
                 </SelectContent>
               </Select>
-              {errors[`status-${index}`] && (
-                <p className="text-sm text-red-600">{errors[`status-${index}`]}</p>
-              )}
             </div>
           </div>
           </div>
@@ -2015,6 +2173,7 @@ export function ProjectRegistration({
             </div>
             <div className="space-y-4 pt-2">
               {/* コンパニオン */}
+              {productInfo.eventType !== "スロセレ" && (
               <div className="space-y-4 bg-rose-50/50 border border-rose-200/50 rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <Label className="text-base font-semibold">コンパニオン</Label>
@@ -2176,6 +2335,7 @@ export function ProjectRegistration({
                   </>
                 )}
               </div>
+              )}
 
               {/* ディレクター */}
               <div className="space-y-4 bg-sky-50/50 border border-sky-200/50 rounded-lg p-4">
@@ -2918,12 +3078,15 @@ export function ProjectRegistration({
             商材を追加
           </Button>
         )}
-        <Button
-          onClick={handleCreateProjects}
-          className="flex items-center gap-2"
-        >
-          {isProductAddMode ? "商材を追加" : isProductEditMode ? "商材を更新" : isEditMode ? "案件を更新" : "案件を作成"}
-        </Button>
+        {/* 修正依頼がある商材編集の場合は「商材を更新」ボタンを表示しない */}
+        {!(isProductEditMode && correctionRequest) && (
+          <Button
+            onClick={handleCreateProjects}
+            className="flex items-center gap-2"
+          >
+            {isProductAddMode ? "商材を追加" : isProductEditMode ? "商材を更新" : isEditMode ? "案件を更新" : "案件を作成"}
+          </Button>
+        )}
       </div>
 
       {/* Step 2: Resource Check */}
@@ -3230,6 +3393,32 @@ export function ProjectRegistration({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* イベントチームへのコメント入力と送信ボタン（商材編集モードの場合のみ、一番下に配置） */}
+      {isProductEditMode && correctionComment !== undefined && onCorrectionCommentChange && (
+        <Card>
+          <CardHeader>
+            <CardTitle>イベントチームへのコメント</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="correction-comment">修正内容についてイベントチームに伝えたいことがあれば記入してください（任意）</Label>
+              <Textarea
+                id="correction-comment"
+                value={correctionComment}
+                onChange={(e) => onCorrectionCommentChange(e.target.value)}
+                placeholder="修正内容についてイベントチームに伝えたいことがあれば記入してください"
+                rows={4}
+              />
+            </div>
+            <div className="flex justify-end pt-2">
+              <Button onClick={onNext} className="gap-2">
+                更新してイベントチームへ送信
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

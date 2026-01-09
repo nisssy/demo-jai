@@ -10,7 +10,7 @@ export default function ProjectValidationPage() {
   const { projectData, setProjectData, setCurrentRole, currentRole, addNotification } = useProject()
 
   useEffect(() => {
-    if (currentRole !== "Internal") {
+    if (currentRole === null || currentRole !== "Internal") {
       setCurrentRole("Internal")
     }
   }, [currentRole, setCurrentRole])

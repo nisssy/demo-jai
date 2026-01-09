@@ -10,7 +10,7 @@ export default function ProjectCorrectionPage() {
   const { projectData, setProjectData, setCurrentRole, currentRole, addNotification } = useProject()
 
   useEffect(() => {
-    if (currentRole !== "Sales") {
+    if (currentRole === null || currentRole !== "Sales") {
       setCurrentRole("Sales")
     }
   }, [currentRole, setCurrentRole])

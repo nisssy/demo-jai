@@ -1,13 +1,48 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { ProjectList } from "@/components/screens/project-list"
+import { RoleSelection } from "@/components/screens/role-selection"
+import { EventTeamDashboard } from "@/components/screens/event-team-dashboard"
 import { useProject } from "@/contexts/project-context"
+import { Suspense } from "react"
 
-export default function HomePage() {
+function HomePageContent() {
   const router = useRouter()
-  const { projectData, setProjectData, currentRole, addNotification } = useProject()
+  const searchParams = useSearchParams()
+  const { projectData, setProjectData, currentRole, setCurrentRole, addNotification } = useProject()
+  
+  // クエリパラメータからタブを取得（デフォルトは"projects"）
+  const tabFromQuery = searchParams?.get("tab")
+  const initialTab: "projects" | "corrections" = tabFromQuery === "corrections" ? "corrections" : "projects"
 
+  // ロールが選択されていない場合はロール選択画面を表示
+  if (currentRole === null) {
+    return (
+      <main>
+        <RoleSelection
+          onSelectRole={(role) => {
+            setCurrentRole(role)
+          }}
+        />
+      </main>
+    )
+  }
+
+  // イベントチームの場合は専用ダッシュボードを表示
+  if (currentRole === "Internal") {
+    return (
+      <main className="px-8 py-8 max-w-7xl mx-auto">
+        <EventTeamDashboard
+          projectData={projectData}
+          setProjectData={setProjectData}
+          addNotification={addNotification}
+        />
+      </main>
+    )
+  }
+
+  // 営業の場合は案件一覧を表示
   return (
     <main className="px-8 py-8 max-w-7xl mx-auto">
       <ProjectList
@@ -19,7 +54,7 @@ export default function HomePage() {
               }}
         onBack={() => router.push("/quote-creation")}
               addNotification={addNotification}
-              role={currentRole}
+              role={currentRole!}
               setCurrentScreen={(screen) => {
           const routes: Record<number, string> = {
             4: "/project-arrangements",
@@ -34,7 +69,22 @@ export default function HomePage() {
           }
         }}
         onCreateNewProject={() => router.push("/project-registration")}
+        initialTab={initialTab}
             />
         </main>
+  )
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={
+      <main className="px-8 py-8 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </main>
+    }>
+      <HomePageContent />
+    </Suspense>
   )
 }

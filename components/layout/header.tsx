@@ -1,10 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Bell } from "lucide-react"
+import { Bell, LogOut, Briefcase, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { useProject } from "@/contexts/project-context"
 
@@ -12,8 +10,8 @@ export function Header() {
   const { currentRole, setCurrentRole, notifications } = useProject()
   const [showNotifications, setShowNotifications] = useState(false)
 
-  const toggleRole = () => {
-    setCurrentRole(currentRole === "Sales" ? "Internal" : "Sales")
+  const handleBackToRoleSelection = () => {
+    setCurrentRole(null)
   }
 
   return (
@@ -31,14 +29,34 @@ export function Header() {
           </div>
 
           <div className="flex items-center gap-6">
-            {/* Role Toggle */}
-            {currentRole === "Internal" && (
-              <div className="flex items-center gap-3 bg-slate-100 px-4 py-2 rounded-lg">
-                <Label htmlFor="role-toggle" className="text-sm font-medium">
-                  🛡️ Co・Dir（内勤）モード
-                </Label>
-                <Switch id="role-toggle" checked={true} onCheckedChange={toggleRole} />
+            {/* Current Role Display */}
+            {currentRole !== null && (
+              <div className="flex items-center gap-2">
+                {currentRole === "Sales" ? (
+                  <Badge variant="default" className="bg-blue-600 text-white px-3 py-1.5 gap-2">
+                    <Briefcase className="h-4 w-4" />
+                    <span className="font-semibold">営業</span>
+                  </Badge>
+                ) : (
+                  <Badge variant="default" className="bg-green-600 text-white px-3 py-1.5 gap-2">
+                    <Users className="h-4 w-4" />
+                    <span className="font-semibold">イベントチーム</span>
+                  </Badge>
+                )}
               </div>
+            )}
+
+            {/* Back to Role Selection */}
+            {currentRole !== null && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleBackToRoleSelection}
+                className="gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                ロールを変更
+              </Button>
             )}
 
             {/* Notifications */}

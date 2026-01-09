@@ -11,7 +11,7 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "DMM - Japan Artist System",
+  title: "DMM様用-デモアプリ",
   description: "タレント予約、見積もり、注文ワークフロー管理システム",
   generator: "v0.app",
   icons: {
