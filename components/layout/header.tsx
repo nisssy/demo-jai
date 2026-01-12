@@ -1,14 +1,12 @@
 "use client"
 
-import { useState } from "react"
-import { Bell, LogOut, Briefcase, Users } from "lucide-react"
+import { LogOut, Briefcase, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useProject } from "@/contexts/project-context"
 
 export function Header() {
-  const { currentRole, setCurrentRole, notifications } = useProject()
-  const [showNotifications, setShowNotifications] = useState(false)
+  const { currentRole, setCurrentRole } = useProject()
 
   const handleBackToRoleSelection = () => {
     setCurrentRole(null)
@@ -59,41 +57,6 @@ export function Header() {
               </Button>
             )}
 
-            {/* Notifications */}
-            <div className="relative">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowNotifications(!showNotifications)}
-                className="relative"
-              >
-                <Bell className="h-5 w-5" />
-                {notifications.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {notifications.length}
-                  </span>
-                )}
-              </Button>
-
-              {showNotifications && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-slate-200 max-h-96 overflow-y-auto">
-                  <div className="p-3 border-b border-slate-200">
-                    <h3 className="font-semibold text-sm">通知センター</h3>
-                  </div>
-                  {notifications.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-slate-500">通知はありません</div>
-                  ) : (
-                    <div className="divide-y divide-slate-100">
-                      {notifications.map((notif, idx) => (
-                        <div key={idx} className="p-3 text-sm hover:bg-slate-50">
-                          {notif}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>

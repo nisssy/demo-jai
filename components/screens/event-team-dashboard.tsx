@@ -211,11 +211,11 @@ export function EventTeamDashboard({
 
   const getStatusBadge = (status: string) => {
     if (!status) {
-      return <Badge variant="secondary">-</Badge>
+      return <Badge variant="secondary" className="bg-slate-100 text-slate-700">-</Badge>
     }
     switch (status) {
       case "見積送付完了":
-        return <Badge className="bg-purple-600 text-white">見積送付完了</Badge>
+        return <Badge className="bg-green-600 text-white">見積送付完了</Badge>
       case "見込み入力完了":
         return <Badge className="bg-slate-500 text-white">見込み入力完了</Badge>
       case "仮押さえ依頼":
@@ -229,61 +229,61 @@ export function EventTeamDashboard({
       case "営業修正中":
         return <Badge className="bg-orange-600 text-white">営業修正中</Badge>
       case "手配進行中":
-        return <Badge className="bg-orange-600 text-white">手配進行中</Badge>
+        return <Badge className="bg-blue-600 text-white">手配進行中</Badge>
       case "イベント終了処理中":
-        return <Badge className="bg-indigo-600 text-white">イベント終了処理中</Badge>
+        return <Badge className="bg-blue-600 text-white">イベント終了処理中</Badge>
       case "手配完了":
         return <Badge className="bg-green-600 text-white">手配完了</Badge>
       case "キャンセル":
         return <Badge className="bg-red-600 text-white">キャンセル</Badge>
       default:
-        return <Badge variant="secondary">{status}</Badge>
+        return <Badge variant="secondary" className="bg-slate-100 text-slate-700">{status}</Badge>
     }
   }
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-slate-900">イベントチーム ダッシュボード</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">イベントチーム ダッシュボード</h1>
       </div>
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)} className="w-full">
-        <div className="border-b border-slate-200 mb-6">
-          <TabsList className="bg-transparent h-auto p-0 gap-1">
+        <div className="border-b border-slate-100 mb-8">
+          <TabsList className="bg-transparent h-auto p-0 gap-0">
             <TabsTrigger 
               value="temporaryHold"
-              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md px-6 py-3 text-base font-semibold rounded-t-lg border-b-2 border-transparent data-[state=active]:border-blue-600 transition-all relative"
+              className="relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
             >
               仮押さえ依頼
               {temporaryHoldRequests.length > 0 && (
-                <Badge className="ml-2 bg-red-600 text-white text-xs px-1.5 py-0.5">{temporaryHoldRequests.length}</Badge>
+                <Badge className="ml-1.5 bg-red-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">{temporaryHoldRequests.length}</Badge>
               )}
             </TabsTrigger>
             <TabsTrigger 
               value="confirmation"
-              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md px-6 py-3 text-base font-semibold rounded-t-lg border-b-2 border-transparent data-[state=active]:border-blue-600 transition-all relative"
+              className="relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
             >
               内容確認依頼
               {confirmationRequests.length > 0 && (
-                <Badge className="ml-2 bg-red-600 text-white text-xs px-1.5 py-0.5">{confirmationRequests.length}</Badge>
+                <Badge className="ml-1.5 bg-red-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">{confirmationRequests.length}</Badge>
               )}
             </TabsTrigger>
             <TabsTrigger 
               value="arrangements"
-              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md px-6 py-3 text-base font-semibold rounded-t-lg border-b-2 border-transparent data-[state=active]:border-blue-600 transition-all relative"
+              className="relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
             >
               手配進行中
               {arrangementProjects.length > 0 && (
-                <Badge className="ml-2 bg-slate-600 text-white text-xs px-1.5 py-0.5">{arrangementProjects.length}</Badge>
+                <Badge className="ml-1.5 bg-slate-400 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">{arrangementProjects.length}</Badge>
               )}
             </TabsTrigger>
             <TabsTrigger 
               value="postEvent"
-              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md px-6 py-3 text-base font-semibold rounded-t-lg border-b-2 border-transparent data-[state=active]:border-blue-600 transition-all relative"
+              className="relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
             >
               イベント終了処理中
               {postEventProjects.length > 0 && (
-                <Badge className="ml-2 bg-slate-600 text-white text-xs px-1.5 py-0.5">{postEventProjects.length}</Badge>
+                <Badge className="ml-1.5 bg-slate-400 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">{postEventProjects.length}</Badge>
               )}
             </TabsTrigger>
           </TabsList>
@@ -293,8 +293,8 @@ export function EventTeamDashboard({
         <TabsContent value="arrangements" className="mt-0">
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">手配進行中</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-lg font-semibold text-slate-900">手配進行中</CardTitle>
+              <CardDescription className="text-slate-600">
                 手配中の案件一覧
               </CardDescription>
             </CardHeader>
@@ -445,8 +445,8 @@ export function EventTeamDashboard({
         <TabsContent value="temporaryHold" className="mt-0">
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">仮押さえ依頼</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-lg font-semibold text-slate-900">仮押さえ依頼</CardTitle>
+              <CardDescription className="text-slate-600">
                 キャスティング情報を確認して仮押さえを行ってください
               </CardDescription>
             </CardHeader>
@@ -514,8 +514,8 @@ export function EventTeamDashboard({
         <TabsContent value="postEvent" className="mt-0">
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">イベント終了処理中</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-lg font-semibold text-slate-900">イベント終了処理中</CardTitle>
+              <CardDescription className="text-slate-600">
                 開催日の翌日以降のイベントのコスト入力を行ってください
               </CardDescription>
             </CardHeader>
@@ -617,8 +617,8 @@ export function EventTeamDashboard({
         <TabsContent value="confirmation" className="mt-0">
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">内容確認依頼</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-lg font-semibold text-slate-900">内容確認依頼</CardTitle>
+              <CardDescription className="text-slate-600">
                 受注確定した案件の内容を確認し、確認完了または修正依頼を行ってください
               </CardDescription>
             </CardHeader>

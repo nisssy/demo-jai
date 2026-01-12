@@ -141,16 +141,26 @@ DMM 営業部`
 
           {(quoteGenerated || emailGenerated) && (
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "quote" | "email")} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="quote" disabled={!quoteGenerated}>
-                  見積書プレビュー
-                </TabsTrigger>
-                <TabsTrigger value="email" disabled={!emailGenerated}>
-                  メールプレビュー
-                </TabsTrigger>
-              </TabsList>
+              <div className="border-b border-slate-100 mb-8">
+                <TabsList className="bg-transparent h-auto p-0 gap-0">
+                  <TabsTrigger 
+                    value="quote" 
+                    disabled={!quoteGenerated}
+                    className="relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    見積書プレビュー
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="email" 
+                    disabled={!emailGenerated}
+                    className="relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    メールプレビュー
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
-              <TabsContent value="quote" className="space-y-3">
+              <TabsContent value="quote" className="mt-0 space-y-3">
                 <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
                   <div className="flex items-center gap-2 text-green-600">
                     <FileText className="h-5 w-5" />
@@ -264,7 +274,7 @@ DMM 営業部`
                 </div>
               </TabsContent>
 
-              <TabsContent value="email" className="space-y-3">
+              <TabsContent value="email" className="mt-0 space-y-3">
                 <div className="flex items-center gap-2 p-4 bg-white rounded-lg border border-slate-200 text-green-600">
                   <Mail className="h-5 w-5" />
                   <span className="font-medium">メール文面生成完了</span>

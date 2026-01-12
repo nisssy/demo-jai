@@ -694,11 +694,11 @@ Co・Dir担当`
   // ステータスバッジを取得する関数（イベント側と統一）
   const getStatusBadge = (status: string | undefined) => {
     if (!status) {
-      return <Badge variant="secondary">-</Badge>
+      return <Badge variant="secondary" className="bg-slate-100 text-slate-700">-</Badge>
     }
     switch (status) {
       case "見積送付完了":
-        return <Badge className="bg-purple-600 text-white">見積送付完了</Badge>
+        return <Badge className="bg-green-600 text-white">見積送付完了</Badge>
       case "見込み入力完了":
         return <Badge className="bg-slate-500 text-white">見込み入力完了</Badge>
       case "仮押さえ依頼":
@@ -712,15 +712,15 @@ Co・Dir担当`
       case "営業確認中":
         return <Badge className="bg-orange-600 text-white">営業確認中</Badge>
       case "手配進行中":
-        return <Badge className="bg-orange-600 text-white">手配進行中</Badge>
+        return <Badge className="bg-blue-600 text-white">手配進行中</Badge>
+      case "イベント終了処理中":
+        return <Badge className="bg-blue-600 text-white">イベント終了処理中</Badge>
       case "手配完了":
         return <Badge className="bg-green-600 text-white">手配完了</Badge>
       case "キャンセル":
         return <Badge className="bg-red-600 text-white">キャンセル</Badge>
-      case "営業修正中":
-        return <Badge className="bg-orange-600 text-white">営業修正中</Badge>
       default:
-        return <Badge variant="secondary">{status}</Badge>
+        return <Badge variant="secondary" className="bg-slate-100 text-slate-700">{status}</Badge>
     }
   }
 
@@ -748,57 +748,52 @@ Co・Dir担当`
         </div>
       )}
 
-      {/* ヘッダーとアクションボタン */}
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-3">
-          <Button
-            onClick={onCreateNewProject}
-            size="lg"
-            className="gap-2 shadow-lg hover:shadow-xl transition-shadow"
-          >
-            <Plus className="h-5 w-5" />
-            新規案件作成
-          </Button>
-        </div>
-      </div>
-
       {/* モダンなタブデザイン */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "projects" | "corrections" | "temporaryHoldFailure")} className="w-full">
-        <div className="border-b border-slate-200 mb-6">
-          <TabsList className="bg-transparent h-auto p-0 gap-1">
-            <TabsTrigger 
+        <div className="border-b border-slate-100 mb-8">
+          <div className="flex items-center justify-between">
+            <TabsList className="bg-transparent h-auto p-0 gap-0">
+              <TabsTrigger 
               value="projects" 
-              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md px-6 py-3 text-base font-semibold rounded-t-lg border-b-2 border-transparent data-[state=active]:border-blue-600 transition-all"
+              className="relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
             >
               案件一覧
             </TabsTrigger>
             <TabsTrigger 
               value="corrections"
-              className="data-[state=active]:bg-orange-600 data-[state=active]:text-white data-[state=active]:shadow-md px-6 py-3 text-base font-semibold rounded-t-lg border-b-2 border-transparent data-[state=active]:border-orange-600 transition-all relative"
+              className="relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
             >
               修正確認依頼
               {correctionRequests.length > 0 && (
-                <Badge className="ml-2 bg-red-600 text-white text-xs px-1.5 py-0.5">{correctionRequests.length}</Badge>
+                <Badge className="ml-1.5 bg-red-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">{correctionRequests.length}</Badge>
               )}
             </TabsTrigger>
             <TabsTrigger 
               value="temporaryHoldFailure"
-              className="data-[state=active]:bg-orange-600 data-[state=active]:text-white data-[state=active]:shadow-md px-6 py-3 text-base font-semibold rounded-t-lg border-b-2 border-transparent data-[state=active]:border-orange-600 transition-all relative"
+              className="relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
             >
               仮押さえ不可
               {temporaryHoldFailureRequests.length > 0 && (
-                <Badge className="ml-2 bg-red-600 text-white text-xs px-1.5 py-0.5">{temporaryHoldFailureRequests.length}</Badge>
+                <Badge className="ml-1.5 bg-red-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">{temporaryHoldFailureRequests.length}</Badge>
               )}
             </TabsTrigger>
           </TabsList>
+          <button
+            onClick={onCreateNewProject}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors duration-200"
+          >
+            <Plus className="h-4 w-4" />
+            新規案件作成
+          </button>
+          </div>
         </div>
 
         <TabsContent value="projects" className="mt-0">
           {/* 検索UI */}
-          <Card className="mb-6 border-blue-200 bg-blue-50/30">
+          <Card className="mb-6 border-slate-200 bg-slate-50">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Search className="h-5 w-5 text-blue-600" />
+              <CardTitle className="text-lg font-semibold flex items-center gap-2 text-slate-900">
+                <Search className="h-5 w-5 text-slate-600" />
                 案件検索
               </CardTitle>
               <CardDescription>
@@ -1200,79 +1195,83 @@ Co・Dir担当`
                     return (
                       <div
                         key={project.id}
-                        className="border-l-4 border-slate-300 rounded-r-lg bg-slate-50/50 hover:bg-slate-200 transition-colors"
+                        className="bg-white border border-slate-200 rounded-lg hover:border-slate-300 hover:shadow-sm transition-all cursor-pointer"
+                        onClick={() => {
+                          // 営業修正中の場合は修正画面に遷移、それ以外は通常の編集画面に遷移
+                          if (projectItem.projectStatus === "営業修正中") {
+                            router.push(`/project/${project.id}/correction`)
+                          } else {
+                            router.push(`/project/${project.id}`)
+                          }
+                        }}
                       >
-                        <div className="p-4">
+                        <div className="p-5">
                           <div className="flex items-start justify-between gap-4">
-                            <div 
-                              className="flex-1 space-y-3 cursor-pointer"
-                              onClick={() => {
-                                // 営業修正中の場合は修正画面に遷移、それ以外は通常の編集画面に遷移
-                                if (projectItem.projectStatus === "営業修正中") {
-                                  router.push(`/project/${project.id}/correction`)
-                                } else {
-                                  router.push(`/project/${project.id}`)
-                                }
-                              }}
-                            >
-                              <div className="flex items-center gap-3">
-                                <h3 className="text-lg font-semibold text-slate-900">
-                                  {projectItem.eventProductName || project.projectName}
-                                </h3>
-                                {getStatusBadge(projectItem.projectStatus)}
-                              </div>
-
-                              <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                                <div className="flex items-center gap-2 text-slate-600">
-                                  <span>ステータス:</span>
-                                  {getStatusBadge(projectItem.projectStatus)}
+                            <div className="flex-1 space-y-4">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-2">
+                                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">案件No: {project.projectNumber}</span>
+                                    {getStatusBadge(projectItem.projectStatus)}
+                                  </div>
+                                  <h3 className="text-base font-semibold text-slate-900 mb-1">
+                                    {projectItem.eventProductName || project.projectName}
+                                  </h3>
+                                  <p className="text-sm text-slate-600">{project.clientName}</p>
                                 </div>
-                                <div className="flex items-center gap-2 text-slate-600">
-                                  <span>
-                                    商材カテゴリ: <span className="font-medium text-slate-900">{projectItem.category || "-"}</span>
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2 text-slate-600">
-                                  <span>
-                                    イベント区分: <span className="font-medium text-slate-900">{projectItem.eventType || "-"}</span>
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2 text-slate-600">
-                                  <span>
-                                    イベント商材名: <span className="font-medium text-slate-900">{projectItem.eventProductName || "-"}</span>
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2 text-slate-600">
-                                  <Calendar className="h-4 w-4" />
-                                  <span>
-                                    開催日: <span className="font-medium text-slate-900">{projectItem.eventDate || project.date || "-"}</span>
-                                  </span>
+                                <div 
+                                  className="flex flex-col items-end"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <Label htmlFor={`status-${project.id}`} className="text-xs text-slate-600">
+                                      {project.status === "ordered" ? "受注済み" : "見積中"}
+                                    </Label>
+                                    <Switch
+                                      id={`status-${project.id}`}
+                                      checked={project.status === "ordered"}
+                                      onCheckedChange={(checked) => handleStatusToggle(projectItem, checked)}
+                                      className="scale-75"
+                                    />
+                                  </div>
                                 </div>
                               </div>
 
-                              <div className="pt-2 border-t border-slate-200">
-                                <span className="text-sm text-slate-600">見積金額: </span>
-                                <span className="text-lg font-semibold text-blue-600">
-                                  {(project as any).estimatedBillingAmount !== undefined
-                                    ? `¥${(project as any).estimatedBillingAmount.toLocaleString()}`
-                                    : project.estimateAmount}
-                                </span>
+                              <div className="grid grid-cols-3 gap-4 pt-3 border-t border-slate-100">
+                                <div>
+                                  <div className="text-xs text-slate-500 mb-1">開催日</div>
+                                  <div className="text-sm font-medium text-slate-900 flex items-center gap-1.5">
+                                    <Calendar className="h-3.5 w-3.5" />
+                                    {projectItem.eventDate || project.date || "-"}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="text-xs text-slate-500 mb-1">商材カテゴリ</div>
+                                  <div className="text-sm font-medium text-slate-900">{projectItem.category || "-"}</div>
+                                </div>
+                                <div>
+                                  <div className="text-xs text-slate-500 mb-1">イベント区分</div>
+                                  <div className="text-sm font-medium text-slate-900">{projectItem.eventType || "-"}</div>
+                                </div>
                               </div>
-                            </div>
 
-                            <div 
-                              className="flex flex-col items-end gap-3"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <div className="flex items-center gap-2 pt-2">
-                                <Label htmlFor={`status-${project.id}`} className="text-sm">
-                                  {project.status === "ordered" ? "受注済み" : "受注に切替"}
-                                </Label>
-                                <Switch
-                                  id={`status-${project.id}`}
-                                  checked={project.status === "ordered"}
-                                  onCheckedChange={(checked) => handleStatusToggle(projectItem, checked)}
-                                />
+                              <div className="pt-3 border-t border-slate-100">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <div className="text-xs text-slate-500 mb-1">見積金額</div>
+                                    <div className="text-lg font-semibold text-slate-900">
+                                      {(project as any).estimatedBillingAmount !== undefined
+                                        ? `¥${(project as any).estimatedBillingAmount.toLocaleString()}`
+                                        : project.estimateAmount}
+                                    </div>
+                                  </div>
+                                  {projectItem.salesPersonName && (
+                                    <div className="text-right">
+                                      <div className="text-xs text-slate-500 mb-1">担当営業</div>
+                                      <div className="text-sm font-medium text-slate-700">{projectItem.salesPersonName}</div>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1656,7 +1655,7 @@ Co・Dir担当`
                   </Badge>
                 </div>
                 <Textarea value={prText} onChange={(e) => setPrText(e.target.value)} rows={4} className="mb-3" />
-                <Button className="bg-blue-500 hover:bg-blue-600">承認して投稿予約</Button>
+                <Button>承認して投稿予約</Button>
               </div>
             )}
           </div>
@@ -2170,55 +2169,76 @@ Co・Dir担当`
                 }
                 const correctionRequest = (project as any).correctionRequest || ""
                 return (
-                  <Card key={project.id} className="hover:shadow-md transition-shadow border-orange-200">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 space-y-3">
-                          <div className="flex items-center gap-3">
-                            <h3 className="text-lg font-semibold text-slate-900">
-                              {projectItem.eventProductName || project.projectName}
-                            </h3>
-                            {getStatusBadge(projectItem.projectStatus)}
-                          </div>
-                          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                            <div className="flex items-center gap-2 text-slate-600">
-                              <span>案件No:</span>
-                              <span className="font-medium text-slate-900">{project.projectNumber}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-slate-600">
-                              <span>クライアント:</span>
-                              <span className="font-medium text-slate-900">{project.clientName}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-slate-600">
-                              <span>開催日:</span>
-                              <span className="font-medium text-slate-900">{projectItem.eventDate || project.date}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-slate-600">
-                              <span>ステータス:</span>
+                  <div
+                    key={project.id}
+                    className="bg-white border border-slate-200 rounded-lg hover:border-slate-300 hover:shadow-sm transition-all"
+                  >
+                    <div className="p-5">
+                      <div className="space-y-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">案件No: {project.projectNumber}</span>
                               {getStatusBadge(projectItem.projectStatus)}
                             </div>
+                            <h3 className="text-base font-semibold text-slate-900 mb-1">
+                              {projectItem.eventProductName || project.projectName}
+                            </h3>
+                            <p className="text-sm text-slate-600">{project.clientName}</p>
                           </div>
-                          {correctionRequest && (
-                            <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                              <div className="flex items-center gap-2 mb-2">
-                                <AlertTriangle className="h-4 w-4 text-orange-600" />
-                                <span className="text-sm font-semibold text-orange-900">修正依頼内容</span>
-                              </div>
-                              <p className="text-sm text-slate-700 whitespace-pre-wrap">{correctionRequest}</p>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4 pt-3 border-t border-slate-100">
+                          <div>
+                            <div className="text-xs text-slate-500 mb-1">開催日</div>
+                            <div className="text-sm font-medium text-slate-900 flex items-center gap-1.5">
+                              <Calendar className="h-3.5 w-3.5" />
+                              {projectItem.eventDate || project.date || "-"}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-slate-500 mb-1">見積金額</div>
+                            <div className="text-sm font-medium text-slate-900">
+                              {(project as any).estimatedBillingAmount !== undefined
+                                ? `¥${(project as any).estimatedBillingAmount.toLocaleString()}`
+                                : project.estimateAmount}
+                            </div>
+                          </div>
+                          {projectItem.salesPersonName && (
+                            <div>
+                              <div className="text-xs text-slate-500 mb-1">担当営業</div>
+                              <div className="text-sm font-medium text-slate-700">{projectItem.salesPersonName}</div>
                             </div>
                           )}
                         </div>
-                        <div className="flex items-center gap-2">
+
+                        {correctionRequest && (
+                          <div className="pt-3 border-t border-slate-100">
+                            <div className="bg-orange-50 border border-orange-200 rounded-md p-3">
+                              <div className="flex items-center gap-2 mb-2">
+                                <AlertTriangle className="h-4 w-4 text-orange-600" />
+                                <span className="text-xs font-semibold text-orange-900">修正依頼内容</span>
+                              </div>
+                              <p className="text-sm text-slate-700 whitespace-pre-wrap">{correctionRequest}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="pt-3 border-t border-slate-100 flex justify-end">
                           <Button
-                            onClick={() => router.push(`/project/${project.id}/correction?tab=corrections`)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              router.push(`/project/${project.id}/correction?tab=corrections`)
+                            }}
+                            size="sm"
                             className="gap-2"
                           >
                             修正
                           </Button>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 )
               })}
             </div>
@@ -2255,55 +2275,63 @@ Co・Dir担当`
                 }
                 const temporaryHoldFailureComment = (project as any).temporaryHoldFailureComment || ""
                 return (
-                  <Card key={project.id} className="hover:shadow-md transition-shadow border-orange-200">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 space-y-3">
-                          <div className="flex items-center gap-3">
-                            <h3 className="text-lg font-semibold text-slate-900">
-                              {projectItem.eventProductName || project.projectName}
-                            </h3>
-                            {getStatusBadge(projectItem.projectStatus)}
-                          </div>
-                          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                            <div className="flex items-center gap-2 text-slate-600">
-                              <span>案件No:</span>
-                              <span className="font-medium text-slate-900">{project.projectNumber}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-slate-600">
-                              <span>クライアント:</span>
-                              <span className="font-medium text-slate-900">{project.clientName}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-slate-600">
-                              <span>開催日:</span>
-                              <span className="font-medium text-slate-900">{projectItem.eventDate || project.date}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-slate-600">
-                              <span>ステータス:</span>
+                  <div
+                    key={project.id}
+                    className="bg-white border border-slate-200 rounded-lg hover:border-slate-300 hover:shadow-sm transition-all"
+                  >
+                    <div className="p-5">
+                      <div className="space-y-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">案件No: {project.projectNumber}</span>
                               {getStatusBadge(projectItem.projectStatus)}
                             </div>
+                            <h3 className="text-base font-semibold text-slate-900 mb-1">
+                              {projectItem.eventProductName || project.projectName}
+                            </h3>
+                            <p className="text-sm text-slate-600">{project.clientName}</p>
                           </div>
-                          {temporaryHoldFailureComment && (
-                            <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                              <div className="flex items-center gap-2 mb-2">
-                                <AlertTriangle className="h-4 w-4 text-orange-600" />
-                                <span className="text-sm font-semibold text-orange-900">仮押さえ不可の理由</span>
-                              </div>
-                              <p className="text-sm text-slate-700 whitespace-pre-wrap">{temporaryHoldFailureComment}</p>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4 pt-3 border-t border-slate-100">
+                          <div>
+                            <div className="text-xs text-slate-500 mb-1">開催日</div>
+                            <div className="text-sm font-medium text-slate-900 flex items-center gap-1.5">
+                              <Calendar className="h-3.5 w-3.5" />
+                              {projectItem.eventDate || project.date || "-"}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-slate-500 mb-1">見積金額</div>
+                            <div className="text-sm font-medium text-slate-900">
+                              {(project as any).estimatedBillingAmount !== undefined
+                                ? `¥${(project as any).estimatedBillingAmount.toLocaleString()}`
+                                : project.estimateAmount}
+                            </div>
+                          </div>
+                          {projectItem.salesPersonName && (
+                            <div>
+                              <div className="text-xs text-slate-500 mb-1">担当営業</div>
+                              <div className="text-sm font-medium text-slate-700">{projectItem.salesPersonName}</div>
                             </div>
                           )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            onClick={() => router.push(`/project/${project.id}`)}
-                            className="gap-2"
-                          >
-                            詳細を確認
-                          </Button>
-                        </div>
+
+                        {temporaryHoldFailureComment && (
+                          <div className="pt-3 border-t border-slate-100">
+                            <div className="bg-orange-50 border border-orange-200 rounded-md p-3">
+                              <div className="flex items-center gap-2 mb-2">
+                                <AlertTriangle className="h-4 w-4 text-orange-600" />
+                                <span className="text-xs font-semibold text-orange-900">仮押さえ不可の理由</span>
+                              </div>
+                              <p className="text-sm text-slate-700 whitespace-pre-wrap">{temporaryHoldFailureComment}</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 )
               })}
             </div>
