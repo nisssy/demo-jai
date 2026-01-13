@@ -1,11 +1,11 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import { useAppRouter } from "@/hooks/use-app-router"
 import { ProjectRegistration } from "@/components/screens/project-registration"
 import { useProject } from "@/contexts/project-context"
 
 export default function ProjectRegistrationPage() {
-  const router = useRouter()
+  const router = useAppRouter()
   const { projectData, setProjectData, addNotification } = useProject()
 
   return (

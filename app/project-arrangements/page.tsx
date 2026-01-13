@@ -1,11 +1,11 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import { useAppRouter } from "@/hooks/use-app-router"
 import { ProjectArrangements } from "@/components/screens/project-arrangements"
 import { useProject } from "@/contexts/project-context"
 
 export default function ProjectArrangementsPage() {
-  const router = useRouter()
+  const router = useAppRouter()
   const { projectData, addNotification } = useProject()
 
   return (

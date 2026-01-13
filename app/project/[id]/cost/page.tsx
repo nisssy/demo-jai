@@ -1,6 +1,7 @@
 "use client"
 
-import { useRouter, useParams } from "next/navigation"
+import { useParams } from "next/navigation"
+import { useAppRouter } from "@/hooks/use-app-router"
 import { useProject } from "@/contexts/project-context"
 import { useEffect, useState, Suspense } from "react"
 import { Button } from "@/components/ui/button"
@@ -11,7 +12,7 @@ import { ChevronLeft, Send } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
 function ProjectCostPageContent() {
-  const router = useRouter()
+  const router = useAppRouter()
   const params = useParams()
   const projectId = params?.id ? Number(params.id) : null
   const { getProjectById, updateProject, addNotification } = useProject()

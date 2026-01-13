@@ -21,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { useRouter } from "next/navigation"
+import { useAppRouter } from "@/hooks/use-app-router"
 import { useProject } from "@/contexts/project-context"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
@@ -54,7 +54,7 @@ export function ProjectRegistration({
   onCorrectionCommentChange,
   correctionRequest,
 }: ProjectRegistrationProps) {
-  const router = useRouter()
+  const router = useAppRouter()
   const { createProjects, createProject, getProjectById, updateProject, getHalls, getHallByName, searchHalls, getProjects, generateProjectNumber, getCompanies, getCompanyById, getCompanyByCompanyId, searchCompanies, getHallsByCompanyId } = useProject()
   const isEditMode = projectId !== undefined && projectId !== null
   const isProductMode = isProductAddMode || isProductEditMode

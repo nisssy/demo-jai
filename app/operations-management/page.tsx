@@ -1,11 +1,11 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import { useAppRouter } from "@/hooks/use-app-router"
 import { OperationsManagement } from "@/components/screens/operations-management"
 import { useProject } from "@/contexts/project-context"
 
 export default function OperationsManagementPage() {
-  const router = useRouter()
+  const router = useAppRouter()
   const { projectData } = useProject()
 
   return (

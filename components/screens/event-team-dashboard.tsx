@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, MapPin, User, Building2, CheckCircle2, XCircle, Eye, Send, FileText, Download, Mail } from "lucide-react"
 import type { ProjectData } from "@/types/project"
 import { useProject } from "@/contexts/project-context"
-import { useRouter } from "next/navigation"
+import { useAppRouter } from "@/hooks/use-app-router"
 
 type EventTeamDashboardProps = {
   projectData: ProjectData
@@ -28,7 +28,7 @@ export function EventTeamDashboard({
   setProjectData,
   addNotification,
 }: EventTeamDashboardProps) {
-  const router = useRouter()
+  const router = useAppRouter()
   const { getProjects, updateProject } = useProject()
   const allProjects = getProjects()
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)

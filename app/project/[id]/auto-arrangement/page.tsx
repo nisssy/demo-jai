@@ -1,6 +1,7 @@
 "use client"
 
-import { useRouter, useParams, useSearchParams } from "next/navigation"
+import { useParams, useSearchParams } from "next/navigation"
+import { useAppRouter } from "@/hooks/use-app-router"
 import { useProject } from "@/contexts/project-context"
 import { useEffect, useState, Suspense } from "react"
 import { Button } from "@/components/ui/button"
@@ -11,7 +12,7 @@ import { ChevronLeft, Send } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 
 function ProjectAutoArrangementPageContent() {
-  const router = useRouter()
+  const router = useAppRouter()
   const params = useParams()
   const searchParams = useSearchParams()
   const projectId = params?.id ? (typeof params.id === 'string' ? Number(params.id) : params.id) : null

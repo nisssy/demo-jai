@@ -51,7 +51,7 @@ import {
 import type { ProjectData, Role } from "@/types/project"
 import { useState, useMemo, useEffect, useRef } from "react"
 import { useProject } from "@/contexts/project-context"
-import { useRouter } from "next/navigation"
+import { useAppRouter } from "@/hooks/use-app-router"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -171,7 +171,7 @@ export function ProjectList({
   onCreateNewProject,
   initialTab = "projects",
 }: ProjectListProps) {
-  const router = useRouter()
+  const router = useAppRouter()
   const { getProjects, updateProject, getHalls, searchHalls, searchCompanies, getCompanyByCompanyId } = useProject()
   const allProjects = getProjects()
   const [activeTab, setActiveTab] = useState<"projects" | "corrections" | "temporaryHoldFailure">(initialTab as "projects" | "corrections" | "temporaryHoldFailure")
@@ -780,7 +780,7 @@ Co・Dir担当`
           </TabsList>
           <button
             onClick={onCreateNewProject}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors duration-200"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors duration-200 cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             新規案件作成
@@ -968,7 +968,7 @@ Co・Dir担当`
                             e.stopPropagation()
                             setSearchProjectNumber("")
                           }}
-                          className="ml-1 hover:text-red-600"
+                          className="ml-1 hover:text-red-600 cursor-pointer"
                         >
                           ×
                         </button>
@@ -983,7 +983,7 @@ Co・Dir担当`
                             e.stopPropagation()
                             setSearchCategory(null)
                           }}
-                          className="ml-1 hover:text-red-600"
+                          className="ml-1 hover:text-red-600 cursor-pointer"
                         >
                           ×
                         </button>
@@ -998,7 +998,7 @@ Co・Dir担当`
                             e.stopPropagation()
                             setSearchEventType(null)
                           }}
-                          className="ml-1 hover:text-red-600"
+                          className="ml-1 hover:text-red-600 cursor-pointer"
                         >
                           ×
                         </button>
@@ -1013,7 +1013,7 @@ Co・Dir担当`
                             e.stopPropagation()
                             setSelectedHallName(null)
                           }}
-                          className="ml-1 hover:text-red-600"
+                          className="ml-1 hover:text-red-600 cursor-pointer"
                         >
                           ×
                         </button>
@@ -1028,7 +1028,7 @@ Co・Dir担当`
                             e.stopPropagation()
                             setSelectedCompanyId(null)
                           }}
-                          className="ml-1 hover:text-red-600"
+                          className="ml-1 hover:text-red-600 cursor-pointer"
                         >
                           ×
                         </button>

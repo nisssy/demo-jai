@@ -1,11 +1,11 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import { useAppRouter } from "@/hooks/use-app-router"
 import { QuoteCreation } from "@/components/screens/quote-creation"
 import { useProject } from "@/contexts/project-context"
 
 export default function QuoteCreationPage() {
-  const router = useRouter()
+  const router = useAppRouter()
   const { projectData, setProjectData } = useProject()
 
   return (

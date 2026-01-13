@@ -1,12 +1,13 @@
 "use client"
 
-import { useRouter, useParams, useSearchParams } from "next/navigation"
+import { useParams, useSearchParams } from "next/navigation"
+import { useAppRouter } from "@/hooks/use-app-router"
 import { ProjectRegistration } from "@/components/screens/project-registration"
 import { useProject } from "@/contexts/project-context"
 import { useEffect, useState } from "react"
 
 export default function ProjectEditPage() {
-  const router = useRouter()
+  const router = useAppRouter()
   const params = useParams()
   const searchParams = useSearchParams()
   const projectId = params?.id ? Number(params.id) : null

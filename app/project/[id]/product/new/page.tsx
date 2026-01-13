@@ -1,11 +1,12 @@
 "use client"
 
-import { useRouter, useParams } from "next/navigation"
+import { useParams } from "next/navigation"
+import { useAppRouter } from "@/hooks/use-app-router"
 import { ProjectRegistration } from "@/components/screens/project-registration"
 import { useProject } from "@/contexts/project-context"
 
 export default function ProductRegistrationPage() {
-  const router = useRouter()
+  const router = useAppRouter()
   const params = useParams()
   const projectId = params.id ? Number(params.id) : null
   const { projectData, setProjectData, addNotification, getProjectById } = useProject()

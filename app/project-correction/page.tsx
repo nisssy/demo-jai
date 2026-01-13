@@ -1,12 +1,12 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import { useAppRouter } from "@/hooks/use-app-router"
 import { ProjectCorrection } from "@/components/screens/project-correction"
 import { useProject } from "@/contexts/project-context"
 import { useEffect } from "react"
 
 export default function ProjectCorrectionPage() {
-  const router = useRouter()
+  const router = useAppRouter()
   const { projectData, setProjectData, setCurrentRole, currentRole, addNotification } = useProject()
 
   useEffect(() => {

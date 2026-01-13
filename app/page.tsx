@@ -1,6 +1,7 @@
 "use client"
 
-import { useRouter, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
+import { useAppRouter } from "@/hooks/use-app-router"
 import { ProjectList } from "@/components/screens/project-list"
 import { RoleSelection } from "@/components/screens/role-selection"
 import { EventTeamDashboard } from "@/components/screens/event-team-dashboard"
@@ -8,7 +9,7 @@ import { useProject } from "@/contexts/project-context"
 import { Suspense } from "react"
 
 function HomePageContent() {
-  const router = useRouter()
+  const router = useAppRouter()
   const searchParams = useSearchParams()
   const { projectData, setProjectData, currentRole, setCurrentRole, addNotification } = useProject()
   

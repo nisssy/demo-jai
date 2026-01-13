@@ -1,6 +1,7 @@
 "use client"
 
-import { useRouter, useParams, useSearchParams } from "next/navigation"
+import { useParams, useSearchParams } from "next/navigation"
+import { useAppRouter } from "@/hooks/use-app-router"
 import { ProjectRegistration } from "@/components/screens/project-registration"
 import { useProject } from "@/contexts/project-context"
 import { useEffect, useState, Suspense } from "react"
@@ -9,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 function ProjectCorrectionPageContent() {
-  const router = useRouter()
+  const router = useAppRouter()
   const params = useParams()
   const searchParams = useSearchParams()
   const projectId = params?.id ? Number(params.id) : null

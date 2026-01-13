@@ -1,11 +1,11 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import { useAppRouter } from "@/hooks/use-app-router"
 import { DataExport } from "@/components/screens/data-export"
 import { useProject } from "@/contexts/project-context"
 
 export default function DataExportPage() {
-  const router = useRouter()
+  const router = useAppRouter()
   const { projectData } = useProject()
 
   return (
