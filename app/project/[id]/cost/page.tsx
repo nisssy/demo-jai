@@ -11,6 +11,67 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ChevronLeft, Send } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
+// キャストのマスタデータ（時給）- 営業画面と同じ値を使用
+const companionHourlyRates: { [key: string]: number } = {
+  // 専属コンパニオン
+  Rio: 5000,
+  Ayaka: 5500,
+  Nanaka: 5200,
+  // 外部コンパニオン
+  "山田 花子": 6000,
+  "佐藤 美咲": 5800,
+  "鈴木 さくら": 6200,
+  "高橋 みゆき": 5900,
+  "伊藤 あかり": 6100,
+}
+
+const directorHourlyRates: { [key: string]: number } = {
+  // 専属ディレクター
+  Takeshi: 8000,
+  Kenji: 8500,
+  Hiroshi: 8200,
+  // 外部ディレクター
+  "田中 ディレクター": 9000,
+  "佐藤 ディレクター": 8800,
+  "鈴木 ディレクター": 9200,
+  "高橋 ディレクター": 8900,
+  "伊藤 ディレクター": 9100,
+}
+
+const mcHourlyRates: { [key: string]: number } = {
+  // 専属MC
+  Yuki: 7000,
+  Saki: 7200,
+  Mai: 7100,
+  // 外部MC
+  "山田 MC": 7500,
+  "中村 MC": 7300,
+  "小林 MC": 7600,
+  "加藤 MC": 7400,
+  "松本 MC": 7500,
+}
+
+// 平均時給を計算
+function getAverageHourlyRate(rates: { [key: string]: number }): number {
+  const values = Object.values(rates)
+  if (values.length === 0) return 0
+  return values.reduce((sum, rate) => sum + rate, 0) / values.length
+}
+
+const averageCompanionRate = getAverageHourlyRate(companionHourlyRates)
+const averageDirectorRate = getAverageHourlyRate(directorHourlyRates)
+const averageMcRate = getAverageHourlyRate(mcHourlyRates)
+
+// 時間数を計算
+function getDurationInHours(startTime: string, endTime: string): number {
+  if (!startTime || !endTime) return 0
+  const [startHour, startMin] = startTime.split(":").map(Number)
+  const [endHour, endMin] = endTime.split(":").map(Number)
+  const startMinutes = startHour * 60 + startMin
+  const endMinutes = endHour * 60 + endMin
+  return (endMinutes - startMinutes) / 60
+}
+
 function ProjectCostPageContent() {
   const router = useAppRouter()
   const params = useParams()
@@ -41,67 +102,6 @@ function ProjectCostPageContent() {
   
   // ポストPRの状態
   const [postPRCost, setPostPRCost] = useState(50000) // 固定額50,000円
-  
-  // キャストのマスタデータ（時給）- 営業画面と同じ値を使用
-  const companionHourlyRates: { [key: string]: number } = {
-    // 専属コンパニオン
-    "Rio": 5000,
-    "Ayaka": 5500,
-    "Nanaka": 5200,
-    // 外部コンパニオン
-    "山田 花子": 6000,
-    "佐藤 美咲": 5800,
-    "鈴木 さくら": 6200,
-    "高橋 みゆき": 5900,
-    "伊藤 あかり": 6100,
-  }
-  
-  const directorHourlyRates: { [key: string]: number } = {
-    // 専属ディレクター
-    "Takeshi": 8000,
-    "Kenji": 8500,
-    "Hiroshi": 8200,
-    // 外部ディレクター
-    "田中 ディレクター": 9000,
-    "佐藤 ディレクター": 8800,
-    "鈴木 ディレクター": 9200,
-    "高橋 ディレクター": 8900,
-    "伊藤 ディレクター": 9100,
-  }
-  
-  const mcHourlyRates: { [key: string]: number } = {
-    // 専属MC
-    "Yuki": 7000,
-    "Saki": 7200,
-    "Mai": 7100,
-    // 外部MC
-    "山田 MC": 7500,
-    "中村 MC": 7300,
-    "小林 MC": 7600,
-    "加藤 MC": 7400,
-    "松本 MC": 7500,
-  }
-  
-  // 平均時給を計算
-  const getAverageHourlyRate = (rates: { [key: string]: number }): number => {
-    const values = Object.values(rates)
-    if (values.length === 0) return 0
-    return values.reduce((sum, rate) => sum + rate, 0) / values.length
-  }
-  
-  const averageCompanionRate = getAverageHourlyRate(companionHourlyRates)
-  const averageDirectorRate = getAverageHourlyRate(directorHourlyRates)
-  const averageMcRate = getAverageHourlyRate(mcHourlyRates)
-  
-  // 時間数を計算
-  const getDurationInHours = (startTime: string, endTime: string): number => {
-    if (!startTime || !endTime) return 0
-    const [startHour, startMin] = startTime.split(":").map(Number)
-    const [endHour, endMin] = endTime.split(":").map(Number)
-    const startMinutes = startHour * 60 + startMin
-    const endMinutes = endHour * 60 + endMin
-    return (endMinutes - startMinutes) / 60
-  }
   
   // キャスティングコストを計算（確定キャストから）
   const calculateCastingCost = useCallback(() => {
@@ -152,7 +152,7 @@ function ProjectCostPageContent() {
         total: totalCost,
       }
     }
-  }
+  }, [project])
 
   const hasInitialized = useRef(false)
   
