@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -30,7 +30,7 @@ export function EventTeamDashboard({
 }: EventTeamDashboardProps) {
   const router = useAppRouter()
   const { getProjects, updateProject } = useProject()
-  const allProjects = getProjects()
+  const allProjects = useMemo(() => getProjects(), [getProjects])
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [showCastingInfoModal, setShowCastingInfoModal] = useState(false)
   const [showTemporaryHoldModal, setShowTemporaryHoldModal] = useState(false)
@@ -63,6 +63,57 @@ export function EventTeamDashboard({
       xAccount: true,
     })
     setShowAutoArrangementModal(true)
+  }
+
+  // ぱちタウンの公開状況を取得する関数
+  const getPachitownPublicationStatus = (project: Project): string | null => {
+    const pachitownLinked = (project as any).pachitownLinked
+    if (!pachitownLinked) {
+      return null // ぱちタウン連携が実行されていない場合はnullを返す
+    }
+
+    const publicationDate = (project as any).publicationDate
+    if (!publicationDate) {
+      return "公開待ち" // 掲載日が設定されていない場合
+    }
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    // 日付文字列をDateオブジェクトに変換
+    const dateStr = publicationDate.replace(/-/g, "/")
+    const [year, month, day] = dateStr.split("/").map(Number)
+    if (isNaN(year) || isNaN(month) || isNaN(day)) {
+      return "公開待ち"
+    }
+
+    const pubDate = new Date(year, month - 1, day)
+    pubDate.setHours(0, 0, 0, 0)
+
+    if (pubDate > today) {
+      return "公開待ち"
+    } else if (pubDate.getTime() === today.getTime()) {
+      return "公開中"
+    } else {
+      // 公開日が過去の場合、イベント日を確認して公開期間を判断
+      const eventDate = project.eventDate || project.date
+      if (eventDate) {
+        const eventDateStr = eventDate.replace(/-/g, "/")
+        const [eventYear, eventMonth, eventDay] = eventDateStr.split("/").map(Number)
+        if (!isNaN(eventYear) && !isNaN(eventMonth) && !isNaN(eventDay)) {
+          const eventDateObj = new Date(eventYear, eventMonth - 1, eventDay)
+          eventDateObj.setHours(0, 0, 0, 0)
+          
+          // イベント日が過去の場合は公開済み、未来の場合は公開中
+          if (eventDateObj < today) {
+            return "公開済み"
+          } else {
+            return "公開中"
+          }
+        }
+      }
+      return "公開中"
+    }
   }
 
   // 手配進行中の案件（projectStatus === "手配進行中"）
@@ -105,13 +156,32 @@ export function EventTeamDashboard({
     })
   }, [allProjects])
 
-  // 開催日の翌日以降の案件のステータスを自動更新
+  // 開催日の翌日以降の案件のステータスを自動更新（更新済みフラグ）
+  const updatedProjectsRef = useRef<Set<number>>(new Set())
+  const updateProjectRef = useRef(updateProject)
+  const lastProjectsIdsRef = useRef<string>("")
+  
+  // updateProject の最新の参照を保持
   useEffect(() => {
+    updateProjectRef.current = updateProject
+  }, [updateProject])
+  
+  useEffect(() => {
+    // プロジェクトIDのリストを文字列化して比較（変更検知）
+    const currentProjectsIds = allProjects.map(p => `${p.id}:${p.projectStatus}`).join(",")
+    
+    // 前回と同じ場合はスキップ（無限ループ防止）
+    if (currentProjectsIds === lastProjectsIdsRef.current) {
+      return
+    }
+    
+    lastProjectsIdsRef.current = currentProjectsIds
+    
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     
     allProjects.forEach((p) => {
-      if (p.projectStatus === "手配進行中") {
+      if (p.projectStatus === "手配進行中" && !updatedProjectsRef.current.has(p.id)) {
         const eventDate = p.eventDate || p.date
         if (eventDate) {
           const dateStr = eventDate.replace(/-/g, "/")
@@ -122,13 +192,17 @@ export function EventTeamDashboard({
             
             // 開催日の翌日以降（開催日より前の日）にステータスを更新
             if (projectDate < today) {
-              updateProject(p.id, { projectStatus: "イベント終了処理中" } as any)
+              updatedProjectsRef.current.add(p.id)
+              updateProjectRef.current(p.id, { projectStatus: "イベント終了処理中" } as any)
             }
           }
         }
+      } else if (p.projectStatus !== "手配進行中") {
+        // ステータスが変わった場合は更新済みフラグをクリア
+        updatedProjectsRef.current.delete(p.id)
       }
     })
-  }, [allProjects, updateProject])
+  }, [allProjects])
 
   const handleViewCastingInfo = (project: Project) => {
     setSelectedProject(project)
@@ -317,6 +391,7 @@ export function EventTeamDashboard({
                           <TableHead>ディレクター確定</TableHead>
                           <TableHead>MC確定</TableHead>
                           <TableHead>ステータス</TableHead>
+                          <TableHead>ぱちタウン公開状況</TableHead>
                           <TableHead className="sticky right-0 bg-white z-10">操作</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -391,6 +466,28 @@ export function EventTeamDashboard({
                                 )}
                               </TableCell>
                               <TableCell>{getStatusBadge(project.projectStatus || "")}</TableCell>
+                              <TableCell>
+                                {(() => {
+                                  const publicationStatus = getPachitownPublicationStatus(project)
+                                  if (publicationStatus === null) {
+                                    return <span className="text-sm text-slate-400">-</span>
+                                  }
+                                  let badgeVariant: "default" | "secondary" | "outline" = "default"
+                                  let badgeColor = ""
+                                  if (publicationStatus === "公開待ち") {
+                                    badgeColor = "bg-yellow-100 text-yellow-800"
+                                  } else if (publicationStatus === "公開中") {
+                                    badgeColor = "bg-green-100 text-green-800"
+                                  } else if (publicationStatus === "公開済み") {
+                                    badgeColor = "bg-blue-100 text-blue-800"
+                                  }
+                                  return (
+                                    <Badge className={badgeColor}>
+                                      {publicationStatus}
+                                    </Badge>
+                                  )
+                                })()}
+                              </TableCell>
                               <TableCell className="sticky right-0 bg-white z-10">
                                 <Button
                                   size="sm"
@@ -1015,7 +1112,7 @@ export function EventTeamDashboard({
                       id="pachitown"
                       checked={autoArrangementChecks.pachitown}
                       onCheckedChange={(checked) => {
-                        setAutoArrangementChecks({ ...autoArrangementChecks, pachitown: checked === true })
+                        setAutoArrangementChecks((prev) => ({ ...prev, pachitown: checked === true }))
                       }}
                     />
                     <Label htmlFor="pachitown" className="text-sm font-medium cursor-pointer">
@@ -1029,7 +1126,7 @@ export function EventTeamDashboard({
                       id="report"
                       checked={autoArrangementChecks.report}
                       onCheckedChange={(checked) => {
-                        setAutoArrangementChecks({ ...autoArrangementChecks, report: checked === true })
+                        setAutoArrangementChecks((prev) => ({ ...prev, report: checked === true }))
                       }}
                     />
                     <Label htmlFor="report" className="text-sm font-medium cursor-pointer">
@@ -1042,7 +1139,7 @@ export function EventTeamDashboard({
                     id="googleForm"
                     checked={autoArrangementChecks.googleForm}
                     onCheckedChange={(checked) => {
-                      setAutoArrangementChecks({ ...autoArrangementChecks, googleForm: checked === true })
+                      setAutoArrangementChecks((prev) => ({ ...prev, googleForm: checked === true }))
                     }}
                   />
                   <Label htmlFor="googleForm" className="text-sm font-medium cursor-pointer">
@@ -1054,7 +1151,7 @@ export function EventTeamDashboard({
                     id="xAccount"
                     checked={autoArrangementChecks.xAccount}
                     onCheckedChange={(checked) => {
-                      setAutoArrangementChecks({ ...autoArrangementChecks, xAccount: checked === true })
+                      setAutoArrangementChecks((prev) => ({ ...prev, xAccount: checked === true }))
                     }}
                   />
                   <Label htmlFor="xAccount" className="text-sm font-medium cursor-pointer">
@@ -1077,6 +1174,13 @@ export function EventTeamDashboard({
                 if (autoArrangementChecks.xAccount) actions.push("専用Xアカウントによる事前告知依頼")
                 
                 if (actions.length > 0) {
+                  // ぱちタウン連携が実行された場合、連携情報を保存
+                  if (autoArrangementChecks.pachitown && selectedProject) {
+                    updateProject(selectedProject.id, {
+                      pachitownLinked: true,
+                      pachitownLinkedDate: new Date().toISOString().split('T')[0],
+                    } as any)
+                  }
                   addNotification(`以下の操作を実行しました: ${actions.join("、")}`)
                 } else {
                   addNotification("実行する操作が選択されていません")

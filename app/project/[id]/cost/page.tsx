@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation"
 import { useAppRouter } from "@/hooks/use-app-router"
 import { useProject } from "@/contexts/project-context"
-import { useEffect, useState, Suspense } from "react"
+import { useEffect, useState, Suspense, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -104,7 +104,7 @@ function ProjectCostPageContent() {
   }
   
   // キャスティングコストを計算（確定キャストから）
-  const calculateCastingCost = () => {
+  const calculateCastingCost = useCallback(() => {
     if (!project) {
       return { cost: 0, breakdown: { companions: [], directors: [], mcs: [], total: 0 } }
     }
@@ -154,8 +154,11 @@ function ProjectCostPageContent() {
     }
   }
 
+  const hasInitialized = useRef(false)
+  
   useEffect(() => {
-    if (projectId && getProjectById) {
+    if (projectId !== null && typeof projectId === 'number' && getProjectById && !hasInitialized.current) {
+      hasInitialized.current = true
       const loadedProject = getProjectById(projectId)
       if (!loadedProject) {
         addNotification("案件が見つかりませんでした")
@@ -186,10 +189,11 @@ function ProjectCostPageContent() {
       setIsTransportationAutoFilled(isTransportationAuto)
       setIsAccommodationAutoFilled(isAccommodationAuto)
       setIsLoading(false)
-    } else {
+    } else if (projectId === null) {
       setIsLoading(false)
+      hasInitialized.current = false
     }
-  }, [projectId, getProjectById, router, addNotification])
+  }, [projectId, getProjectById, router, addNotification, calculateCastingCost])
 
   // プロジェクトが変更されたらキャスティングコストを再計算
   useEffect(() => {
@@ -201,7 +205,7 @@ function ProjectCostPageContent() {
         setCastingBreakdown(calculated.breakdown)
       }
     }
-  }, [project])
+  }, [project, calculateCastingCost])
 
   if (isLoading) {
     return (

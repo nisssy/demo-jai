@@ -122,4 +122,9 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* 時間入力フィールドの無効な値のスタイリング（ブラウザの実装に依存） */
+  input[type="time"]:invalid {
+    filter: grayscale(0.5);
+    opacity: 0.7;
+  }
 }

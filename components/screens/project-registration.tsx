@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Calendar, Sparkles, CheckCircle2, XCircle, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react"
 import type { ProjectData } from "@/types/project"
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -26,6 +26,7 @@ import { useProject } from "@/contexts/project-context"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Check, ChevronsUpDown } from "lucide-react"
+import { TimePicker } from "@/components/ui/time-picker"
 
 type ProjectRegistrationProps = {
   projectData: ProjectData
@@ -151,13 +152,13 @@ export function ProjectRegistration({
   const isProductInfoOpen = productInfos[0]?.isOpen ?? true
 
   // 商材情報の更新関数
-  const updateProductInfo = (index: number, updates: Partial<ProductInfo>) => {
+  const updateProductInfo = useCallback((index: number, updates: Partial<ProductInfo>) => {
     setProductInfos((prev) => {
       const newInfos = [...prev]
       newInfos[index] = { ...newInfos[index], ...updates }
       return newInfos
     })
-  }
+  }, [])
 
   // 商材情報の追加
   const addProductInfo = () => {
@@ -327,6 +328,9 @@ export function ProjectRegistration({
     return new Date(today.setDate(diff))
   })
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
+  
+  // エラーフィールドへのref
+  const errorRefs = useRef<{ [key: string]: HTMLElement | null }>({})
 
   // 開催時間数を自動計算
   const calculateDuration = (): string => {
@@ -548,6 +552,31 @@ export function ProjectRegistration({
     })
     
     setErrors(newErrors)
+    
+    // エラーがある場合、最初のエラーまでスクロール
+    if (Object.keys(newErrors).length > 0) {
+      // エラーの優先順位に従って最初のエラーフィールドを探す
+      const errorOrder = [
+        'companyName',
+        'acquirerName',
+        'requestDate',
+        'hallName',
+        ...productInfos.map((_, index) => `eventProductName-${index}`),
+        ...productInfos.map((_, index) => `eventDate-${index}`),
+      ]
+      
+      const firstErrorKey = errorOrder.find(key => newErrors[key])
+      
+      if (firstErrorKey && errorRefs.current[firstErrorKey]) {
+        setTimeout(() => {
+          errorRefs.current[firstErrorKey]?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+          })
+        }, 100)
+      }
+    }
+    
     return Object.keys(newErrors).length === 0
   }
 
@@ -828,6 +857,8 @@ export function ProjectRegistration({
         projectStatus: newProjectStatus,
         // 仮押さえ不可の案件を更新する場合は、コメントをクリア
         ...(isTemporaryHoldFailure && { temporaryHoldFailureComment: undefined }),
+        // イベントチームへのコメントを保存
+        ...(correctionComment !== undefined && { correctionComment: correctionComment }),
         category: productInfo.category,
         eventType: productInfo.eventType,
         eventProductName: productInfo.eventProductName,
@@ -1179,11 +1210,20 @@ export function ProjectRegistration({
   const [isLoadingBooking, setIsLoadingBooking] = useState(false)
   const [directorWorkingHours, setDirectorWorkingHours] = useState("")
 
-  // 編集モードで既存データを読み込む
+  // 編集モードで既存データを読み込む（初期化フラグ）
+  const hasInitialized = useRef(false)
+  
   useEffect(() => {
-    if (isEditMode && projectId && getProjectById && getHallByName) {
+    // 商材追加モードの場合は既存データを読み込まない
+    if (isProductAddMode) {
+      hasInitialized.current = true
+      return
+    }
+    
+    if (isEditMode && projectId && getProjectById && getHallByName && !hasInitialized.current) {
       const project = getProjectById(projectId)
       if (project) {
+        hasInitialized.current = true
         // 基本情報を読み込み
         if (project.requestDate) {
           // YYYY/MM/DD形式をYYYY-MM-DD形式に変換
@@ -1270,7 +1310,11 @@ export function ProjectRegistration({
         }
       }
     }
-  }, [isEditMode, projectId, getProjectById, getHallByName])
+    // projectId が変わった場合は初期化フラグをリセット
+    if (!isEditMode || !projectId) {
+      hasInitialized.current = false
+    }
+  }, [isEditMode, isProductAddMode, projectId, getProjectById, getHallByName, getCompanyByCompanyId, getCompanyById, selectedCompanyId])
 
   useEffect(() => {
     if (projectData.date) {
@@ -1770,9 +1814,14 @@ export function ProjectRegistration({
                               // 法人を変更したらホール名をリセット
                               setHallName("")
                               setAcquirerName("")
-                              if (errors.companyName) {
-                                setErrors({ ...errors, companyName: "" })
-                              }
+                              setErrors((prev) => {
+                                if (prev.companyName) {
+                                  const newErrors = { ...prev }
+                                  delete newErrors.companyName
+                                  return newErrors
+                                }
+                                return prev
+                              })
                             }}
                           >
                             <Check
@@ -1790,7 +1839,7 @@ export function ProjectRegistration({
                 </PopoverContent>
               </Popover>
               {errors.companyName && (
-                <p className="text-sm text-red-600">{errors.companyName}</p>
+                <p ref={(el) => { errorRefs.current.companyName = el }} className="text-sm text-red-600">{errors.companyName}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -1836,12 +1885,19 @@ export function ProjectRegistration({
                               setAcquirerName(hall.salesPersonName)
                               setHallSearchOpen(false)
                               setHallSearchQuery("")
-                              if (errors.hallName) {
-                                setErrors({ ...errors, hallName: "" })
-                              }
-                              if (errors.acquirerName) {
-                                setErrors({ ...errors, acquirerName: "" })
-                              }
+                              setErrors((prev) => {
+                                const newErrors = { ...prev }
+                                let hasChanges = false
+                                if (prev.hallName) {
+                                  delete newErrors.hallName
+                                  hasChanges = true
+                                }
+                                if (prev.acquirerName) {
+                                  delete newErrors.acquirerName
+                                  hasChanges = true
+                                }
+                                return hasChanges ? newErrors : prev
+                              })
                             }}
                           >
                             <Check
@@ -1859,7 +1915,7 @@ export function ProjectRegistration({
                 </PopoverContent>
               </Popover>
               {errors.hallName && (
-                <p className="text-sm text-red-600">{errors.hallName}</p>
+                <p ref={(el) => { errorRefs.current.hallName = el }} className="text-sm text-red-600">{errors.hallName}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -1878,15 +1934,20 @@ export function ProjectRegistration({
                 value={acquirerName}
                 onChange={(e) => {
                   setAcquirerName(e.target.value)
-                  if (errors.acquirerName) {
-                    setErrors({ ...errors, acquirerName: "" })
-                  }
+                  setErrors((prev) => {
+                    if (prev.acquirerName) {
+                      const newErrors = { ...prev }
+                      delete newErrors.acquirerName
+                      return newErrors
+                    }
+                    return prev
+                  })
                 }}
                 placeholder="例: 山田 太郎"
                 className={errors.acquirerName ? "border-red-500" : ""}
               />
               {errors.acquirerName && (
-                <p className="text-sm text-red-600">{errors.acquirerName}</p>
+                <p ref={(el) => { errorRefs.current.acquirerName = el }} className="text-sm text-red-600">{errors.acquirerName}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -1898,13 +1959,20 @@ export function ProjectRegistration({
                 onChange={(e) => {
                   setRequestDate(e.target.value)
                   if (errors.requestDate) {
-                    setErrors({ ...errors, requestDate: "" })
+                    setErrors((prev) => {
+                      if (prev.requestDate) {
+                        const newErrors = { ...prev }
+                        delete newErrors.requestDate
+                        return newErrors
+                      }
+                      return prev
+                    })
                   }
                 }}
                 className={errors.requestDate ? "border-red-500" : ""}
               />
               {errors.requestDate && (
-                <p className="text-sm text-red-600">{errors.requestDate}</p>
+                <p ref={(el) => { errorRefs.current.requestDate = el }} className="text-sm text-red-600">{errors.requestDate}</p>
               )}
             </div>
           </div>
@@ -1951,227 +2019,235 @@ export function ProjectRegistration({
               </CardHeader>
               <CollapsibleContent>
                 <CardContent className="space-y-4">
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-base font-semibold text-slate-900 mb-2">基本情報</h3>
-              <div className="border-b border-slate-300 w-full"></div>
-            </div>
-            <div className="grid grid-cols-2 gap-4 pt-2">
-            <div className="space-y-2">
-              <Label htmlFor={`category-${productInfo.id}`}>カテゴリ</Label>
-              <Select
-                value={productInfo.category}
-                onValueChange={(value) => {
-                  updateProductInfo(index, { category: value })
-                  if (errors.category && index === 0) {
-                    setErrors({ ...errors, category: "" })
-                  }
-                }}
-                disabled
-              >
-                <SelectTrigger id={`category-${productInfo.id}`} className={errors.category && index === 0 ? "border-red-500" : ""}>
-                  <SelectValue placeholder="カテゴリを選択してください" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="基本契約">基本契約</SelectItem>
-                  <SelectItem value="イベント">イベント</SelectItem>
-                  <SelectItem value="オプション">オプション</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.category && index === 0 && (
-                <p className="text-sm text-red-600">{errors.category}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`eventType-${productInfo.id}`}>イベント区分</Label>
-              <Select
-                value={productInfo.eventType}
-                onValueChange={(value) => {
-                  updateProductInfo(index, { eventType: value })
-                  if (errors.eventType && index === 0) {
-                    setErrors({ ...errors, eventType: "" })
-                  }
-                }}
-              >
-                <SelectTrigger id={`eventType-${productInfo.id}`} className={errors.eventType && index === 0 ? "border-red-500" : ""}>
-                  <SelectValue placeholder="イベント種別を選択してください" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="トリニティガール">トリニティガール</SelectItem>
-                  <SelectItem value="スロセレ">スロセレ</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.eventType && index === 0 && (
-                <p className="text-sm text-red-600">{errors.eventType}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`eventProductName-${productInfo.id}`}>イベント商材名</Label>
-              <Input
-                id={`eventProductName-${productInfo.id}`}
-                value={productInfo.eventProductName}
-                onChange={(e) => {
-                  updateProductInfo(index, { eventProductName: e.target.value })
-                  const errorKey = `eventProductName-${index}`
-                  if (errors[errorKey]) {
-                    const newErrors = { ...errors }
-                    delete newErrors[errorKey]
-                    setErrors(newErrors)
-                  }
-                }}
-                placeholder="例: 新台入替イベント"
-                className={errors[`eventProductName-${index}`] ? "border-red-500" : ""}
-              />
-              {errors[`eventProductName-${index}`] && (
-                <p className="text-sm text-red-600">{errors[`eventProductName-${index}`]}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`eventDate-${productInfo.id}`}>開催日</Label>
-              <Input
-                id={`eventDate-${productInfo.id}`}
-                type="date"
-                value={productInfo.eventDate}
-                onChange={(e) => {
-                  updateProductInfo(index, { eventDate: e.target.value })
-                  const errorKey = `eventDate-${index}`
-                  if (errors[errorKey]) {
-                    const newErrors = { ...errors }
-                    delete newErrors[errorKey]
-                    setErrors(newErrors)
-                  }
-                }}
-                className={errors[`eventDate-${index}`] ? "border-red-500" : ""}
-              />
-              {errors[`eventDate-${index}`] && (
-                <p className="text-sm text-red-600">{errors[`eventDate-${index}`]}</p>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor={`startTime-${productInfo.id}`}>開始時間</Label>
-                <Input
-                  id={`startTime-${productInfo.id}`}
-                  type="time"
-                  value={productInfo.startTime}
-                  onChange={(e) => {
-                    updateProductInfo(index, { startTime: e.target.value })
-                    if (errors.startTime && index === 0) {
-                      setErrors({ ...errors, startTime: "" })
-                    }
-                  }}
-                  className={errors.startTime && index === 0 ? "border-red-500" : ""}
-                />
-                {errors.startTime && index === 0 && (
-                  <p className="text-sm text-red-600">{errors.startTime}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={`endTime-${productInfo.id}`}>終了時間</Label>
-                <Input
-                  id={`endTime-${productInfo.id}`}
-                  type="time"
-                  value={productInfo.endTime}
-                  onChange={(e) => {
-                    updateProductInfo(index, { endTime: e.target.value })
-                    if (errors.endTime && index === 0) {
-                      setErrors({ ...errors, endTime: "" })
-                    }
-                  }}
-                  className={errors.endTime && index === 0 ? "border-red-500" : ""}
-                />
-                {errors.endTime && index === 0 && (
-                  <p className="text-sm text-red-600">{errors.endTime}</p>
-                )}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`duration-${productInfo.id}`}>開催時間数</Label>
-              <Input
-                id={`duration-${productInfo.id}`}
-                value={productDuration}
-                disabled
-                className="bg-slate-50"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`mustSeeFlag-${productInfo.id}`}>必見フラグ</Label>
-              <Select
-                value={productInfo.mustSeeFlag}
-                onValueChange={(value) => {
-                  // 必見フラグに応じて必見掲載を自動設定
-                  const mustSeePublication = value === "1" ? "要" : "不要"
-                  updateProductInfo(index, { 
-                    mustSeeFlag: value,
-                    mustSeePublication: mustSeePublication
-                  })
-                }}
-              >
-                <SelectTrigger id={`mustSeeFlag-${productInfo.id}`}>
-                  <SelectValue placeholder="選択してください" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">0</SelectItem>
-                  <SelectItem value="1">1</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`mustSeePublication-${productInfo.id}`}>必見掲載</Label>
-              <Select
-                value={productInfo.mustSeePublication}
-                onValueChange={(value) => updateProductInfo(index, { mustSeePublication: value })}
-              >
-                <SelectTrigger id={`mustSeePublication-${productInfo.id}`}>
-                  <SelectValue placeholder="選択してください" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="要">要</SelectItem>
-                  <SelectItem value="不要">不要</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`publicationDate-${productInfo.id}`}>必見掲載日</Label>
-              <Input
-                id={`publicationDate-${productInfo.id}`}
-                type="date"
-                value={productInfo.publicationDate}
-                onChange={(e) => updateProductInfo(index, { publicationDate: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`publicationTime-${productInfo.id}`}>必見掲載時刻</Label>
-              <Input
-                id={`publicationTime-${productInfo.id}`}
-                type="time"
-                value={productInfo.publicationTime}
-                onChange={(e) => updateProductInfo(index, { publicationTime: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`reportRequired-${productInfo.id}`}>レポート要否</Label>
-              <Select
-                value={productInfo.reportRequired}
-                onValueChange={(value) => updateProductInfo(index, { reportRequired: value })}
-              >
-                <SelectTrigger id={`reportRequired-${productInfo.id}`}>
-                  <SelectValue placeholder="選択してください" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="要">要</SelectItem>
-                  <SelectItem value="不要">不要</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-base font-semibold text-slate-900 mb-2">キャスティング情報</h3>
-              <div className="border-b border-slate-300 w-full"></div>
-            </div>
-            <div className="space-y-4 pt-2">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-base font-semibold text-slate-900 mb-2">基本情報</h3>
+                      <div className="border-b border-slate-300 w-full"></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 pt-2">
+                                <div className="space-y-2">
+                                  <Label htmlFor={`category-${productInfo.id}`}>カテゴリ</Label>
+                        <Select
+                          value={productInfo.category || undefined}
+                          onValueChange={(value) => {
+                            updateProductInfo(index, { category: value })
+                            if (index === 0) {
+                              setErrors((prev) => {
+                                if (prev.category) {
+                                  const newErrors = { ...prev }
+                                  delete newErrors.category
+                                  return newErrors
+                                }
+                                return prev
+                              })
+                            }
+                          }}
+                          disabled
+                        >
+                          <SelectTrigger id={`category-${productInfo.id}`} className={errors.category && index === 0 ? "border-red-500" : ""}>
+                            <SelectValue placeholder="カテゴリを選択してください" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="基本契約">基本契約</SelectItem>
+                            <SelectItem value="イベント">イベント</SelectItem>
+                            <SelectItem value="オプション">オプション</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {errors.category && index === 0 && (
+                          <p className="text-sm text-red-600">{errors.category}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`eventType-${productInfo.id}`}>イベント区分</Label>
+                        <Select
+                          value={productInfo.eventType || undefined}
+                          onValueChange={(value) => {
+                            updateProductInfo(index, { eventType: value })
+                            if (index === 0) {
+                              setErrors((prev) => {
+                                if (prev.eventType) {
+                                  const newErrors = { ...prev }
+                                  delete newErrors.eventType
+                                  return newErrors
+                                }
+                                return prev
+                              })
+                            }
+                          }}
+                        >
+                          <SelectTrigger id={`eventType-${productInfo.id}`} className={errors.eventType && index === 0 ? "border-red-500" : ""}>
+                            <SelectValue placeholder="イベント種別を選択してください" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="トリニティガール">トリニティガール</SelectItem>
+                            <SelectItem value="スロセレ">スロセレ</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {errors.eventType && index === 0 && (
+                          <p className="text-sm text-red-600">{errors.eventType}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`eventProductName-${productInfo.id}`}>イベント商材名</Label>
+                        <Input
+                          id={`eventProductName-${productInfo.id}`}
+                          value={productInfo.eventProductName}
+                          onChange={(e) => {
+                            updateProductInfo(index, { eventProductName: e.target.value })
+                            const errorKey = `eventProductName-${index}`
+                            setErrors((prev) => {
+                              if (prev[errorKey]) {
+                                const newErrors = { ...prev }
+                                delete newErrors[errorKey]
+                                return newErrors
+                              }
+                              return prev
+                            })
+                          }}
+                          placeholder="例: 新台入替イベント"
+                          className={errors[`eventProductName-${index}`] ? "border-red-500" : ""}
+                        />
+                        {errors[`eventProductName-${index}`] && (
+                          <p ref={(el) => { errorRefs.current[`eventProductName-${index}`] = el }} className="text-sm text-red-600">{errors[`eventProductName-${index}`]}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`eventDate-${productInfo.id}`}>開催日</Label>
+                        <Input
+                          id={`eventDate-${productInfo.id}`}
+                          type="date"
+                          value={productInfo.eventDate}
+                          onChange={(e) => {
+                            updateProductInfo(index, { eventDate: e.target.value })
+                            const errorKey = `eventDate-${index}`
+                            setErrors((prev) => {
+                              if (prev[errorKey]) {
+                                const newErrors = { ...prev }
+                                delete newErrors[errorKey]
+                                return newErrors
+                              }
+                              return prev
+                            })
+                          }}
+                          className={errors[`eventDate-${index}`] ? "border-red-500" : ""}
+                        />
+                        {errors[`eventDate-${index}`] && (
+                          <p ref={(el) => { errorRefs.current[`eventDate-${index}`] = el }} className="text-sm text-red-600">{errors[`eventDate-${index}`]}</p>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor={`startTime-${productInfo.id}`}>開始時間</Label>
+                          <TimePicker
+                            id={`startTime-${productInfo.id}`}
+                            value={productInfo.startTime}
+                            onChange={(value) => {
+                              updateProductInfo(index, { startTime: value })
+                            }}
+                            max={productInfo.endTime || undefined}
+                            placeholder="開始時間を選択"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor={`endTime-${productInfo.id}`}>終了時間</Label>
+                          <TimePicker
+                            id={`endTime-${productInfo.id}`}
+                            value={productInfo.endTime}
+                            onChange={(value) => {
+                              updateProductInfo(index, { endTime: value })
+                            }}
+                            min={productInfo.startTime || undefined}
+                            placeholder="終了時間を選択"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`duration-${productInfo.id}`}>開催時間数</Label>
+                        <Input
+                          id={`duration-${productInfo.id}`}
+                          value={productDuration}
+                          disabled
+                          className="bg-slate-50"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`mustSeeFlag-${productInfo.id}`}>必見フラグ</Label>
+                        <Select
+                          value={productInfo.mustSeeFlag}
+                          onValueChange={(value) => {
+                            // 必見フラグに応じて必見掲載を自動設定
+                            const mustSeePublication = value === "1" ? "要" : "不要"
+                            updateProductInfo(index, { 
+                              mustSeeFlag: value,
+                              mustSeePublication: mustSeePublication
+                            })
+                          }}
+                        >
+                          <SelectTrigger id={`mustSeeFlag-${productInfo.id}`}>
+                            <SelectValue placeholder="選択してください" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">0</SelectItem>
+                            <SelectItem value="1">1</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`mustSeePublication-${productInfo.id}`}>必見掲載</Label>
+                        <Select
+                          value={productInfo.mustSeePublication}
+                          onValueChange={(value) => updateProductInfo(index, { mustSeePublication: value })}
+                        >
+                          <SelectTrigger id={`mustSeePublication-${productInfo.id}`}>
+                            <SelectValue placeholder="選択してください" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="要">要</SelectItem>
+                            <SelectItem value="不要">不要</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`publicationDate-${productInfo.id}`}>必見掲載日</Label>
+                        <Input
+                          id={`publicationDate-${productInfo.id}`}
+                          type="date"
+                          value={productInfo.publicationDate}
+                          onChange={(e) => updateProductInfo(index, { publicationDate: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`publicationTime-${productInfo.id}`}>必見掲載時刻</Label>
+                        <Input
+                          id={`publicationTime-${productInfo.id}`}
+                          type="time"
+                          value={productInfo.publicationTime}
+                          onChange={(e) => updateProductInfo(index, { publicationTime: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`reportRequired-${productInfo.id}`}>レポート要否</Label>
+                        <Select
+                          value={productInfo.reportRequired}
+                          onValueChange={(value) => updateProductInfo(index, { reportRequired: value })}
+                        >
+                          <SelectTrigger id={`reportRequired-${productInfo.id}`}>
+                            <SelectValue placeholder="選択してください" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="要">要</SelectItem>
+                            <SelectItem value="不要">不要</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-base font-semibold text-slate-900 mb-2">キャスティング情報</h3>
+                      <div className="border-b border-slate-300 w-full"></div>
+                    </div>
+                    <div className="space-y-4 pt-2">
               {/* コンパニオン */}
               {productInfo.eventType !== "スロセレ" && (
               <div className="space-y-4 bg-rose-50/50 border border-rose-200/50 rounded-lg p-4">
@@ -3058,11 +3134,11 @@ export function ProjectRegistration({
                 )
               })()}
             </div>
-          </div>
+                  </div>
                 </CardContent>
-              </CollapsibleContent>
-            </Collapsible>
-          </Card>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
         )
       })}
 
@@ -3394,8 +3470,8 @@ export function ProjectRegistration({
         </DialogContent>
       </Dialog>
 
-      {/* イベントチームへのコメント入力と送信ボタン（商材編集モードの場合のみ、一番下に配置） */}
-      {isProductEditMode && correctionComment !== undefined && onCorrectionCommentChange && (
+      {/* イベントチームへのコメント入力と送信ボタン（修正依頼がある商材編集の場合のみ、一番下に配置） */}
+      {isProductEditMode && correctionRequest && correctionComment !== undefined && onCorrectionCommentChange && (
         <Card>
           <CardHeader>
             <CardTitle>イベントチームへのコメント</CardTitle>
@@ -3405,8 +3481,12 @@ export function ProjectRegistration({
               <Label htmlFor="correction-comment">修正内容についてイベントチームに伝えたいことがあれば記入してください（任意）</Label>
               <Textarea
                 id="correction-comment"
-                value={correctionComment}
-                onChange={(e) => onCorrectionCommentChange(e.target.value)}
+                value={correctionComment ?? ""}
+                onChange={(e) => {
+                  if (onCorrectionCommentChange) {
+                    onCorrectionCommentChange(e.target.value)
+                  }
+                }}
                 placeholder="修正内容についてイベントチームに伝えたいことがあれば記入してください"
                 rows={4}
               />

@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation"
 import { useAppRouter } from "@/hooks/use-app-router"
 import { useProject } from "@/contexts/project-context"
-import { useEffect, useState, Suspense } from "react"
+import { useEffect, useState, Suspense, useCallback, useRef, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge"
 function ProjectArrangementPageContent() {
   const router = useAppRouter()
   const params = useParams()
-  const projectId = params?.id ? (typeof params.id === 'string' ? Number(params.id) : params.id) : null
+  const projectId = params?.id ? (typeof params.id === 'string' ? Number(params.id) : Array.isArray(params.id) ? Number(params.id[0]) : null) : null
   const { getProjectById, updateProject, addNotification } = useProject()
   const [isLoading, setIsLoading] = useState(true)
   const [project, setProject] = useState<any>(null)
@@ -28,7 +28,7 @@ function ProjectArrangementPageContent() {
   const [companionCostumes, setCompanionCostumes] = useState<{ [companionName: string]: string }>({})
   
   // コンパニオンのマスタデータ（サイズ情報）
-  const companionMasterData: { [name: string]: { size: string } } = {
+  const companionMasterData: { [name: string]: { size: string } } = useMemo(() => ({
     "Rio": { size: "S" },
     "Ayaka": { size: "M" },
     "Nanaka": { size: "M" },
@@ -37,7 +37,7 @@ function ProjectArrangementPageContent() {
     "鈴木 さくら": { size: "S" },
     "高橋 みゆき": { size: "M" },
     "伊藤 あかり": { size: "L" },
-  }
+  }), [])
   
   // 衣装の選択肢
   const costumeOptions = [
@@ -65,25 +65,109 @@ function ProjectArrangementPageContent() {
     "山田 MC", "中村 MC", "小林 MC", "加藤 MC", "松本 MC",
   ]
 
+  // サイズに基づいて衣装を自動選択する関数
+  const getCostumeBySize = useCallback((size: string): string => {
+    // サイズに応じたデフォルト衣装を選択（すべての衣装がS/M/L対応なので、デフォルトでcostume1を選択）
+    // 将来的にサイズ別の衣装が必要な場合は、ここでサイズに応じた選択ロジックを実装
+    return "costume1"
+  }, [])
+
+  // コンパニオン選択のハンドラーをメモ化（useEffectの前に定義）
+  const handleCompanionChange = useCallback((index: number, value: string) => {
+    setConfirmedCompanions((prev) => {
+      // 値が変更されていない場合は更新しない
+      if (prev[index] === value) {
+        return prev
+      }
+      const newCompanions = [...prev]
+      newCompanions[index] = value
+      return newCompanions
+    })
+    // 新しいコンパニオンの場合は、サイズに基づいて衣装を自動選択
+    if (value) {
+      setCompanionCostumes((prev) => {
+        // 既に衣装が設定されている場合は更新しない
+        if (prev[value] !== undefined && prev[value] !== "") {
+          return prev
+        }
+        // サイズ情報を取得して衣装を自動選択
+        const companionSize = companionMasterData[value]?.size
+        const autoCostume = companionSize ? getCostumeBySize(companionSize) : "costume1"
+        return { ...prev, [value]: autoCostume }
+      })
+    }
+  }, [companionMasterData, getCostumeBySize])
+
+  // 衣装選択のハンドラーをメモ化
+  const handleCostumeChange = useCallback((companionName: string, value: string) => {
+    setCompanionCostumes((prev) => {
+      // 値が変更されていない場合は更新しない
+      if (prev[companionName] === value) {
+        return prev
+      }
+      return {
+        ...prev,
+        [companionName]: value,
+      }
+    })
+  }, [])
+
+  // ディレクター選択のハンドラーをメモ化
+  const handleDirectorChange = useCallback((index: number, value: string) => {
+    setConfirmedDirectors((prev) => {
+      // 値が変更されていない場合は更新しない
+      if (prev[index] === value) {
+        return prev
+      }
+      const newDirectors = [...prev]
+      newDirectors[index] = value
+      return newDirectors
+    })
+  }, [])
+
+  // MC選択のハンドラーをメモ化
+  const handleMcChange = useCallback((index: number, value: string) => {
+    setConfirmedMcs((prev) => {
+      // 値が変更されていない場合は更新しない
+      if (prev[index] === value) {
+        return prev
+      }
+      const newMcs = [...prev]
+      newMcs[index] = value
+      return newMcs
+    })
+  }, [])
+
+  const hasInitialized = useRef(false)
+  
   useEffect(() => {
-    if (!projectId || isNaN(projectId)) {
+    if (projectId === null || typeof projectId !== 'number' || isNaN(projectId)) {
       addNotification("無効な案件IDです")
       router.push("/")
       setIsLoading(false)
+      hasInitialized.current = false
       return
     }
     
     if (!getProjectById) {
       setIsLoading(false)
+      hasInitialized.current = false
       return
     }
     
+    if (hasInitialized.current) {
+      return
+    }
+    
+    hasInitialized.current = true
+    
     try {
-      const loadedProject = getProjectById(projectId)
+      const loadedProject = projectId !== null && typeof projectId === 'number' ? getProjectById(projectId) : null
       if (!loadedProject) {
         addNotification("案件が見つかりませんでした")
         router.push("/")
         setIsLoading(false)
+        hasInitialized.current = false
         return
       }
       setProject(loadedProject)
@@ -94,27 +178,78 @@ function ProjectArrangementPageContent() {
       const existingConfirmedMcs = (loadedProject as any).confirmedMcs || []
       const existingCostumes = (loadedProject as any).companionCostumes || {}
       
-      // 必要人数分の配列を初期化（既存データがあれば使用、なければ空文字列）
+      // 案件に登録されたキャスト情報を取得
+      const selectedCompanions = (loadedProject as any).selectedCompanions || []
+      const selectedDirectors = (loadedProject as any).selectedDirectors || []
+      const selectedMcs = (loadedProject as any).selectedMcs || []
+      
+      // 必要人数分の配列を初期化
       const companionCount = Number(loadedProject.companionCount) || 0
       const directorCount = Number(loadedProject.directorCount) || 0
       const mcCount = Number(loadedProject.mcCount) || 0
       
-      const initializedCompanions = Array.from({ length: companionCount }, (_, i) => existingConfirmedCompanions[i] || "")
-      const initializedDirectors = Array.from({ length: directorCount }, (_, i) => existingConfirmedDirectors[i] || "")
-      const initializedMcs = Array.from({ length: mcCount }, (_, i) => existingConfirmedMcs[i] || "")
+      // 既存の確定情報があれば優先、なければ案件に登録されたキャストを使用
+      const initializedCompanions = Array.from({ length: companionCount }, (_, i) => {
+        if (existingConfirmedCompanions[i]) {
+          return existingConfirmedCompanions[i]
+        }
+        // 案件に登録されたキャストから選択（「未定」は除外）
+        const selectedCompanion = selectedCompanions[i]
+        return selectedCompanion && selectedCompanion !== "未定" ? selectedCompanion : ""
+      })
+      
+      const initializedDirectors = Array.from({ length: directorCount }, (_, i) => {
+        if (existingConfirmedDirectors[i]) {
+          return existingConfirmedDirectors[i]
+        }
+        const selectedDirector = selectedDirectors[i]
+        return selectedDirector && selectedDirector !== "未定" ? selectedDirector : ""
+      })
+      
+      const initializedMcs = Array.from({ length: mcCount }, (_, i) => {
+        if (existingConfirmedMcs[i]) {
+          return existingConfirmedMcs[i]
+        }
+        const selectedMc = selectedMcs[i]
+        return selectedMc && selectedMc !== "未定" ? selectedMc : ""
+      })
+      
+      // 衣装情報を初期化（既存の衣装があれば使用、なければサイズから自動選択）
+      const initializedCostumes: { [companionName: string]: string } = { ...existingCostumes }
+      initializedCompanions.forEach((companionName) => {
+        if (companionName && companionName !== "未定") {
+          // 既に衣装が設定されている場合はスキップ
+          if (initializedCostumes[companionName] && initializedCostumes[companionName] !== "") {
+            return
+          }
+          // サイズ情報を取得して衣装を自動選択
+          const companionSize = companionMasterData[companionName]?.size
+          if (companionSize) {
+            initializedCostumes[companionName] = getCostumeBySize(companionSize)
+          }
+        }
+      })
       
       setConfirmedCompanions(initializedCompanions)
       setConfirmedDirectors(initializedDirectors)
       setConfirmedMcs(initializedMcs)
-      setCompanionCostumes(existingCostumes)
+      setCompanionCostumes(initializedCostumes)
       setIsLoading(false)
     } catch (error) {
       console.error("Error loading project:", error)
       addNotification("案件の読み込み中にエラーが発生しました")
       router.push("/")
       setIsLoading(false)
+      hasInitialized.current = false
     }
-  }, [projectId, getProjectById, router, addNotification])
+    
+    // projectId が変わった場合は初期化フラグをリセット
+    return () => {
+      if (projectId === null) {
+        hasInitialized.current = false
+      }
+    }
+  }, [projectId, getProjectById, router, addNotification, companionMasterData, getCostumeBySize])
 
   if (isLoading) {
     return (
@@ -131,7 +266,7 @@ function ProjectArrangementPageContent() {
   }
 
   const handleSave = () => {
-    if (!projectId) return
+    if (projectId === null || typeof projectId !== 'number') return
     updateProject(projectId, {
       confirmedCompanions: confirmedCompanions.filter(c => c.trim() !== ""),
       confirmedDirectors: confirmedDirectors.filter(d => d.trim() !== ""),
@@ -144,7 +279,7 @@ function ProjectArrangementPageContent() {
   }
 
   const handleSaveAndBack = () => {
-    if (!projectId) return
+    if (projectId === null || typeof projectId !== 'number') return
     updateProject(projectId, {
       confirmedCompanions: confirmedCompanions.filter(c => c.trim() !== ""),
       confirmedDirectors: confirmedDirectors.filter(d => d.trim() !== ""),
@@ -157,7 +292,7 @@ function ProjectArrangementPageContent() {
 
   // 個別保存関数
   const handleSaveCompanion = (index: number) => {
-    if (!projectId) return
+    if (projectId === null || typeof projectId !== 'number') return
     const companion = confirmedCompanions[index]
     if (!companion || !companion.trim()) return
     
@@ -175,7 +310,7 @@ function ProjectArrangementPageContent() {
   }
 
   const handleSaveCompanionCostume = (companionName: string) => {
-    if (!projectId || !companionName) return
+    if (projectId === null || typeof projectId !== 'number' || !companionName) return
     const costume = companionCostumes[companionName]
     if (!costume) return
     
@@ -190,7 +325,7 @@ function ProjectArrangementPageContent() {
   }
 
   const handleSaveDirector = (index: number) => {
-    if (!projectId) return
+    if (projectId === null || typeof projectId !== 'number') return
     const director = confirmedDirectors[index]
     if (!director || !director.trim()) return
     
@@ -208,7 +343,7 @@ function ProjectArrangementPageContent() {
   }
 
   const handleSaveMc = (index: number) => {
-    if (!projectId) return
+    if (projectId === null || typeof projectId !== 'number') return
     const mc = confirmedMcs[index]
     if (!mc || !mc.trim()) return
     
@@ -286,14 +421,10 @@ function ProjectArrangementPageContent() {
                   <div>
                     <Label className="text-sm font-medium">コンパニオン {index + 1}</Label>
                     <Select
-                      value={confirmedCompanions[index] || ""}
+                      value={confirmedCompanions[index] || undefined}
                       onValueChange={(value) => {
-                        const newCompanions = [...confirmedCompanions]
-                        newCompanions[index] = value
-                        setConfirmedCompanions(newCompanions)
-                        // 新しいコンパニオンの場合は衣装を空にする
-                        if (value && !companionCostumes[value]) {
-                          setCompanionCostumes({ ...companionCostumes, [value]: "" })
+                        if (value !== confirmedCompanions[index]) {
+                          handleCompanionChange(index, value)
                         }
                       }}
                     >
@@ -318,15 +449,14 @@ function ProjectArrangementPageContent() {
                         <div className="space-y-2">
                           <Label className="text-sm font-medium">衣装選択</Label>
                           <div className="flex gap-2">
+                            <div className="flex-1">
                             <Select
-                              value={companionCostumes[confirmedCompanions[index]] || ""}
+                              value={companionCostumes[confirmedCompanions[index]] || undefined}
                               onValueChange={(value) => {
-                                setCompanionCostumes({
-                                  ...companionCostumes,
-                                  [confirmedCompanions[index]]: value,
-                                })
+                                if (value !== companionCostumes[confirmedCompanions[index]]) {
+                                  handleCostumeChange(confirmedCompanions[index], value)
+                                }
                               }}
-                              className="flex-1"
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="衣装を選択してください" />
@@ -339,6 +469,7 @@ function ProjectArrangementPageContent() {
                                 ))}
                               </SelectContent>
                             </Select>
+                            </div>
                             <Button
                               size="sm"
                               variant="outline"
@@ -380,11 +511,11 @@ function ProjectArrangementPageContent() {
                     <div key={index} className="border rounded-lg p-4 space-y-2">
                       <Label className="text-sm font-medium">ディレクター {index + 1}</Label>
                       <Select
-                        value={confirmedDirectors[index] || ""}
+                        value={confirmedDirectors[index] || undefined}
                         onValueChange={(value) => {
-                          const newDirectors = [...confirmedDirectors]
-                          newDirectors[index] = value
-                          setConfirmedDirectors(newDirectors)
+                          if (value !== confirmedDirectors[index]) {
+                            handleDirectorChange(index, value)
+                          }
                         }}
                       >
                         <SelectTrigger className="mt-1">
@@ -428,11 +559,11 @@ function ProjectArrangementPageContent() {
                     <div key={index} className="border rounded-lg p-4 space-y-2">
                       <Label className="text-sm font-medium">MC {index + 1}</Label>
                       <Select
-                        value={confirmedMcs[index] || ""}
+                        value={confirmedMcs[index] || undefined}
                         onValueChange={(value) => {
-                          const newMcs = [...confirmedMcs]
-                          newMcs[index] = value
-                          setConfirmedMcs(newMcs)
+                          if (value !== confirmedMcs[index]) {
+                            handleMcChange(index, value)
+                          }
                         }}
                       >
                         <SelectTrigger className="mt-1">

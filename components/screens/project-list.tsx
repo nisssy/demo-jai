@@ -1158,7 +1158,7 @@ Co・Dir担当`
                         </Button>
                       )}
                       <Button
-                        onClick={() => router.push(`/project/${firstProduct.id}/product/new`)}
+                        onClick={() => router.push(`/project/${firstProduct.id}?addProduct=true`)}
                         variant="outline"
                         className="gap-2"
                       >
@@ -2329,6 +2329,20 @@ Co・Dir担当`
                             </div>
                           </div>
                         )}
+
+                        <div className="pt-3 border-t border-slate-100 flex justify-end">
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              router.push(`/project/${project.id}`)
+                            }}
+                            size="sm"
+                            className="gap-2"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                            編集
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>

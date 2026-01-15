@@ -14,8 +14,17 @@ export default function ProjectEditPage() {
   const { projectData, setProjectData, addNotification, getProjectById } = useProject()
   const [isLoading, setIsLoading] = useState(true)
   const tab = searchParams?.get("tab")
+  const addProduct = searchParams?.get("addProduct") === "true"
+  const [correctionComment, setCorrectionComment] = useState("")
+  const [correctionRequest, setCorrectionRequest] = useState("")
 
   useEffect(() => {
+    // 商材追加モードの場合は既存データを読み込まない
+    if (addProduct) {
+      setIsLoading(false)
+      return
+    }
+    
     if (projectId && getProjectById) {
       const project = getProjectById(projectId)
       if (!project) {
@@ -28,11 +37,15 @@ export default function ProjectEditPage() {
         router.push(`/project/${projectId}/correction${tab ? `?tab=${tab}` : ""}`)
         return
       }
+      // 既存のコメントを読み込む
+      setCorrectionComment((project as any).correctionComment || "")
+      // 修正依頼内容を読み込む
+      setCorrectionRequest((project as any).correctionRequest || "")
       setIsLoading(false)
     } else {
       setIsLoading(false)
     }
-  }, [projectId, getProjectById, router, addNotification, tab])
+  }, [projectId, getProjectById, router, addNotification, tab, addProduct])
 
   if (isLoading) {
     return (
@@ -64,11 +77,15 @@ export default function ProjectEditPage() {
           } else {
             router.push("/")
           }
-          addNotification("商材を更新しました")
+          addNotification(addProduct ? "商材を追加しました" : "商材を更新しました")
         }}
         onBack={handleBack}
         addNotification={addNotification}
-        isProductEditMode={true}
+        isProductEditMode={!addProduct}
+        isProductAddMode={addProduct}
+        correctionComment={correctionComment ?? ""}
+        onCorrectionCommentChange={setCorrectionComment}
+        correctionRequest={correctionRequest || undefined}
       />
     </main>
   )
