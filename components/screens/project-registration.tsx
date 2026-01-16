@@ -102,6 +102,7 @@ export function ProjectRegistration({
     transportationFeePerPerson: string
     accommodationFeePerPerson: string
     performanceFeeDiscount: string
+    eventBaseFee: string
     eventBaseFeeDiscount: string
     isOpen: boolean
   }
@@ -135,6 +136,7 @@ export function ProjectRegistration({
       transportationFeePerPerson: "",
       accommodationFeePerPerson: "",
       performanceFeeDiscount: "",
+      eventBaseFee: "",
       eventBaseFeeDiscount: "",
       isOpen: true,
     }
@@ -1304,6 +1306,7 @@ export function ProjectRegistration({
             transportationFeePerPerson: "",
             accommodationFeePerPerson: "",
             performanceFeeDiscount: "",
+            eventBaseFee: String(getEventBaseFee(project.eventType)),
             eventBaseFeeDiscount: "",
             isOpen: true,
           }])
@@ -1992,30 +1995,32 @@ export function ProjectRegistration({
               onOpenChange={(open) => updateProductInfo(index, { isOpen: open })}
             >
               <CardHeader>
-                <CollapsibleTrigger className="w-full cursor-pointer">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-slate-900">商材情報{productNumber === 1 ? "①" : productNumber === 2 ? "②" : productNumber === 3 ? "③" : productNumber === 4 ? "④" : "⑤"}</h3>
-                    <div className="flex items-center gap-2">
-                      {productInfos.length > 1 && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            removeProductInfo(productInfo.id)
-                          }}
-                          className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
-                          title="削除"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      )}
-                      <ChevronDown
-                        className={`h-5 w-5 text-slate-600 transition-transform duration-200 ${
-                          productInfo.isOpen ? "transform rotate-180" : ""
-                        }`}
-                      />
-                    </div>
-                  </div>
-                </CollapsibleTrigger>
+                <div className="flex items-center justify-between gap-2">
+                  <CollapsibleTrigger className="flex flex-1 items-center justify-between text-left w-full cursor-pointer">
+                    <h3 className="text-lg font-semibold text-slate-900">
+                      商材情報{productNumber === 1 ? "①" : productNumber === 2 ? "②" : productNumber === 3 ? "③" : productNumber === 4 ? "④" : "⑤"}
+                    </h3>
+                    <ChevronDown
+                      className={`h-5 w-5 text-slate-600 transition-transform duration-200 ${
+                        productInfo.isOpen ? "transform rotate-180" : ""
+                      }`}
+                    />
+                  </CollapsibleTrigger>
+
+                  {productInfos.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        removeProductInfo(productInfo.id)
+                      }}
+                      className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
+                      title="削除"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               </CardHeader>
               <CollapsibleContent>
                 <CardContent className="space-y-4">
