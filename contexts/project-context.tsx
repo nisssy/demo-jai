@@ -6,6 +6,18 @@ import type { ProjectData, Role } from "@/types/project"
 
 type Project = NonNullable<ProjectData["projects"]>[number]
 
+type DemoDbSnapshot = {
+  version: number
+  data: {
+    projects: Project[]
+    halls: HallData[]
+    companies: CompanyData[]
+  }
+}
+
+const DEMO_DB_STORAGE_KEY = "demo-jai:demo-db"
+const DEMO_DB_STORAGE_VERSION = 1
+
 // 法人データの型定義
 export type CompanyData = {
   id: number
@@ -30,6 +42,8 @@ type ProjectContextType = {
   setCurrentRole: (role: Role | null) => void
   notifications: string[]
   addNotification: (message: string) => void
+  // デモ用擬似DBの操作
+  resetDemoData: () => void
   // 仮想DB操作関数
   getProjects: () => Project[]
   createProject: (project: Omit<Project, "id">) => Project
@@ -1714,19 +1728,70 @@ const initialProjects: Project[] = [
   },
 ]
 
+function safeParseDemoDbSnapshot(raw: string | null): DemoDbSnapshot | null {
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw) as DemoDbSnapshot
+    if (!parsed || typeof parsed !== "object") return null
+    if (parsed.version !== DEMO_DB_STORAGE_VERSION) return null
+    const data = (parsed as any).data
+    if (!data || typeof data !== "object") return null
+    if (!Array.isArray(data.projects) || !Array.isArray(data.halls) || !Array.isArray(data.companies)) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function loadDemoDbFromStorage(): DemoDbSnapshot | null {
+  if (typeof window === "undefined") return null
+  const raw = window.localStorage.getItem(DEMO_DB_STORAGE_KEY)
+  return safeParseDemoDbSnapshot(raw)
+}
+
+function saveDemoDbToStorage(data: DemoDbSnapshot["data"]) {
+  if (typeof window === "undefined") return
+  const snapshot: DemoDbSnapshot = {
+    version: DEMO_DB_STORAGE_VERSION,
+    data,
+  }
+  try {
+    window.localStorage.setItem(DEMO_DB_STORAGE_KEY, JSON.stringify(snapshot))
+  } catch {
+    // ignore quota / private mode errors in demo
+  }
+}
+
+function getDemoDbSeed(): DemoDbSnapshot["data"] {
+  return {
+    projects: initialProjects,
+    halls: initialHalls,
+    companies: initialCompanies,
+  }
+}
+
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const [currentRole, setCurrentRole] = useState<Role | null>(null)
   const [notifications, setNotifications] = useState<string[]>([])
   const { toast } = useToast()
 
   // 案件データを独立したstateとして管理（仮想DB）
-  const [projects, setProjects] = useState<Project[]>(initialProjects)
+  const [projects, setProjects] = useState<Project[]>(() => {
+    const loaded = loadDemoDbFromStorage()
+    return loaded?.data.projects ?? getDemoDbSeed().projects
+  })
   
   // ホールデータを独立したstateとして管理（仮想DB）
-  const [halls, setHalls] = useState<HallData[]>(initialHalls)
+  const [halls, setHalls] = useState<HallData[]>(() => {
+    const loaded = loadDemoDbFromStorage()
+    return loaded?.data.halls ?? getDemoDbSeed().halls
+  })
   
   // 法人データを独立したstateとして管理（仮想DB）
-  const [companies, setCompanies] = useState<CompanyData[]>(initialCompanies)
+  const [companies, setCompanies] = useState<CompanyData[]>(() => {
+    const loaded = loadDemoDbFromStorage()
+    return loaded?.data.companies ?? getDemoDbSeed().companies
+  })
 
   const [projectData, setProjectData] = useState<ProjectData>({
     projectName: "",
@@ -1753,6 +1818,11 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }))
   }, [projects])
 
+  // デモ用擬似DBをlocalStorageに永続化（projects/halls/companies 全保存）
+  useEffect(() => {
+    saveDemoDbToStorage({ projects, halls, companies })
+  }, [projects, halls, companies])
+
   const addNotification = (message: string) => {
     setNotifications((prev) => [message, ...prev])
     toast({
@@ -1760,6 +1830,21 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       description: message,
     })
   }
+
+  const resetDemoData = useCallback(() => {
+    const seed = getDemoDbSeed()
+    try {
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem(DEMO_DB_STORAGE_KEY)
+      }
+    } catch {
+      // ignore
+    }
+    setCompanies(seed.companies)
+    setHalls(seed.halls)
+    setProjects(seed.projects)
+    addNotification("デモデータを初期化しました")
+  }, [addNotification])
 
   // 仮想DB操作関数
   const getProjects = useCallback(() => {
@@ -1925,6 +2010,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         setCurrentRole,
         notifications,
         addNotification,
+        resetDemoData,
         getProjects,
         createProject,
         createProjects,

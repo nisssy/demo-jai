@@ -1,12 +1,23 @@
 "use client"
 
-import { LogOut, Briefcase, Users } from "lucide-react"
+import { LogOut, Briefcase, Users, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useProject } from "@/contexts/project-context"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 export function Header() {
-  const { currentRole, setCurrentRole } = useProject()
+  const { currentRole, setCurrentRole, resetDemoData } = useProject()
 
   const handleBackToRoleSelection = () => {
     setCurrentRole(null)
@@ -27,6 +38,34 @@ export function Header() {
           </div>
 
           <div className="flex items-center gap-6">
+            {/* Demo Reset */}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <RotateCcw className="h-4 w-4" />
+                  デモ初期化
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>デモデータを初期化しますか？</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    projects / halls / companies を含む全データが初期状態に戻ります（localStorageもリセットされます）。
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      resetDemoData()
+                    }}
+                  >
+                    初期化する
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
             {/* Current Role Display */}
             {currentRole !== null && (
               <div className="flex items-center gap-2">
