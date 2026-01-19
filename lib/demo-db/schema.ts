@@ -13,6 +13,29 @@ export const HallDataSchema = z.object({
   salesPersonName: z.string(),
   companyId: z.number(),
   discountAmount: z.number(),
+  /** デモ用：ホール住所（未設定でも動くよう optional） */
+  address: z.string().optional(),
+})
+
+/**
+ * プロダクション（企業）マスタ
+ * - コンパニオンは必ずどこかのプロダクションに所属する
+ */
+export const ProductionDataSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  address: z.string(),
+  phone: z.string(),
+})
+
+/**
+ * コンパニオン（キャスト）マスタ
+ */
+export const CompanionDataSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  /** ProductionData.id */
+  productionId: z.number(),
 })
 
 /**
@@ -212,6 +235,8 @@ export const DemoDbSnapshotSchema = z.object({
     products: z.array(ProductEntitySchema),
     halls: z.array(HallDataSchema),
     companies: z.array(CompanyDataSchema),
+    productions: z.array(ProductionDataSchema),
+    companions: z.array(CompanionDataSchema),
   }),
 })
 

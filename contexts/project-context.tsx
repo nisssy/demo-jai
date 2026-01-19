@@ -4,7 +4,15 @@ import { createContext, useContext, useState, useCallback, useEffect, useMemo, u
 import { useToast } from "@/hooks/use-toast"
 import type { ProjectData, Role } from "@/types/project"
 import { clearDemoDbStorage, loadDemoDbFromStorageMeta, saveDemoDbToStorage } from "@/lib/demo-db/storage"
-import type { CompanyData, HallData, DemoProductEntity, DemoProject, DemoProjectEntity } from "@/lib/demo-db/types"
+import type {
+  CompanyData,
+  HallData,
+  ProductionData,
+  CompanionData,
+  DemoProductEntity,
+  DemoProject,
+  DemoProjectEntity,
+} from "@/lib/demo-db/types"
 import { denormalizeProjects, type DemoDbV3Data } from "@/lib/demo-db/denormalize"
 import {
   findCompanyByCompanyId as findCompanyByCompanyIdRepo,
@@ -49,6 +57,9 @@ type ProjectContextType = {
   getCompanyByCompanyId: (companyId: string) => CompanyData | null
   searchCompanies: (query: string) => CompanyData[]
   getHallsByCompanyId: (companyId: number) => HallData[]
+  // プロダクション/コンパニオン（マスタ）
+  getProductions: () => ProductionData[]
+  getCompanions: () => CompanionData[]
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined)
@@ -90,10 +101,36 @@ initialCompanies.forEach((company, companyIndex) => {
   for (let i = 1; i <= 20; i++) {
     const salesPersonIndex = (companyIndex * 20 + i - 1) % salesPersonNames.length
     const hallNumber = String(i).padStart(2, "0")
+    const location = ["本店", "渋谷店", "新宿店", "池袋店", "上野店", "錦糸町店", "新橋店", "横浜店", "川崎店", "大宮店", "千葉店", "船橋店", "柏店", "立川店", "八王子店", "町田店", "相模原店", "厚木店", "藤沢店", "鎌倉店"][i - 1]
+    const wardMap: Record<string, string> = {
+      "本店": "千代田区",
+      "渋谷店": "渋谷区",
+      "新宿店": "新宿区",
+      "池袋店": "豊島区",
+      "上野店": "台東区",
+      "錦糸町店": "墨田区",
+      "新橋店": "港区",
+      "横浜店": "神奈川県横浜市西区",
+      "川崎店": "神奈川県川崎市川崎区",
+      "大宮店": "埼玉県さいたま市大宮区",
+      "千葉店": "千葉県千葉市中央区",
+      "船橋店": "千葉県船橋市",
+      "柏店": "千葉県柏市",
+      "立川店": "東京都立川市",
+      "八王子店": "東京都八王子市",
+      "町田店": "東京都町田市",
+      "相模原店": "神奈川県相模原市中央区",
+      "厚木店": "神奈川県厚木市",
+      "藤沢店": "神奈川県藤沢市",
+      "鎌倉店": "神奈川県鎌倉市",
+    }
+    const addressBase = wardMap[location] || "東京都"
+
     initialHalls.push({
       id: hallCounter,
       hallId: `${company.companyId}-HALL-${hallNumber}`, // ホールIDを生成
-      name: `${company.name.replace("株式会社", "")}${["本店", "渋谷店", "新宿店", "池袋店", "上野店", "錦糸町店", "新橋店", "横浜店", "川崎店", "大宮店", "千葉店", "船橋店", "柏店", "立川店", "八王子店", "町田店", "相模原店", "厚木店", "藤沢店", "鎌倉店"][i - 1]}`,
+      name: `${company.name.replace("株式会社", "")}${location}`,
+      address: `${addressBase}${String(i).padStart(2, "0")}-1-1`,
       salesPersonName: salesPersonNames[salesPersonIndex],
       companyId: company.id,
       discountAmount: generateRandomDiscount(), // 5000円〜50000円のランダムな割引金額
@@ -101,6 +138,26 @@ initialCompanies.forEach((company, companyIndex) => {
     hallCounter++
   }
 })
+
+// プロダクション（企業）マスタ（デモ）
+const initialProductions: ProductionData[] = [
+  { id: 1, name: "プロダクションA", address: "東京都渋谷区1-1-1", phone: "03-1111-1111" },
+  { id: 2, name: "プロダクションB", address: "東京都新宿区2-2-2", phone: "03-2222-2222" },
+  { id: 3, name: "プロダクションC", address: "東京都豊島区3-3-3", phone: "03-3333-3333" },
+]
+
+// コンパニオン（所属必須）
+// NOTE: 既存のテストデータに登場するコンパニオン名を適当にプロダクションへ紐づけている
+const initialCompanions: CompanionData[] = [
+  { id: 1, name: "Rio", productionId: 1 },
+  { id: 2, name: "Ayaka", productionId: 1 },
+  { id: 3, name: "Nanaka", productionId: 2 },
+  { id: 4, name: "山田 花子", productionId: 3 },
+  { id: 5, name: "佐藤 美咲", productionId: 3 },
+  { id: 6, name: "鈴木 さくら", productionId: 3 },
+  { id: 7, name: "高橋 みゆき", productionId: 2 },
+  { id: 8, name: "伊藤 あかり", productionId: 1 },
+]
 
 // ホール名から法人情報とホールIDを取得するヘルパー関数
 const getCompanyAndHallInfo = (hallName: string): { companyName: string; companyId: string; hallId: string } => {
@@ -1721,6 +1778,8 @@ function getDemoDbSeed() {
     projects: initialProjects,
     halls: initialHalls,
     companies: initialCompanies,
+    productions: initialProductions,
+    companions: initialCompanions,
   }
 }
 
@@ -1738,6 +1797,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const initialV3 = useMemo((): DemoDbV3Data => {
     const companies = (initialDb.companies as CompanyData[] | undefined) ?? initialSeed.companies
     const halls = (initialDb.halls as HallData[] | undefined) ?? initialSeed.halls
+    const productions = ((initialDb as any).productions as ProductionData[] | undefined) ?? initialSeed.productions
+    const companions = ((initialDb as any).companions as CompanionData[] | undefined) ?? initialSeed.companions
 
     const maybeProducts = (initialDb as any).products
     const isV3 = Array.isArray(maybeProducts)
@@ -1754,6 +1815,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         products: ((initialDb as any).products as DemoProductEntity[] | undefined) ?? [],
         halls,
         companies,
+        productions,
+        companions,
       }
     }
 
@@ -1851,8 +1914,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    return { projects, products, halls, companies }
-  }, [initialDb, initialSeed.companies, initialSeed.halls, initialSeed.projects])
+    return { projects, products, halls, companies, productions, companions }
+  }, [initialDb, initialSeed.companies, initialSeed.halls, initialSeed.projects, initialSeed.productions, initialSeed.companions])
 
   // v3: 正規化DB（projects=案件, products=商材）
   const [projectEntities, setProjectEntities] = useState<DemoProjectEntity[]>(() => {
@@ -1872,15 +1935,25 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     return initialV3.companies
   })
 
+  // プロダクション/コンパニオン（マスタ）
+  const [productions, setProductions] = useState<ProductionData[]>(() => {
+    return (initialV3 as any).productions ?? initialSeed.productions
+  })
+  const [companions, setCompanions] = useState<CompanionData[]>(() => {
+    return (initialV3 as any).companions ?? initialSeed.companions
+  })
+
   const denormalizedProducts = useMemo(() => {
     const data: DemoDbV3Data = {
       projects: projectEntities,
       products: productEntities,
       halls,
       companies,
+      productions,
+      companions,
     }
     return denormalizeProjects(data)
-  }, [companies, halls, productEntities, projectEntities])
+  }, [companies, halls, productEntities, projectEntities, productions, companions])
 
   const [projectData, setProjectData] = useState<ProjectData>({
     projectName: "",
@@ -1909,8 +1982,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   // デモ用擬似DBをlocalStorageに永続化（projects/halls/companies 全保存）
   useEffect(() => {
-    saveDemoDbToStorage({ projects: projectEntities, products: productEntities, halls, companies } as any)
-  }, [projectEntities, productEntities, halls, companies])
+    saveDemoDbToStorage({ projects: projectEntities, products: productEntities, halls, companies, productions, companions } as any)
+  }, [projectEntities, productEntities, halls, companies, productions, companions])
 
   const addNotification = useCallback((message: string) => {
     setNotifications((prev) => [message, ...prev])
@@ -1919,6 +1992,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       description: message,
     })
   }, [toast])
+
+  const getProductions = useCallback(() => productions, [productions])
+  const getCompanions = useCallback(() => companions, [companions])
 
   // localStorage のデモデータを自動マイグレーション/補正した場合は、最初の一回だけ通知する
   useEffect(() => {
@@ -1933,6 +2009,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     clearDemoDbStorage()
     setCompanies(seed.companies)
     setHalls(seed.halls)
+    setProductions(seed.productions)
+    setCompanions(seed.companions)
     // seed(旧形式)をv3へ変換してセット
     const legacyRows = seed.projects
     const grouped = new Map<string, DemoProject[]>()
@@ -2291,6 +2369,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         getCompanyByCompanyId,
         searchCompanies,
         getHallsByCompanyId,
+        getProductions,
+        getCompanions,
       }}
     >
       {children}

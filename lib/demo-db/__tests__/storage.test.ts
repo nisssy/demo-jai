@@ -37,14 +37,20 @@ describe("lib/demo-db/storage", () => {
   })
 
   test("safeParseDemoDbSnapshot: migrates version mismatch when shape is valid", () => {
-    const raw = JSON.stringify({ version: DEMO_DB_STORAGE_VERSION - 1, data: { projects: [], products: [], halls: [], companies: [] } })
+    const raw = JSON.stringify({
+      version: DEMO_DB_STORAGE_VERSION - 1,
+      data: { projects: [], products: [], halls: [], companies: [], productions: [], companions: [] },
+    })
     const parsed = safeParseDemoDbSnapshot(raw)
     expect(parsed?.version).toBe(DEMO_DB_STORAGE_VERSION)
     expect(parsed?.data.projects).toEqual([])
   })
 
   test("safeParseDemoDbSnapshot: accepts valid shape + version", () => {
-    const raw = JSON.stringify({ version: DEMO_DB_STORAGE_VERSION, data: { projects: [], products: [], halls: [], companies: [] } })
+    const raw = JSON.stringify({
+      version: DEMO_DB_STORAGE_VERSION,
+      data: { projects: [], products: [], halls: [], companies: [], productions: [], companions: [] },
+    })
     const parsed = safeParseDemoDbSnapshot(raw)
     expect(parsed?.version).toBe(DEMO_DB_STORAGE_VERSION)
     expect(parsed?.data.projects).toEqual([])
@@ -116,7 +122,10 @@ describe("lib/demo-db/storage", () => {
   })
 
   test("safeParseDemoDbSnapshot: rejects future versions", () => {
-    const raw = JSON.stringify({ version: DEMO_DB_STORAGE_VERSION + 1, data: { projects: [], products: [], halls: [], companies: [] } })
+    const raw = JSON.stringify({
+      version: DEMO_DB_STORAGE_VERSION + 1,
+      data: { projects: [], products: [], halls: [], companies: [], productions: [], companions: [] },
+    })
     expect(safeParseDemoDbSnapshot(raw)).toBeNull()
   })
 
@@ -131,7 +140,7 @@ describe("lib/demo-db/storage", () => {
 
     expect(loadDemoDbFromStorage()).toBeNull()
 
-    saveDemoDbToStorage({ projects: [], products: [], halls: [], companies: [] })
+    saveDemoDbToStorage({ projects: [], products: [], halls: [], companies: [], productions: [], companions: [] })
     expect(state.has(DEMO_DB_STORAGE_KEY)).toBe(true)
 
     const loaded = loadDemoDbFromStorage()

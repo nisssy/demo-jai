@@ -9,7 +9,7 @@ import {
 } from "@/lib/demo-db/schema"
 
 export const DEMO_DB_STORAGE_KEY = "demo-jai:demo-db"
-export const DEMO_DB_STORAGE_VERSION = 3
+export const DEMO_DB_STORAGE_VERSION = 4
 
 type ParseMeta = {
   snapshot: DemoDbSnapshot
@@ -308,6 +308,33 @@ function migrateV2ToV3(data: any): any {
   }
 }
 
+function migrateV3ToV4(data: any): any {
+  // v4: add productions/companions master arrays
+  const base = typeof data === "object" && data ? data : {}
+  const productions = Array.isArray((base as any).productions)
+    ? (base as any).productions
+    : [
+        { id: 1, name: "プロダクションA", address: "東京都渋谷区1-1-1", phone: "03-1111-1111" },
+        { id: 2, name: "プロダクションB", address: "東京都新宿区2-2-2", phone: "03-2222-2222" },
+        { id: 3, name: "プロダクションC", address: "東京都豊島区3-3-3", phone: "03-3333-3333" },
+      ]
+
+  const companions = Array.isArray((base as any).companions)
+    ? (base as any).companions
+    : [
+        { id: 1, name: "Rio", productionId: 1 },
+        { id: 2, name: "Ayaka", productionId: 1 },
+        { id: 3, name: "Nanaka", productionId: 2 },
+        { id: 4, name: "山田 花子", productionId: 3 },
+        { id: 5, name: "佐藤 美咲", productionId: 3 },
+        { id: 6, name: "鈴木 さくら", productionId: 3 },
+        { id: 7, name: "高橋 みゆき", productionId: 2 },
+        { id: 8, name: "伊藤 あかり", productionId: 1 },
+      ]
+
+  return { ...base, productions, companions }
+}
+
 function applyMigrations(version: number, data: any): { version: number; data: any; migrated: boolean } | null {
   if (version > DEMO_DB_STORAGE_VERSION) return null
   let v = version
@@ -330,6 +357,12 @@ function applyMigrations(version: number, data: any): { version: number; data: a
     if (v === 2) {
       d = migrateV2ToV3(d)
       v = 3
+      migrated = true
+      continue
+    }
+    if (v === 3) {
+      d = migrateV3ToV4(d)
+      v = 4
       migrated = true
       continue
     }

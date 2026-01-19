@@ -72,6 +72,8 @@ export function ProjectRegistration({
     getCompanyByCompanyId,
     searchCompanies,
     getHallsByCompanyId,
+    getCompanions,
+    getProductions,
   } = useProject()
   const isEditMode = projectId !== undefined && projectId !== null
   const isProductMode = isProductAddMode || isProductEditMode
@@ -95,6 +97,81 @@ export function ProjectRegistration({
   const [hallId, setHallId] = useState("")
   const [projectName, setProjectName] = useState("")
   const [projectNameTouched, setProjectNameTouched] = useState(false)
+
+  const productionsById = useMemo(() => {
+    const byId = new Map<number, { id: number; name: string; address: string; phone: string }>()
+    getProductions().forEach((p) => byId.set(p.id, p as any))
+    return byId
+  }, [getProductions])
+
+  const companionsByName = useMemo(() => {
+    const byName = new Map<string, { id: number; name: string; productionId: number }>()
+    getCompanions().forEach((c) => byName.set(c.name, c as any))
+    return byName
+  }, [getCompanions])
+
+  const estimateTravelFee = useCallback((fromAddr: string, toAddr: string) => {
+    const zones = [
+      "千代田区",
+      "渋谷区",
+      "新宿区",
+      "豊島区",
+      "台東区",
+      "墨田区",
+      "港区",
+      "横浜",
+      "川崎",
+      "大宮",
+      "千葉",
+      "船橋",
+      "柏",
+      "立川",
+      "八王子",
+      "町田",
+      "相模原",
+      "厚木",
+      "藤沢",
+      "鎌倉",
+    ]
+    const pickZone = (addr: string) => zones.find((z) => addr.includes(z)) ?? "その他"
+    const a = pickZone(fromAddr)
+    const b = pickZone(toAddr)
+    if (a === b) return 2000
+    // ざっくり距離感（同都内=4k, 都外=8k, それ以外=6k）
+    const isTokyo = (z: string) => ["千代田区", "渋谷区", "新宿区", "豊島区", "台東区", "墨田区", "港区", "立川", "八王子", "町田"].some((t) => z.includes(t))
+    if (isTokyo(a) && isTokyo(b)) return 4000
+    if (!isTokyo(a) && !isTokyo(b)) return 6000
+    return 8000
+  }, [])
+
+  const computeTransportationFeeTotal = useCallback(
+    (selectedCompanions: Set<string>) => {
+      const hall = hallName ? getHallByName(hallName) : null
+      const hallAddress = hall?.address || hallName || "東京都"
+      let total = 0
+      for (const name of selectedCompanions) {
+        if (!name || name === "未定") continue
+        const comp = companionsByName.get(name)
+        if (!comp) continue
+        const prod = productionsById.get(comp.productionId)
+        const fromAddr = prod?.address || "東京都"
+        total += estimateTravelFee(fromAddr, hallAddress)
+      }
+      return Math.round(total)
+    },
+    [companionsByName, estimateTravelFee, getHallByName, hallName, productionsById],
+  )
+
+  // 初期表示/データ読込/ホール変更時に、交通費（所属住所→ホール住所）を再計算
+  useEffect(() => {
+    if (!hallName) return
+    setProductInfos((prev) =>
+      prev.map((p) => ({
+        ...p,
+        transportationFeeTotal: String(computeTransportationFeeTotal(p.selectedCompanions)),
+      })),
+    )
+  }, [computeTransportationFeeTotal, hallName])
   
   // 商材情報の型定義
   type ProductInfo = {
@@ -120,7 +197,8 @@ export function ProjectRegistration({
     nominatedCompanions: Record<string, boolean>
     nominatedDirectors: Record<string, boolean>
     nominatedMcs: Record<string, boolean>
-    transportationFeePerPerson: string
+  /** 交通費（合計・自動計算） */
+  transportationFeeTotal: string
     accommodationFeePerPerson: string
     performanceFeeDiscount: string
     eventBaseFee: string
@@ -157,7 +235,7 @@ export function ProjectRegistration({
       nominatedCompanions: {},
       nominatedDirectors: {},
       nominatedMcs: {},
-      transportationFeePerPerson: "",
+    transportationFeeTotal: "",
       accommodationFeePerPerson: "",
       performanceFeeDiscount: "",
       eventBaseFee: "",
@@ -278,7 +356,12 @@ export function ProjectRegistration({
         if (nominated[name] === undefined) nominated[name] = false
       }
     }
-    updateProductInfo(index, { selectedCompanions: newSelected, nominatedCompanions: nominated })
+    const transportationFeeTotal = computeTransportationFeeTotal(newSelected)
+    updateProductInfo(index, {
+      selectedCompanions: newSelected,
+      nominatedCompanions: nominated,
+      transportationFeeTotal: String(transportationFeeTotal),
+    })
   }
 
   const updateSelectedDirectors = (index: number, name: string) => {
@@ -313,6 +396,7 @@ export function ProjectRegistration({
         if (nominated[name] === undefined) nominated[name] = false
       }
     }
+    // 交通費はコンパニオン所属住所ベースで算出するため、ディレクター選択では再計算しない
     updateProductInfo(index, { selectedDirectors: newSelected, nominatedDirectors: nominated })
   }
 
@@ -348,10 +432,11 @@ export function ProjectRegistration({
         if (nominated[name] === undefined) nominated[name] = false
       }
     }
+    // 交通費はコンパニオン所属住所ベースで算出するため、MC選択では再計算しない
     updateProductInfo(index, { selectedMcs: newSelected, nominatedMcs: nominated })
   }
   // 既存のstateを商材情報①と互換性を保つために残す（後方互換性のため）
-  const transportationFeePerPerson = productInfos[0]?.transportationFeePerPerson || ""
+  const transportationFeeTotal = productInfos[0]?.transportationFeeTotal || ""
   const accommodationFeePerPerson = productInfos[0]?.accommodationFeePerPerson || ""
   const eventBaseFee = productInfos[0]?.eventBaseFee || ""
   const performanceFeeDiscount = productInfos[0]?.performanceFeeDiscount || ""
@@ -706,15 +791,14 @@ export function ProjectRegistration({
         return cost
       })()
       const totalCost = companionCost + directorCost + mcCost
-      // 交通費・宿泊費の計算用：入力された人数の合計（未定を含む）
+      // 宿泊費の計算用：入力された人数の合計（未定を含む）
       const totalCastCount = 
         (Number(productInfo.companionCount) || 0) +
         (Number(productInfo.directorCount) || 0) +
         (Number(productInfo.mcCount) || 0)
       const performanceFeeDiscountValue = Number(productInfo.performanceFeeDiscount) || 0
       const performanceFeeAfterDiscount = Math.max(0, totalCost - performanceFeeDiscountValue)
-      const transportationFeePerPersonValue = Number(productInfo.transportationFeePerPerson) || 0
-      const totalTransportationFee = transportationFeePerPersonValue * totalCastCount
+      const totalTransportationFee = Math.round(Number(productInfo.transportationFeeTotal) || 0)
       const accommodationFeePerPersonValue = Number(productInfo.accommodationFeePerPerson) || 0
       const totalAccommodationFee = accommodationFeePerPersonValue * totalCastCount
       const eventBaseFeeValue = getEventBaseFee(productInfo.eventType)
@@ -773,6 +857,8 @@ export function ProjectRegistration({
         nominatedCompanions: productInfo.nominatedCompanions,
         nominatedDirectors: productInfo.nominatedDirectors,
         nominatedMcs: productInfo.nominatedMcs,
+        transportationFee: totalTransportationFee,
+        isTransportationAutoFilled: true,
       }
       
       createProduct(newProductProject)
@@ -861,8 +947,7 @@ export function ProjectRegistration({
         (productInfo.selectedMcs.has("未定") ? 0 : productInfo.selectedMcs.size)
       const performanceFeeDiscountValue = Number(productInfo.performanceFeeDiscount) || 0
       const performanceFeeAfterDiscount = Math.round(Math.max(0, totalCost - performanceFeeDiscountValue))
-      const transportationFeePerPersonValue = Number(productInfo.transportationFeePerPerson) || 0
-      const totalTransportationFee = Math.round(transportationFeePerPersonValue * castCount)
+      const totalTransportationFee = Math.round(Number(productInfo.transportationFeeTotal) || 0)
       const accommodationFeePerPersonValue = Number(productInfo.accommodationFeePerPerson) || 0
       const totalAccommodationFee = Math.round(accommodationFeePerPersonValue * castCount)
       const eventBaseFeeValue = getEventBaseFee(productInfo.eventType)
@@ -933,6 +1018,8 @@ export function ProjectRegistration({
         nominatedCompanions: productInfo.nominatedCompanions,
         nominatedDirectors: productInfo.nominatedDirectors,
         nominatedMcs: productInfo.nominatedMcs,
+        transportationFee: totalTransportationFee,
+        isTransportationAutoFilled: true,
       }
       
       updateProduct(projectId, updatedProject)
@@ -1021,8 +1108,7 @@ export function ProjectRegistration({
         (productInfo.selectedMcs.has("未定") ? 0 : productInfo.selectedMcs.size)
       const performanceFeeDiscountValue = Number(productInfo.performanceFeeDiscount) || 0
       const performanceFeeAfterDiscount = Math.round(Math.max(0, totalCost - performanceFeeDiscountValue))
-      const transportationFeePerPersonValue = Number(productInfo.transportationFeePerPerson) || 0
-      const totalTransportationFee = Math.round(transportationFeePerPersonValue * castCount)
+      const totalTransportationFee = Math.round(Number(productInfo.transportationFeeTotal) || 0)
       const accommodationFeePerPersonValue = Number(productInfo.accommodationFeePerPerson) || 0
       const totalAccommodationFee = Math.round(accommodationFeePerPersonValue * castCount)
       const eventBaseFeeValue = getEventBaseFee(productInfo.eventType)
@@ -1181,8 +1267,7 @@ export function ProjectRegistration({
         (productInfo.selectedMcs.has("未定") ? 0 : productInfo.selectedMcs.size)
         const performanceFeeDiscountValue = Number(productInfo.performanceFeeDiscount) || 0
         const performanceFeeAfterDiscount = Math.max(0, totalCost - performanceFeeDiscountValue)
-        const transportationFeePerPersonValue = Number(productInfo.transportationFeePerPerson) || 0
-        const totalTransportationFee = transportationFeePerPersonValue * castCount
+        const totalTransportationFee = Math.round(Number(productInfo.transportationFeeTotal) || 0)
         const accommodationFeePerPersonValue = Number(productInfo.accommodationFeePerPerson) || 0
         const totalAccommodationFee = accommodationFeePerPersonValue * castCount
         const eventBaseFeeValue = Number(productInfo.eventBaseFee) || 0
@@ -1227,6 +1312,8 @@ export function ProjectRegistration({
           nominatedCompanions: productInfo.nominatedCompanions,
           nominatedDirectors: productInfo.nominatedDirectors,
           nominatedMcs: productInfo.nominatedMcs,
+          transportationFee: totalTransportationFee,
+          isTransportationAutoFilled: true,
         }
       })
       
@@ -1382,7 +1469,7 @@ export function ProjectRegistration({
             nominatedCompanions: (project as any).nominatedCompanions || {},
             nominatedDirectors: (project as any).nominatedDirectors || {},
             nominatedMcs: (project as any).nominatedMcs || {},
-            transportationFeePerPerson: "",
+            transportationFeeTotal: "",
             accommodationFeePerPerson: "",
             performanceFeeDiscount: "",
             eventBaseFee: String(getEventBaseFee(project.eventType)),
@@ -2137,6 +2224,13 @@ export function ProjectRegistration({
                               setHallName(hall.name)
                               setHallId(hall.hallId)
                               setAcquirerName(hall.salesPersonName)
+                              // ホール変更により交通費（所属住所→ホール住所）を再計算
+                              setProductInfos((prev) =>
+                                prev.map((p) => ({
+                                  ...p,
+                                  transportationFeeTotal: String(computeTransportationFeeTotal(p.selectedCompanions)),
+                                })),
+                              )
                               setHallSearchOpen(false)
                               setHallSearchQuery("")
                               setErrors((prev) => {
@@ -3160,22 +3254,10 @@ export function ProjectRegistration({
                 )}
               </div>
 
-              {/* 交通費・宿泊費 */}
+              {/* 宿泊費 */}
               <div className="space-y-4 bg-slate-50/50 border border-slate-200/50 rounded-lg p-4">
-                <Label className="text-base font-semibold">交通費・宿泊費</Label>
+                <Label className="text-base font-semibold">宿泊費</Label>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor={`transportationFeePerPerson-${productInfo.id}`} className="text-sm text-slate-700">
-                      一人当たりの交通費
-                    </Label>
-                    <Input
-                      id={`transportationFeePerPerson-${productInfo.id}`}
-                      type="number"
-                      value={productInfo.transportationFeePerPerson}
-                      onChange={(e) => updateProductInfo(index, { transportationFeePerPerson: e.target.value })}
-                      placeholder="0"
-                    />
-                  </div>
                   <div className="space-y-2">
                     <Label htmlFor={`accommodationFeePerPerson-${productInfo.id}`} className="text-sm text-slate-700">
                       一人当たりの宿泊費
@@ -3187,6 +3269,12 @@ export function ProjectRegistration({
                       onChange={(e) => updateProductInfo(index, { accommodationFeePerPerson: e.target.value })}
                       placeholder="0"
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm text-slate-700">備考</Label>
+                    <div className="text-xs text-slate-500 pt-2">
+                      ※ 交通費は請求予定金額側で「合計（自動計算）」として表示します
+                    </div>
                   </div>
                 </div>
               </div>
@@ -3276,15 +3364,14 @@ export function ProjectRegistration({
                   return Math.round(cost)
                 })()
                 const totalCost = Math.round(companionCost + directorCost + mcCost)
-                // 交通費・宿泊費の計算用：入力された人数の合計（未定を含む）
+                // 宿泊費の計算用：入力された人数の合計（未定を含む）
                 const totalCastCount = 
                   (Number(productInfo.companionCount) || 0) +
                   (Number(productInfo.directorCount) || 0) +
                   (Number(productInfo.mcCount) || 0)
                 const performanceFeeDiscountValue = Number(productInfo.performanceFeeDiscount) || 0
                 const performanceFeeAfterDiscount = Math.round(Math.max(0, totalCost - performanceFeeDiscountValue))
-                const transportationFeePerPersonValue = Number(productInfo.transportationFeePerPerson) || 0
-                const totalTransportationFee = Math.round(transportationFeePerPersonValue * totalCastCount)
+                const totalTransportationFee = Math.round(Number(productInfo.transportationFeeTotal) || 0)
                 const accommodationFeePerPersonValue = Number(productInfo.accommodationFeePerPerson) || 0
                 const totalAccommodationFee = Math.round(accommodationFeePerPersonValue * totalCastCount)
                 const eventBaseFeeValue = getEventBaseFee(productInfo.eventType)
@@ -3466,7 +3553,7 @@ export function ProjectRegistration({
                             ¥{Math.round(totalTransportationFee).toLocaleString()}
                           </div>
                           <div className="text-xs text-slate-500 mt-1">
-                            {totalCastCount > 0 ? `（${totalCastCount}名 × ¥${Math.round(transportationFeePerPersonValue).toLocaleString()}）` : ""}
+                            {totalTransportationFee > 0 ? "（所属住所→ホール住所から自動計算）" : ""}
                           </div>
                         </div>
                       </div>

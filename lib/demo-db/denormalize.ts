@@ -1,10 +1,20 @@
-import type { CompanyData, DemoProductEntity, DemoProject, DemoProjectEntity, HallData } from "@/lib/demo-db/types"
+import type {
+  CompanyData,
+  DemoProductEntity,
+  DemoProject,
+  DemoProjectEntity,
+  HallData,
+  ProductionData,
+  CompanionData,
+} from "@/lib/demo-db/types"
 
 export type DemoDbV3Data = {
   projects: DemoProjectEntity[]
   products: DemoProductEntity[]
   halls: HallData[]
   companies: CompanyData[]
+  productions: ProductionData[]
+  companions: CompanionData[]
 }
 
 const PROJECT_KEYS: Array<keyof DemoProject> = [

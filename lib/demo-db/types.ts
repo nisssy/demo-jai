@@ -13,6 +13,20 @@ export type HallData = {
   salesPersonName: string
   companyId: number
   discountAmount: number
+  address?: string
+}
+
+export type ProductionData = {
+  id: number
+  name: string
+  address: string
+  phone: string
+}
+
+export type CompanionData = {
+  id: number
+  name: string
+  productionId: number
 }
 
 // v2までの「1行=商材(案件情報も含む)」形式（UI互換のため残す）
