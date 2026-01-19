@@ -326,7 +326,14 @@ function ProjectCostPageContent() {
                       <div className="mt-1 space-y-1">
                         {castingBreakdown.companions.map((item, idx) => (
                           <div key={idx} className="flex justify-between text-sm">
-                            <span>{item.name}</span>
+                            <span className="flex items-center gap-2">
+                              {item.name}
+                              {Boolean((project as any)?.nominatedCompanions?.[item.name]) && (
+                                <Badge variant="outline" className="text-xs border-purple-200 bg-purple-50 text-purple-700">
+                                  指名
+                                </Badge>
+                              )}
+                            </span>
                             <span className="font-medium">¥{item.cost.toLocaleString()}</span>
                           </div>
                         ))}
@@ -344,7 +351,14 @@ function ProjectCostPageContent() {
                       <div className="mt-1 space-y-1">
                         {castingBreakdown.directors.map((item, idx) => (
                           <div key={idx} className="flex justify-between text-sm">
-                            <span>{item.name}</span>
+                            <span className="flex items-center gap-2">
+                              {item.name}
+                              {Boolean((project as any)?.nominatedDirectors?.[item.name]) && (
+                                <Badge variant="outline" className="text-xs border-purple-200 bg-purple-50 text-purple-700">
+                                  指名
+                                </Badge>
+                              )}
+                            </span>
                             <span className="font-medium">¥{item.cost.toLocaleString()}</span>
                           </div>
                         ))}
@@ -362,7 +376,14 @@ function ProjectCostPageContent() {
                       <div className="mt-1 space-y-1">
                         {castingBreakdown.mcs.map((item, idx) => (
                           <div key={idx} className="flex justify-between text-sm">
-                            <span>{item.name}</span>
+                            <span className="flex items-center gap-2">
+                              {item.name}
+                              {Boolean((project as any)?.nominatedMcs?.[item.name]) && (
+                                <Badge variant="outline" className="text-xs border-purple-200 bg-purple-50 text-purple-700">
+                                  指名
+                                </Badge>
+                              )}
+                            </span>
                             <span className="font-medium">¥{item.cost.toLocaleString()}</span>
                           </div>
                         ))}

@@ -117,6 +117,9 @@ export function ProjectRegistration({
     selectedCompanions: Set<string>
     selectedDirectors: Set<string>
     selectedMcs: Set<string>
+    nominatedCompanions: Record<string, boolean>
+    nominatedDirectors: Record<string, boolean>
+    nominatedMcs: Record<string, boolean>
     transportationFeePerPerson: string
     accommodationFeePerPerson: string
     performanceFeeDiscount: string
@@ -151,6 +154,9 @@ export function ProjectRegistration({
       selectedCompanions: new Set(["未定"]),
       selectedDirectors: new Set(["未定"]),
       selectedMcs: new Set(["未定"]),
+      nominatedCompanions: {},
+      nominatedDirectors: {},
+      nominatedMcs: {},
       transportationFeePerPerson: "",
       accommodationFeePerPerson: "",
       performanceFeeDiscount: "",
@@ -242,17 +248,21 @@ export function ProjectRegistration({
   const updateSelectedCompanions = (index: number, name: string) => {
     const productInfo = productInfos[index]
     const newSelected = new Set(productInfo.selectedCompanions)
+    const nominated = { ...(productInfo.nominatedCompanions || {}) }
     const maxCount = Number(productInfo.companionCount) || 0
     
     if (name === "未定") {
       // 「未定」を選択する場合、他の選択肢をすべて解除
       newSelected.clear()
       newSelected.add("未定")
+      // 指名情報もクリア
+      Object.keys(nominated).forEach((k) => delete nominated[k])
     } else {
       // 他の選択肢を選択する場合、「未定」を解除してから追加
       newSelected.delete("未定")
       if (newSelected.has(name)) {
         newSelected.delete(name)
+        delete nominated[name]
         // すべて解除された場合は「未定」を選択
         if (newSelected.size === 0) {
           newSelected.add("未定")
@@ -265,25 +275,29 @@ export function ProjectRegistration({
           return
         }
         newSelected.add(name)
+        if (nominated[name] === undefined) nominated[name] = false
       }
     }
-    updateProductInfo(index, { selectedCompanions: newSelected })
+    updateProductInfo(index, { selectedCompanions: newSelected, nominatedCompanions: nominated })
   }
 
   const updateSelectedDirectors = (index: number, name: string) => {
     const productInfo = productInfos[index]
     const newSelected = new Set(productInfo.selectedDirectors)
+    const nominated = { ...(productInfo.nominatedDirectors || {}) }
     const maxCount = Number(productInfo.directorCount) || 0
     
     if (name === "未定") {
       // 「未定」を選択する場合、他の選択肢をすべて解除
       newSelected.clear()
       newSelected.add("未定")
+      Object.keys(nominated).forEach((k) => delete nominated[k])
     } else {
       // 他の選択肢を選択する場合、「未定」を解除してから追加
       newSelected.delete("未定")
       if (newSelected.has(name)) {
         newSelected.delete(name)
+        delete nominated[name]
         // すべて解除された場合は「未定」を選択
         if (newSelected.size === 0) {
           newSelected.add("未定")
@@ -296,25 +310,29 @@ export function ProjectRegistration({
           return
         }
         newSelected.add(name)
+        if (nominated[name] === undefined) nominated[name] = false
       }
     }
-    updateProductInfo(index, { selectedDirectors: newSelected })
+    updateProductInfo(index, { selectedDirectors: newSelected, nominatedDirectors: nominated })
   }
 
   const updateSelectedMcs = (index: number, name: string) => {
     const productInfo = productInfos[index]
     const newSelected = new Set(productInfo.selectedMcs)
+    const nominated = { ...(productInfo.nominatedMcs || {}) }
     const maxCount = Number(productInfo.mcCount) || 0
     
     if (name === "未定") {
       // 「未定」を選択する場合、他の選択肢をすべて解除
       newSelected.clear()
       newSelected.add("未定")
+      Object.keys(nominated).forEach((k) => delete nominated[k])
     } else {
       // 他の選択肢を選択する場合、「未定」を解除してから追加
       newSelected.delete("未定")
       if (newSelected.has(name)) {
         newSelected.delete(name)
+        delete nominated[name]
         // すべて解除された場合は「未定」を選択
         if (newSelected.size === 0) {
           newSelected.add("未定")
@@ -327,9 +345,10 @@ export function ProjectRegistration({
           return
         }
         newSelected.add(name)
+        if (nominated[name] === undefined) nominated[name] = false
       }
     }
-    updateProductInfo(index, { selectedMcs: newSelected })
+    updateProductInfo(index, { selectedMcs: newSelected, nominatedMcs: nominated })
   }
   // 既存のstateを商材情報①と互換性を保つために残す（後方互換性のため）
   const transportationFeePerPerson = productInfos[0]?.transportationFeePerPerson || ""
@@ -751,6 +770,9 @@ export function ProjectRegistration({
         selectedCompanions: Array.from(productInfo.selectedCompanions),
         selectedDirectors: Array.from(productInfo.selectedDirectors),
         selectedMcs: Array.from(productInfo.selectedMcs),
+        nominatedCompanions: productInfo.nominatedCompanions,
+        nominatedDirectors: productInfo.nominatedDirectors,
+        nominatedMcs: productInfo.nominatedMcs,
       }
       
       createProduct(newProductProject)
@@ -908,6 +930,9 @@ export function ProjectRegistration({
         selectedCompanions: Array.from(productInfo.selectedCompanions),
         selectedDirectors: Array.from(productInfo.selectedDirectors),
         selectedMcs: Array.from(productInfo.selectedMcs),
+        nominatedCompanions: productInfo.nominatedCompanions,
+        nominatedDirectors: productInfo.nominatedDirectors,
+        nominatedMcs: productInfo.nominatedMcs,
       }
       
       updateProduct(projectId, updatedProject)
@@ -1199,6 +1224,9 @@ export function ProjectRegistration({
           selectedCompanions: Array.from(productInfo.selectedCompanions),
           selectedDirectors: Array.from(productInfo.selectedDirectors),
           selectedMcs: Array.from(productInfo.selectedMcs),
+          nominatedCompanions: productInfo.nominatedCompanions,
+          nominatedDirectors: productInfo.nominatedDirectors,
+          nominatedMcs: productInfo.nominatedMcs,
         }
       })
       
@@ -1351,6 +1379,9 @@ export function ProjectRegistration({
             selectedCompanions: selectedCompanions,
             selectedDirectors: selectedDirectors,
             selectedMcs: selectedMcs,
+            nominatedCompanions: (project as any).nominatedCompanions || {},
+            nominatedDirectors: (project as any).nominatedDirectors || {},
+            nominatedMcs: (project as any).nominatedMcs || {},
             transportationFeePerPerson: "",
             accommodationFeePerPerson: "",
             performanceFeeDiscount: "",
@@ -1412,34 +1443,44 @@ export function ProjectRegistration({
     return { weekDays, timeSlots }
   }, [currentWeekStart])
 
-  const getBusySlots = (dayIndex: number, timeIndex: number, companionName?: string, weekDays?: typeof weekData.weekDays, status?: "available" | "busy") => {
-    if (!companionName) {
+  const getBusySlotInfo = (
+    dayIndex: number,
+    timeIndex: number,
+    personName?: string,
+    weekDays?: typeof weekData.weekDays,
+    status?: "available" | "busy",
+    personType?: "companion" | "director" | "mc",
+  ): { busy: boolean; nominated: boolean } => {
+    if (!personName) {
       const talentStatus = status || projectData.talentStatus
       if (talentStatus === "available") {
-        return dayIndex === 2 && timeIndex >= 5 && timeIndex <= 7 // Wednesday 14:00-17:00
+        return { busy: dayIndex === 2 && timeIndex >= 5 && timeIndex <= 7, nominated: false } // Wednesday 14:00-17:00
       } else {
-        return (
-          (dayIndex === 1 && timeIndex >= 1 && timeIndex <= 3) || // Tuesday 10:00-13:00
-          (dayIndex === 3 && timeIndex >= 4 && timeIndex <= 8) || // Thursday 13:00-18:00
-          (dayIndex === 4 && timeIndex >= 0 && timeIndex <= 2) // Friday 9:00-12:00
-        )
+        return {
+          busy:
+            (dayIndex === 1 && timeIndex >= 1 && timeIndex <= 3) || // Tuesday 10:00-13:00
+            (dayIndex === 3 && timeIndex >= 4 && timeIndex <= 8) || // Thursday 13:00-18:00
+            (dayIndex === 4 && timeIndex >= 0 && timeIndex <= 2), // Friday 9:00-12:00
+          nominated: false,
+        }
       }
     }
 
     // 人材名が指定されている場合は、予定データから判定
-    let schedules: Array<{ dayOfWeek: number; startTime: string; endTime: string }> = []
-    if (companionName) {
-      if (modalPersonType === "companion") {
-        schedules = companionSchedules[companionName as keyof typeof companionSchedules] || []
-      } else if (modalPersonType === "director") {
-        schedules = directorSchedules[companionName as keyof typeof directorSchedules] || []
-      } else if (modalPersonType === "mc") {
-        schedules = mcSchedules[companionName as keyof typeof mcSchedules] || []
+    let schedules: ScheduleItem[] = []
+    if (personName) {
+      const type = personType || "companion"
+      if (type === "companion") {
+        schedules = companionSchedules[personName] || []
+      } else if (type === "director") {
+        schedules = directorSchedules[personName] || []
+      } else if (type === "mc") {
+        schedules = mcSchedules[personName] || []
       }
     }
     const days = weekDays || modalWeekData.weekDays
     const day = days[dayIndex]
-    if (!day) return false
+    if (!day) return { busy: false, nominated: false }
 
     const dayOfWeek = day.date.getDay() // 0=日曜日, 1=月曜日, ...
     const targetHour = 9 + timeIndex
@@ -1449,12 +1490,12 @@ export function ProjectRegistration({
         const [scheduleStartHour] = schedule.startTime.split(":").map(Number)
         const [scheduleEndHour] = schedule.endTime.split(":").map(Number)
         if (targetHour >= scheduleStartHour && targetHour < scheduleEndHour) {
-          return true
+          return { busy: true, nominated: Boolean(schedule.nominated) }
         }
       }
     }
 
-    return false
+    return { busy: false, nominated: false }
   }
 
   const modalWeekData = useMemo(() => {
@@ -1573,59 +1614,61 @@ export function ProjectRegistration({
     return `${currentWeekStart.getMonth() + 1}/${currentWeekStart.getDate()} - ${endDate.getMonth() + 1}/${endDate.getDate()}, ${currentWeekStart.getFullYear()}`
   }, [currentWeekStart])
 
+  type ScheduleItem = { dayOfWeek: number; startTime: string; endTime: string; nominated?: boolean }
+
   // 各コンパニオンの予定データ（曜日ベース）
   // 0=日曜日, 1=月曜日, 2=火曜日, 3=水曜日, 4=木曜日, 5=金曜日, 6=土曜日
-  const companionSchedules = {
+  const companionSchedules: Record<string, ScheduleItem[]> = {
     "Rio": [
-      { dayOfWeek: 1, startTime: "10:00", endTime: "13:00" }, // 月曜日 10:00-13:00 (3時間)
-      { dayOfWeek: 3, startTime: "14:00", endTime: "17:00" }, // 水曜日 14:00-17:00 (3時間)
-      { dayOfWeek: 5, startTime: "15:00", endTime: "18:00" }, // 金曜日 15:00-18:00 (3時間)
+      { dayOfWeek: 1, startTime: "10:00", endTime: "13:00", nominated: true }, // 指名予定
+      { dayOfWeek: 3, startTime: "14:00", endTime: "17:00" },
+      { dayOfWeek: 5, startTime: "15:00", endTime: "18:00" },
     ],
     "Ayaka": [
-      { dayOfWeek: 2, startTime: "11:00", endTime: "14:00" }, // 火曜日 11:00-14:00 (3時間)
-      { dayOfWeek: 4, startTime: "13:00", endTime: "16:00" }, // 木曜日 13:00-16:00 (3時間)
-      { dayOfWeek: 6, startTime: "10:00", endTime: "13:00" }, // 土曜日 10:00-13:00 (3時間)
+      { dayOfWeek: 2, startTime: "11:00", endTime: "14:00" },
+      { dayOfWeek: 4, startTime: "13:00", endTime: "16:00", nominated: true }, // 指名予定
+      { dayOfWeek: 6, startTime: "10:00", endTime: "13:00" },
     ],
     "Nanaka": [
-      { dayOfWeek: 1, startTime: "9:00", endTime: "12:00" }, // 月曜日 9:00-12:00 (3時間)
-      { dayOfWeek: 3, startTime: "13:00", endTime: "17:00" }, // 水曜日 13:00-17:00 (4時間)
-      { dayOfWeek: 5, startTime: "14:00", endTime: "18:00" }, // 金曜日 14:00-18:00 (4時間)
+      { dayOfWeek: 1, startTime: "9:00", endTime: "12:00" },
+      { dayOfWeek: 3, startTime: "13:00", endTime: "17:00" },
+      { dayOfWeek: 5, startTime: "14:00", endTime: "18:00", nominated: true }, // 指名予定
     ],
   }
 
   // 各ディレクターの予定データ（曜日ベース）
-  const directorSchedules = {
+  const directorSchedules: Record<string, ScheduleItem[]> = {
     "Takeshi": [
-      { dayOfWeek: 1, startTime: "9:00", endTime: "12:00" }, // 月曜日 9:00-12:00 (3時間)
-      { dayOfWeek: 2, startTime: "14:00", endTime: "17:00" }, // 水曜日 14:00-17:00 (3時間)
-      { dayOfWeek: 3, startTime: "10:00", endTime: "13:00" }, // 金曜日 10:00-13:00 (3時間)
+      { dayOfWeek: 1, startTime: "9:00", endTime: "12:00" },
+      { dayOfWeek: 2, startTime: "14:00", endTime: "17:00", nominated: true }, // 指名予定
+      { dayOfWeek: 3, startTime: "10:00", endTime: "13:00" },
     ],
     "Kenji": [
-      { dayOfWeek: 4, startTime: "13:00", endTime: "16:00" }, // 木曜日 13:00-16:00 (3時間)
-      { dayOfWeek: 6, startTime: "11:00", endTime: "14:00" }, // 土曜日 11:00-14:00 (3時間)
+      { dayOfWeek: 4, startTime: "13:00", endTime: "16:00" },
+      { dayOfWeek: 6, startTime: "11:00", endTime: "14:00", nominated: true }, // 指名予定
     ],
     "Hiroshi": [
-      { dayOfWeek: 2, startTime: "13:00", endTime: "16:00" }, // 月曜日 13:00-16:00 (3時間)
-      { dayOfWeek: 5, startTime: "14:00", endTime: "17:00" }, // 金曜日 14:00-17:00 (3時間)
+      { dayOfWeek: 2, startTime: "13:00", endTime: "16:00" },
+      { dayOfWeek: 5, startTime: "14:00", endTime: "17:00" },
     ],
   }
 
   // 各MCの予定データ（曜日ベース）
-  const mcSchedules = {
+  const mcSchedules: Record<string, ScheduleItem[]> = {
     "Yuki": [
-      { dayOfWeek: 1, startTime: "11:00", endTime: "14:00" }, // 月曜日 11:00-14:00 (3時間)
-      { dayOfWeek: 3, startTime: "15:00", endTime: "18:00" }, // 水曜日 15:00-18:00 (3時間)
-      { dayOfWeek: 5, startTime: "9:00", endTime: "12:00" }, // 金曜日 9:00-12:00 (3時間)
+      { dayOfWeek: 1, startTime: "11:00", endTime: "14:00" },
+      { dayOfWeek: 3, startTime: "15:00", endTime: "18:00", nominated: true }, // 指名予定
+      { dayOfWeek: 5, startTime: "9:00", endTime: "12:00" },
     ],
     "Saki": [
-      { dayOfWeek: 2, startTime: "9:00", endTime: "12:00" }, // 火曜日 9:00-12:00 (3時間)
-      { dayOfWeek: 4, startTime: "14:00", endTime: "17:00" }, // 木曜日 14:00-17:00 (3時間)
-      { dayOfWeek: 6, startTime: "10:00", endTime: "13:00" }, // 土曜日 10:00-13:00 (3時間)
+      { dayOfWeek: 2, startTime: "9:00", endTime: "12:00" },
+      { dayOfWeek: 4, startTime: "14:00", endTime: "17:00" },
+      { dayOfWeek: 6, startTime: "10:00", endTime: "13:00", nominated: true }, // 指名予定
     ],
     "Mai": [
-      { dayOfWeek: 1, startTime: "14:00", endTime: "17:00" }, // 月曜日 14:00-17:00 (3時間)
-      { dayOfWeek: 3, startTime: "10:00", endTime: "13:00" }, // 水曜日 10:00-13:00 (3時間)
-      { dayOfWeek: 5, startTime: "13:00", endTime: "16:00" }, // 金曜日 13:00-16:00 (3時間)
+      { dayOfWeek: 1, startTime: "14:00", endTime: "17:00" },
+      { dayOfWeek: 3, startTime: "10:00", endTime: "13:00" },
+      { dayOfWeek: 5, startTime: "13:00", endTime: "16:00" },
     ],
   }
 
@@ -2354,7 +2397,7 @@ export function ProjectRegistration({
                         updateProductInfo(index, { companionCount: count })
                         // 人数が0になった場合、選択をクリア
                         if (count === "0" || count === "") {
-                          updateProductInfo(index, { selectedCompanions: new Set(["未定"]) })
+                          updateProductInfo(index, { selectedCompanions: new Set(["未定"]), nominatedCompanions: {} })
                         }
                       }}
                       className="w-20"
@@ -2399,6 +2442,7 @@ export function ProjectRegistration({
                   <div className="grid grid-cols-3 gap-3">
                     {talents.map((talent) => {
                       const isSelected = productInfo.selectedCompanions.has(talent.name)
+                      const isNominated = Boolean(productInfo.nominatedCompanions?.[talent.name])
                       const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
                       return (
                         <div
@@ -2421,6 +2465,11 @@ export function ProjectRegistration({
                               {isSelected && (
                                 <CheckCircle2 className="h-4 w-4 text-blue-600" />
                               )}
+                              {isSelected && isNominated && (
+                                <Badge variant="outline" className="ml-1 border-purple-200 bg-purple-50 text-purple-700">
+                                  指名
+                                </Badge>
+                              )}
                             </div>
                             <Badge variant={talent.status === "available" ? "default" : "destructive"} className="mt-2">
                               {talent.status === "available" ? (
@@ -2439,6 +2488,19 @@ export function ProjectRegistration({
                               <span className="text-slate-600">予想金額: </span>
                               <span className="font-semibold">¥{((companionHourlyRates[talent.name] || 0) * durationHours).toLocaleString()}</span>
                             </div>
+                            {isSelected && talent.name !== "未定" && (
+                              <div className="mt-2 flex items-center gap-2">
+                                <Checkbox
+                                  checked={isNominated}
+                                  onCheckedChange={(checked) => {
+                                    const next = { ...(productInfo.nominatedCompanions || {}) }
+                                    next[talent.name] = Boolean(checked)
+                                    updateProductInfo(index, { nominatedCompanions: next })
+                                  }}
+                                />
+                                <span className="text-xs text-slate-700">指名</span>
+                              </div>
+                            )}
                           </div>
                           <button
                             onClick={(e) => {
@@ -2462,6 +2524,7 @@ export function ProjectRegistration({
                   <div className="grid grid-cols-3 gap-3">
                     {externalCompanions.map((companion) => {
                       const isSelected = productInfo.selectedCompanions.has(companion)
+                      const isNominated = Boolean(productInfo.nominatedCompanions?.[companion])
                       const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
                       return (
                         <div
@@ -2481,6 +2544,11 @@ export function ProjectRegistration({
                               {isSelected && (
                                 <CheckCircle2 className="h-4 w-4 text-blue-600" />
                               )}
+                              {isSelected && isNominated && (
+                                <Badge variant="outline" className="ml-1 border-purple-200 bg-purple-50 text-purple-700">
+                                  指名
+                                </Badge>
+                              )}
                             </div>
                             <Badge variant="outline" className="mt-2">
                               外部
@@ -2489,6 +2557,19 @@ export function ProjectRegistration({
                               <span className="text-slate-600">予想金額: </span>
                               <span className="font-semibold">¥{((companionHourlyRates[companion] || 0) * durationHours).toLocaleString()}</span>
                             </div>
+                            {isSelected && companion !== "未定" && (
+                              <div className="mt-2 flex items-center gap-2">
+                                <Checkbox
+                                  checked={isNominated}
+                                  onCheckedChange={(checked) => {
+                                    const next = { ...(productInfo.nominatedCompanions || {}) }
+                                    next[companion] = Boolean(checked)
+                                    updateProductInfo(index, { nominatedCompanions: next })
+                                  }}
+                                />
+                                <span className="text-xs text-slate-700">指名</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )
@@ -2518,7 +2599,7 @@ export function ProjectRegistration({
                         updateProductInfo(index, { directorCount: count })
                         // 人数が0になった場合、選択をクリア
                         if (count === "0" || count === "") {
-                          updateProductInfo(index, { selectedDirectors: new Set(["未定"]) })
+                          updateProductInfo(index, { selectedDirectors: new Set(["未定"]), nominatedDirectors: {} })
                         }
                       }}
                       className="w-20"
@@ -2563,6 +2644,7 @@ export function ProjectRegistration({
                   <div className="grid grid-cols-3 gap-3">
                     {directors.map((director) => {
                       const isSelected = productInfo.selectedDirectors.has(director.name)
+                      const isNominated = Boolean(productInfo.nominatedDirectors?.[director.name])
                       const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
                       return (
                         <div
@@ -2585,6 +2667,11 @@ export function ProjectRegistration({
                               {isSelected && (
                                 <CheckCircle2 className="h-4 w-4 text-blue-600" />
                               )}
+                              {isSelected && isNominated && (
+                                <Badge variant="outline" className="ml-1 border-purple-200 bg-purple-50 text-purple-700">
+                                  指名
+                                </Badge>
+                              )}
                             </div>
                             <Badge variant={director.status === "available" ? "default" : "destructive"} className="mt-2">
                               {director.status === "available" ? (
@@ -2603,6 +2690,19 @@ export function ProjectRegistration({
                               <span className="text-slate-600">予想金額: </span>
                               <span className="font-semibold">¥{((directorHourlyRates[director.name] || 0) * durationHours).toLocaleString()}</span>
                             </div>
+                            {isSelected && director.name !== "未定" && (
+                              <div className="mt-2 flex items-center gap-2">
+                                <Checkbox
+                                  checked={isNominated}
+                                  onCheckedChange={(checked) => {
+                                    const next = { ...(productInfo.nominatedDirectors || {}) }
+                                    next[director.name] = Boolean(checked)
+                                    updateProductInfo(index, { nominatedDirectors: next })
+                                  }}
+                                />
+                                <span className="text-xs text-slate-700">指名</span>
+                              </div>
+                            )}
                           </div>
                           <button
                             onClick={(e) => {
@@ -2626,6 +2726,7 @@ export function ProjectRegistration({
                   <div className="grid grid-cols-3 gap-3">
                     {externalDirectors.map((director) => {
                       const isSelected = productInfo.selectedDirectors.has(director)
+                      const isNominated = Boolean(productInfo.nominatedDirectors?.[director])
                       const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
                       return (
                         <div
@@ -2645,6 +2746,11 @@ export function ProjectRegistration({
                               {isSelected && (
                                 <CheckCircle2 className="h-4 w-4 text-blue-600" />
                               )}
+                              {isSelected && isNominated && (
+                                <Badge variant="outline" className="ml-1 border-purple-200 bg-purple-50 text-purple-700">
+                                  指名
+                                </Badge>
+                              )}
                             </div>
                             <Badge variant="outline" className="mt-2">
                               外部
@@ -2653,6 +2759,19 @@ export function ProjectRegistration({
                               <span className="text-slate-600">予想金額: </span>
                               <span className="font-semibold">¥{((directorHourlyRates[director] || 0) * durationHours).toLocaleString()}</span>
                             </div>
+                            {isSelected && director !== "未定" && (
+                              <div className="mt-2 flex items-center gap-2">
+                                <Checkbox
+                                  checked={isNominated}
+                                  onCheckedChange={(checked) => {
+                                    const next = { ...(productInfo.nominatedDirectors || {}) }
+                                    next[director] = Boolean(checked)
+                                    updateProductInfo(index, { nominatedDirectors: next })
+                                  }}
+                                />
+                                <span className="text-xs text-slate-700">指名</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )
@@ -2681,7 +2800,7 @@ export function ProjectRegistration({
                         updateProductInfo(index, { mcCount: count })
                         // 人数が0になった場合、選択をクリア
                         if (count === "0" || count === "") {
-                          updateProductInfo(index, { selectedMcs: new Set(["未定"]) })
+                            updateProductInfo(index, { selectedMcs: new Set(["未定"]), nominatedMcs: {} })
                         }
                       }}
                       className="w-20"
@@ -2726,6 +2845,7 @@ export function ProjectRegistration({
                   <div className="grid grid-cols-3 gap-3">
                     {mcs.map((mc) => {
                       const isSelected = productInfo.selectedMcs.has(mc.name)
+                      const isNominated = Boolean(productInfo.nominatedMcs?.[mc.name])
                       const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
                       return (
                         <div
@@ -2748,6 +2868,11 @@ export function ProjectRegistration({
                               {isSelected && (
                                 <CheckCircle2 className="h-4 w-4 text-blue-600" />
                               )}
+                              {isSelected && isNominated && (
+                                <Badge variant="outline" className="ml-1 border-purple-200 bg-purple-50 text-purple-700">
+                                  指名
+                                </Badge>
+                              )}
                             </div>
                             <Badge variant={mc.status === "available" ? "default" : "destructive"} className="mt-2">
                               {mc.status === "available" ? (
@@ -2766,6 +2891,19 @@ export function ProjectRegistration({
                               <span className="text-slate-600">予想金額: </span>
                               <span className="font-semibold">¥{((mcHourlyRates[mc.name] || 0) * durationHours).toLocaleString()}</span>
                             </div>
+                            {isSelected && mc.name !== "未定" && (
+                              <div className="mt-2 flex items-center gap-2">
+                                <Checkbox
+                                  checked={isNominated}
+                                  onCheckedChange={(checked) => {
+                                    const next = { ...(productInfo.nominatedMcs || {}) }
+                                    next[mc.name] = Boolean(checked)
+                                    updateProductInfo(index, { nominatedMcs: next })
+                                  }}
+                                />
+                                <span className="text-xs text-slate-700">指名</span>
+                              </div>
+                            )}
                           </div>
                           <button
                             onClick={(e) => {
@@ -2789,6 +2927,7 @@ export function ProjectRegistration({
                   <div className="grid grid-cols-3 gap-3">
                     {externalMcs.map((mc) => {
                       const isSelected = productInfo.selectedMcs.has(mc)
+                      const isNominated = Boolean(productInfo.nominatedMcs?.[mc])
                       const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
                       return (
                         <div
@@ -2808,6 +2947,11 @@ export function ProjectRegistration({
                               {isSelected && (
                                 <CheckCircle2 className="h-4 w-4 text-blue-600" />
                               )}
+                              {isSelected && isNominated && (
+                                <Badge variant="outline" className="ml-1 border-purple-200 bg-purple-50 text-purple-700">
+                                  指名
+                                </Badge>
+                              )}
                             </div>
                             <Badge variant="outline" className="mt-2">
                               外部
@@ -2816,6 +2960,19 @@ export function ProjectRegistration({
                               <span className="text-slate-600">予想金額: </span>
                               <span className="font-semibold">¥{((mcHourlyRates[mc] || 0) * durationHours).toLocaleString()}</span>
                             </div>
+                            {isSelected && mc !== "未定" && (
+                              <div className="mt-2 flex items-center gap-2">
+                                <Checkbox
+                                  checked={isNominated}
+                                  onCheckedChange={(checked) => {
+                                    const next = { ...(productInfo.nominatedMcs || {}) }
+                                    next[mc] = Boolean(checked)
+                                    updateProductInfo(index, { nominatedMcs: next })
+                                  }}
+                                />
+                                <span className="text-xs text-slate-700">指名</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )
@@ -3339,7 +3496,9 @@ export function ProjectRegistration({
                         {time}
                       </div>
                       {weekData.weekDays.map((day, dayIdx) => {
-                        const isBusy = getBusySlots(dayIdx, timeIdx, projectData.talent, weekData.weekDays)
+                        const busyInfo = getBusySlotInfo(dayIdx, timeIdx, projectData.talent, weekData.weekDays, undefined, "companion")
+                        const isBusy = busyInfo.busy
+                        const isNominatedBusy = busyInfo.nominated
                         const isEventDay =
                           projectData.date && new Date(projectData.date).toDateString() === day.date.toDateString()
                         const slotId = getSlotId(dayIdx, timeIdx)
@@ -3370,6 +3529,8 @@ export function ProjectRegistration({
                             className={`p-2 border-l border-slate-200 min-h-[40px] transition-colors ${
                               isBusy && isEventTime
                                 ? "bg-black cursor-not-allowed"
+                                : isBusy && isNominatedBusy
+                                ? "bg-purple-100 border-purple-200 cursor-not-allowed"
                                 : isBusy
                                 ? "bg-red-100 border-red-200 cursor-not-allowed"
                                 : isSelected
@@ -3379,7 +3540,11 @@ export function ProjectRegistration({
                                     : "bg-white hover:bg-blue-50 cursor-pointer"
                             }`}
                           >
-                            {isBusy && !isEventTime && <div className="text-xs text-red-700 font-medium">予定あり</div>}
+                            {isBusy && !isEventTime && (
+                              <div className={`text-xs font-medium ${isNominatedBusy ? "text-purple-800" : "text-red-700"}`}>
+                                {isNominatedBusy ? "指名予定あり" : "予定あり"}
+                              </div>
+                            )}
                             {isEventTime && !isBusy && <div className="text-xs text-green-800 font-medium">開催時間</div>}
                             {isBusy && isEventTime && <div className="text-xs text-white font-medium">重複</div>}
                             {isSelected && <div className="text-xs text-white font-medium">選択中</div>}
@@ -3400,6 +3565,10 @@ export function ProjectRegistration({
                     <div className="flex items-center gap-1">
                       <div className="w-3 h-3 bg-red-100 border border-red-200 rounded"></div>
                       <span>予定あり</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-purple-100 border border-purple-200 rounded"></div>
+                      <span>指名予定あり</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <div className="w-3 h-3 bg-green-200 border border-green-300 rounded"></div>
@@ -3487,7 +3656,9 @@ export function ProjectRegistration({
                       {time}
                     </div>
                     {modalWeekData.weekDays.map((day, dayIdx) => {
-                      const isBusy = getBusySlots(dayIdx, timeIdx, modalPersonName, modalWeekData.weekDays)
+                      const busyInfo = getBusySlotInfo(dayIdx, timeIdx, modalPersonName, modalWeekData.weekDays, undefined, modalPersonType)
+                      const isBusy = busyInfo.busy
+                      const isNominatedBusy = busyInfo.nominated
                       
                       // 実施日時をチェック
                       let isEventTime = false
@@ -3512,6 +3683,8 @@ export function ProjectRegistration({
                           className={`p-2 border-l border-slate-200 min-h-[40px] ${
                             isBusy && isEventTime
                               ? "bg-black"
+                              : isBusy && isNominatedBusy
+                              ? "bg-purple-100 border-purple-200"
                               : isBusy
                               ? "bg-red-100 border-red-200"
                               : isEventTime
@@ -3519,7 +3692,11 @@ export function ProjectRegistration({
                               : "bg-white"
                           }`}
                         >
-                          {isBusy && !isEventTime && <div className="text-xs text-red-700 font-medium">予定あり</div>}
+                          {isBusy && !isEventTime && (
+                            <div className={`text-xs font-medium ${isNominatedBusy ? "text-purple-800" : "text-red-700"}`}>
+                              {isNominatedBusy ? "指名予定あり" : "予定あり"}
+                            </div>
+                          )}
                           {isEventTime && !isBusy && <div className="text-xs text-green-800 font-medium">開催時間</div>}
                           {isBusy && isEventTime && <div className="text-xs text-white font-medium">重複</div>}
                         </div>
@@ -3538,6 +3715,10 @@ export function ProjectRegistration({
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-red-100 border border-red-200 rounded"></div>
                   <span>予定あり</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-purple-100 border border-purple-200 rounded"></div>
+                  <span>指名予定あり</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-green-200 border border-green-300 rounded"></div>

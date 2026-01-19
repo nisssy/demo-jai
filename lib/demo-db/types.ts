@@ -60,6 +60,9 @@ export type DemoProductEntity = {
   selectedCompanions?: string[]
   selectedDirectors?: string[]
   selectedMcs?: string[]
+  nominatedCompanions?: Record<string, boolean>
+  nominatedDirectors?: Record<string, boolean>
+  nominatedMcs?: Record<string, boolean>
   correctionRequest?: string
   correctionComment?: string
   temporaryHoldFailureComment?: string

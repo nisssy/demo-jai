@@ -400,6 +400,9 @@ export function EventTeamDashboard({
                           const confirmedCompanions = project.confirmedCompanions ?? []
                           const confirmedDirectors = project.confirmedDirectors ?? []
                           const confirmedMcs = project.confirmedMcs ?? []
+                          const nominatedCompanions = (project as any).nominatedCompanions as Record<string, boolean> | undefined
+                          const nominatedDirectors = (project as any).nominatedDirectors as Record<string, boolean> | undefined
+                          const nominatedMcs = (project as any).nominatedMcs as Record<string, boolean> | undefined
                           const companionCount = Number(project.companionCount) || 0
                           const directorCount = Number(project.directorCount) || 0
                           const mcCount = Number(project.mcCount) || 0
@@ -416,6 +419,11 @@ export function EventTeamDashboard({
                                     {confirmedCompanions.map((name: string, idx: number) => (
                                       <div key={idx} className="text-sm">
                                         {name}
+                                        {nominatedCompanions?.[name] && (
+                                          <Badge variant="outline" className="ml-2 text-xs border-purple-200 bg-purple-50 text-purple-700">
+                                            指名
+                                          </Badge>
+                                        )}
                                         {project.companionCostumes && project.companionCostumes[name] && (
                                           <Badge variant="outline" className="ml-2 text-xs">
                                             {project.companionCostumes[name]}
@@ -437,7 +445,14 @@ export function EventTeamDashboard({
                                 {confirmedDirectors.length > 0 ? (
                                   <div className="space-y-1">
                                     {confirmedDirectors.map((name: string, idx: number) => (
-                                      <div key={idx} className="text-sm">{name}</div>
+                                      <div key={idx} className="text-sm">
+                                        {name}
+                                        {nominatedDirectors?.[name] && (
+                                          <Badge variant="outline" className="ml-2 text-xs border-purple-200 bg-purple-50 text-purple-700">
+                                            指名
+                                          </Badge>
+                                        )}
+                                      </div>
                                     ))}
                                     {confirmedDirectors.length < directorCount && (
                                       <p className="text-xs text-slate-500">
@@ -453,7 +468,14 @@ export function EventTeamDashboard({
                                 {confirmedMcs.length > 0 ? (
                                   <div className="space-y-1">
                                     {confirmedMcs.map((name: string, idx: number) => (
-                                      <div key={idx} className="text-sm">{name}</div>
+                                      <div key={idx} className="text-sm">
+                                        {name}
+                                        {nominatedMcs?.[name] && (
+                                          <Badge variant="outline" className="ml-2 text-xs border-purple-200 bg-purple-50 text-purple-700">
+                                            指名
+                                          </Badge>
+                                        )}
+                                      </div>
                                     ))}
                                     {confirmedMcs.length < mcCount && (
                                       <p className="text-xs text-slate-500">
@@ -822,11 +844,19 @@ export function EventTeamDashboard({
                   </div>
                   {selectedProject.selectedCompanions && selectedProject.selectedCompanions.length > 0 ? (
                     <div className="space-y-1">
-                      {selectedProject.selectedCompanions.map((name, index) => (
+                      {selectedProject.selectedCompanions.map((name, index) => {
+                        const isNominated = Boolean((selectedProject as any).nominatedCompanions?.[name])
+                        return (
                         <div key={index} className="text-sm text-slate-700">
                           {name !== "未定" ? `・${name}` : "・未定"}
+                          {name !== "未定" && isNominated && (
+                            <Badge variant="outline" className="ml-2 text-xs border-purple-200 bg-purple-50 text-purple-700">
+                              指名
+                            </Badge>
+                          )}
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   ) : (
                     <p className="text-sm text-slate-500">未選択</p>
@@ -843,11 +873,19 @@ export function EventTeamDashboard({
                   </div>
                   {selectedProject.selectedDirectors && selectedProject.selectedDirectors.length > 0 ? (
                     <div className="space-y-1">
-                      {selectedProject.selectedDirectors.map((name, index) => (
+                      {selectedProject.selectedDirectors.map((name, index) => {
+                        const isNominated = Boolean((selectedProject as any).nominatedDirectors?.[name])
+                        return (
                         <div key={index} className="text-sm text-slate-700">
                           {name !== "未定" ? `・${name}` : "・未定"}
+                          {name !== "未定" && isNominated && (
+                            <Badge variant="outline" className="ml-2 text-xs border-purple-200 bg-purple-50 text-purple-700">
+                              指名
+                            </Badge>
+                          )}
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   ) : (
                     <p className="text-sm text-slate-500">未選択</p>
@@ -864,11 +902,19 @@ export function EventTeamDashboard({
                   </div>
                   {selectedProject.selectedMcs && selectedProject.selectedMcs.length > 0 ? (
                     <div className="space-y-1">
-                      {selectedProject.selectedMcs.map((name, index) => (
+                      {selectedProject.selectedMcs.map((name, index) => {
+                        const isNominated = Boolean((selectedProject as any).nominatedMcs?.[name])
+                        return (
                         <div key={index} className="text-sm text-slate-700">
                           {name !== "未定" ? `・${name}` : "・未定"}
+                          {name !== "未定" && isNominated && (
+                            <Badge variant="outline" className="ml-2 text-xs border-purple-200 bg-purple-50 text-purple-700">
+                              指名
+                            </Badge>
+                          )}
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   ) : (
                     <p className="text-sm text-slate-500">未選択</p>

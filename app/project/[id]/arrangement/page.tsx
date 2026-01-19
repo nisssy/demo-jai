@@ -440,6 +440,11 @@ function ProjectArrangementPageContent() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {confirmedCompanions[index] && Boolean((project as any).nominatedCompanions?.[confirmedCompanions[index]]) && (
+                      <Badge variant="outline" className="mt-2 text-xs border-purple-200 bg-purple-50 text-purple-700">
+                        指名
+                      </Badge>
+                    )}
                     {confirmedCompanions[index] && companionMasterData[confirmedCompanions[index]] && (
                       <p className="text-xs text-slate-500 mt-1">
                         サイズ: {companionMasterData[confirmedCompanions[index]].size}
@@ -530,6 +535,11 @@ function ProjectArrangementPageContent() {
                           ))}
                         </SelectContent>
                       </Select>
+                      {confirmedDirectors[index] && Boolean((project as any).nominatedDirectors?.[confirmedDirectors[index]]) && (
+                        <Badge variant="outline" className="mt-2 text-xs border-purple-200 bg-purple-50 text-purple-700">
+                          指名
+                        </Badge>
+                      )}
                       {confirmedDirectors[index] && (
                         <Button
                           size="sm"
@@ -578,6 +588,11 @@ function ProjectArrangementPageContent() {
                           ))}
                         </SelectContent>
                       </Select>
+                      {confirmedMcs[index] && Boolean((project as any).nominatedMcs?.[confirmedMcs[index]]) && (
+                        <Badge variant="outline" className="mt-2 text-xs border-purple-200 bg-purple-50 text-purple-700">
+                          指名
+                        </Badge>
+                      )}
                       {confirmedMcs[index] && (
                         <Button
                           size="sm"
