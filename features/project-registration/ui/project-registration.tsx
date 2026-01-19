@@ -215,7 +215,7 @@ export function ProjectRegistration({
     return {
       id,
       category: "イベント",
-      eventType: "トリニティガール",
+      eventType: "",
       eventProductName: "",
       eventDate: `${year}-${month}-${day}`,
       mustSeeFlag: "0",
@@ -248,7 +248,7 @@ export function ProjectRegistration({
   
   // 既存のstateを商材情報①と互換性を保つために残す（後方互換性のため）
   const category = productInfos[0]?.category || "イベント"
-  const eventType = productInfos[0]?.eventType || "トリニティガール"
+  const eventType = productInfos[0]?.eventType || ""
   const eventProductName = productInfos[0]?.eventProductName || ""
   const eventDate = productInfos[0]?.eventDate || ""
   const startTime = productInfos[0]?.startTime || "08:00"
@@ -672,6 +672,12 @@ export function ProjectRegistration({
     
     // 商材情報のバリデーション
     productInfos.forEach((productInfo, index) => {
+      // イベント区分が選択されるまでは、カテゴリ/イベント区分以外の入力項目は表示しないため、まずイベント区分を必須にする
+      if (!productInfo.eventType?.trim()) {
+        newErrors[`eventType-${index}`] = `商材情報${index + 1 === 1 ? "①" : index + 1 === 2 ? "②" : index + 1 === 3 ? "③" : index + 1 === 4 ? "④" : "⑤"}のイベント区分を選択してください`
+        return
+      }
+
       if (!productInfo.eventProductName.trim()) {
         newErrors[`eventProductName-${index}`] = `商材情報${index + 1 === 1 ? "①" : index + 1 === 2 ? "②" : index + 1 === 3 ? "③" : index + 1 === 4 ? "④" : "⑤"}のイベント商材名を入力してください`
       }
@@ -691,6 +697,7 @@ export function ProjectRegistration({
         'acquirerName',
         'requestDate',
         'hallName',
+        ...productInfos.map((_, index) => `eventType-${index}`),
         ...productInfos.map((_, index) => `eventProductName-${index}`),
         ...productInfos.map((_, index) => `eventDate-${index}`),
       ]
@@ -2437,19 +2444,18 @@ export function ProjectRegistration({
                           value={productInfo.eventType || undefined}
                           onValueChange={(value) => {
                             updateProductInfo(index, { eventType: value })
-                            if (index === 0) {
-                              setErrors((prev) => {
-                                if (prev.eventType) {
-                                  const newErrors = { ...prev }
-                                  delete newErrors.eventType
-                                  return newErrors
-                                }
-                                return prev
-                              })
-                            }
+                            const errorKey = `eventType-${index}`
+                            setErrors((prev) => {
+                              if (prev[errorKey]) {
+                                const newErrors = { ...prev }
+                                delete newErrors[errorKey]
+                                return newErrors
+                              }
+                              return prev
+                            })
                           }}
                         >
-                          <SelectTrigger id={`eventType-${productInfo.id}`} className={errors.eventType && index === 0 ? "border-red-500" : ""}>
+                          <SelectTrigger id={`eventType-${productInfo.id}`} className={errors[`eventType-${index}`] ? "border-red-500" : ""}>
                             <SelectValue placeholder="イベント種別を選択してください" />
                           </SelectTrigger>
                           <SelectContent>
@@ -2457,10 +2463,16 @@ export function ProjectRegistration({
                             <SelectItem value="スロセレ">スロセレ</SelectItem>
                           </SelectContent>
                         </Select>
-                        {errors.eventType && index === 0 && (
-                          <p className="text-sm text-red-600">{errors.eventType}</p>
+                        {errors[`eventType-${index}`] && (
+                          <p ref={(el) => { errorRefs.current[`eventType-${index}`] = el }} className="text-sm text-red-600">{errors[`eventType-${index}`]}</p>
                         )}
                       </div>
+                      {!productInfo.eventType?.trim() ? (
+                        <div className="col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+                          まず「イベント区分」を選択してください。選択後に、実施日・時間・キャスティング・請求予定金額などの入力項目が表示されます。
+                        </div>
+                      ) : (
+                        <>
                       <div className="space-y-2">
                         <Label htmlFor={`eventProductName-${productInfo.id}`}>イベント商材名</Label>
                         <Input
@@ -2614,8 +2626,12 @@ export function ProjectRegistration({
                           </SelectContent>
                         </Select>
                       </div>
+                        </>
+                      )}
                     </div>
                   </div>
+                  {productInfo.eventType?.trim() && (
+                    <>
                   <div className="space-y-4">
                     <div>
                       <h3 className="text-base font-semibold text-slate-900 mb-2">キャスティング情報</h3>
@@ -3643,6 +3659,8 @@ export function ProjectRegistration({
               })()}
             </div>
                   </div>
+                    </>
+                  )}
                 </CardContent>
             </CollapsibleContent>
           </Collapsible>
