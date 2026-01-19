@@ -56,7 +56,23 @@ export function ProjectRegistration({
   correctionRequest,
 }: ProjectRegistrationProps) {
   const router = useAppRouter()
-  const { createProjects, createProject, getProjectById, updateProject, getHalls, getHallByName, searchHalls, getProjects, generateProjectNumber, getCompanies, getCompanyById, getCompanyByCompanyId, searchCompanies, getHallsByCompanyId } = useProject()
+  const {
+    createProducts,
+    createProduct,
+    getProductById,
+    updateProduct,
+    getHalls,
+    getHallByName,
+    searchHalls,
+    getProjects,
+    getProducts,
+    generateProjectNumber,
+    getCompanies,
+    getCompanyById,
+    getCompanyByCompanyId,
+    searchCompanies,
+    getHallsByCompanyId,
+  } = useProject()
   const isEditMode = projectId !== undefined && projectId !== null
   const isProductMode = isProductAddMode || isProductEditMode
   const [hallSearchOpen, setHallSearchOpen] = useState(false)
@@ -77,6 +93,8 @@ export function ProjectRegistration({
   })
   const [hallName, setHallName] = useState("")
   const [hallId, setHallId] = useState("")
+  const [projectName, setProjectName] = useState("")
+  const [projectNameTouched, setProjectNameTouched] = useState(false)
   
   // 商材情報の型定義
   type ProductInfo = {
@@ -526,6 +544,11 @@ export function ProjectRegistration({
 
   const validateForm = (): boolean => {
     const newErrors: { [key: string]: string } = {}
+
+    // 案件名は「案件作成」時のみ入力対象（商材追加/編集では変更しない）
+    if (!isProductMode && !projectName.trim()) {
+      newErrors.projectName = "案件名を入力してください"
+    }
     
     // 商材追加/編集モードでは基本情報のバリデーションをスキップ
     if (!isProductMode) {
@@ -549,7 +572,7 @@ export function ProjectRegistration({
         newErrors[`eventProductName-${index}`] = `商材情報${index + 1 === 1 ? "①" : index + 1 === 2 ? "②" : index + 1 === 3 ? "③" : index + 1 === 4 ? "④" : "⑤"}のイベント商材名を入力してください`
       }
       if (!productInfo.eventDate) {
-        newErrors[`eventDate-${index}`] = `商材情報${index + 1 === 1 ? "①" : index + 1 === 2 ? "②" : index + 1 === 3 ? "③" : index + 1 === 4 ? "④" : "⑤"}の開催日を入力してください`
+        newErrors[`eventDate-${index}`] = `商材情報${index + 1 === 1 ? "①" : index + 1 === 2 ? "②" : index + 1 === 3 ? "③" : index + 1 === 4 ? "④" : "⑤"}の実施日を入力してください`
       }
     })
     
@@ -559,6 +582,7 @@ export function ProjectRegistration({
     if (Object.keys(newErrors).length > 0) {
       // エラーの優先順位に従って最初のエラーフィールドを探す
       const errorOrder = [
+        ...(!isProductMode ? ["projectName"] : []),
         'companyName',
         'acquirerName',
         'requestDate',
@@ -684,7 +708,7 @@ export function ProjectRegistration({
       const eventBaseFeeAfterDiscount = Math.round(Math.max(0, eventBaseFeeValue - eventBaseFeeDiscountValue))
       const estimatedBillingAmount = Math.round(performanceFeeAfterDiscount + totalTransportationFee + totalAccommodationFee + eventBaseFeeAfterDiscount)
       
-      const existingProject = getProjectById(projectId)
+      const existingProject = getProductById(projectId)
       if (!existingProject) {
         addNotification("案件が見つかりませんでした")
         return
@@ -693,7 +717,8 @@ export function ProjectRegistration({
       // 新しい商材として案件を作成（同じホール情報と案件Noを使用）
       const existingProjectNumber = existingProject.projectNumber
       const newProductProject = {
-        projectName: productInfo.eventProductName || `${existingProject.hallName || existingProject.clientName} - ${productInfo.category}`,
+        // 商材追加では案件名は変更しない
+        projectName: existingProject.projectName,
         clientName: existingProject.hallName || existingProject.clientName,
         date: productInfo.eventDate.replace(/-/g, "/"),
         venue: existingProject.hallName || existingProject.clientName,
@@ -728,7 +753,7 @@ export function ProjectRegistration({
         selectedMcs: Array.from(productInfo.selectedMcs),
       }
       
-      createProject(newProductProject)
+      createProduct(newProductProject)
       addNotification("商材を追加しました")
       router.push("/")
     } else if (isProductEditMode && projectId) {
@@ -828,7 +853,7 @@ export function ProjectRegistration({
       const eventBaseFeeAfterDiscount = Math.round(Math.max(0, eventBaseFeeValue - eventBaseFeeDiscountValue))
       const totalBillingAmount = Math.round(performanceFeeAfterDiscount + totalTransportationFee + totalAccommodationFee + eventBaseFeeAfterDiscount)
       
-      const existingProject = getProjectById(projectId)
+      const existingProject = getProductById(projectId)
       if (!existingProject) {
         addNotification("案件が見つかりませんでした")
         return
@@ -846,7 +871,8 @@ export function ProjectRegistration({
         : (shouldPreserveStatus ? currentProjectStatus : determineProjectStatus(productInfo))
 
       const updatedProject = {
-        projectName: productInfo.eventProductName || `${existingProject.hallName || existingProject.clientName} - ${productInfo.category}`,
+        // 商材編集では案件名は変更しない
+        projectName: existingProject.projectName,
         clientName: existingProject.hallName || existingProject.clientName,
         date: productInfo.eventDate.replace(/-/g, "/"),
         venue: existingProject.hallName || existingProject.clientName,
@@ -884,7 +910,7 @@ export function ProjectRegistration({
         selectedMcs: Array.from(productInfo.selectedMcs),
       }
       
-      updateProject(projectId, updatedProject)
+      updateProduct(projectId, updatedProject)
       addNotification("商材を更新しました")
       router.push("/")
     } else if (isEditMode && projectId) {
@@ -985,7 +1011,7 @@ export function ProjectRegistration({
       const totalBillingAmount = Math.round(performanceFeeAfterDiscount + totalTransportationFee + totalAccommodationFee + eventBaseFeeAfterDiscount)
       
       // 手配進行中の場合はステータスを保持
-      const existingProject = projectId ? getProjectById(projectId) : null
+      const existingProject = projectId ? getProductById(projectId) : null
       const currentProjectStatus = existingProject?.projectStatus || ""
       const shouldPreserveStatus = currentProjectStatus === "手配進行中"
       
@@ -997,7 +1023,7 @@ export function ProjectRegistration({
         : (shouldPreserveStatus ? currentProjectStatus : determineProjectStatus(productInfo))
       
       const updatedProject = {
-        projectName: productInfo.eventProductName || `${hallName} - ${productInfo.category}`,
+        projectName: projectName.trim() || `${hallName} - ${acquirerName}`.trim(),
         clientName: hallName,
         date: productInfo.eventDate.replace(/-/g, "/"),
         venue: hallName,
@@ -1020,7 +1046,27 @@ export function ProjectRegistration({
         hallId: hallId, // ホールID
       }
       
-      updateProject(projectId, updatedProject)
+      updateProduct(projectId, updatedProject)
+      // 案件編集では、案件No単位で「基本情報」を揃える（商材固有情報は上書きしない）
+      if (existingProject?.projectNumber) {
+        const sharedUpdates = {
+          projectName: updatedProject.projectName,
+          clientName: updatedProject.clientName,
+          venue: updatedProject.venue,
+          talent: updatedProject.talent,
+          salesPersonName: updatedProject.salesPersonName,
+          requestDate: updatedProject.requestDate,
+          hallName: updatedProject.hallName,
+          hallId: updatedProject.hallId,
+          companyId: updatedProject.companyId,
+          companyName: updatedProject.companyName,
+        }
+        getProducts()
+          .filter((p) => p.projectNumber === existingProject.projectNumber && p.id !== projectId)
+          .forEach((p) => {
+            updateProduct(p.id, sharedUpdates)
+          })
+      }
       addNotification("案件を更新しました")
       router.push("/")
     } else {
@@ -1120,7 +1166,7 @@ export function ProjectRegistration({
         const estimatedBillingAmount = Math.round(performanceFeeAfterDiscount + totalTransportationFee + totalAccommodationFee + eventBaseFeeAfterDiscount)
         
         return {
-          projectName: productInfo.eventProductName || `${hallName} - ${productInfo.category}`,
+          projectName: projectName.trim() || `${hallName} - ${acquirerName}`.trim(),
           clientName: hallName,
           date: productInfo.eventDate.replace(/-/g, "/"),
           venue: hallName,
@@ -1157,7 +1203,7 @@ export function ProjectRegistration({
       })
       
       // 仮想DBに案件を作成
-      createProjects(newProjectsData)
+      createProducts(newProjectsData)
       addNotification(`案件No ${newProjectNumber} で ${newProjectsData.length}件の商材を作成しました`)
       router.push("/")
     }
@@ -1169,8 +1215,8 @@ export function ProjectRegistration({
     }
     
     // 仮想DBに案件を作成
-    createProject({
-      projectName: `${hallName} - ${acquirerName}`,
+    createProduct({
+      projectName: projectName.trim() || `${hallName} - ${acquirerName}`.trim(),
       clientName: hallName,
       date: requestDate.replace(/-/g, "/"),
       venue: hallName,
@@ -1188,8 +1234,8 @@ export function ProjectRegistration({
     }
     
     // 仮想DBに案件を作成
-    createProject({
-      projectName: `${hallName} - ${acquirerName}`,
+    createProduct({
+      projectName: projectName.trim() || `${hallName} - ${acquirerName}`.trim(),
       clientName: hallName,
       date: requestDate.replace(/-/g, "/"),
       venue: hallName,
@@ -1222,10 +1268,12 @@ export function ProjectRegistration({
       return
     }
     
-    if (isEditMode && projectId && getProjectById && getHallByName && !hasInitialized.current) {
-      const project = getProjectById(projectId)
+    if (isEditMode && projectId && getProductById && getHallByName && !hasInitialized.current) {
+      const project = getProductById(projectId)
       if (project) {
         hasInitialized.current = true
+        setProjectName(project.projectName || "")
+        setProjectNameTouched(false)
         // 基本情報を読み込み
         if (project.requestDate) {
           // YYYY/MM/DD形式をYYYY-MM-DD形式に変換
@@ -1317,7 +1365,17 @@ export function ProjectRegistration({
     if (!isEditMode || !projectId) {
       hasInitialized.current = false
     }
-  }, [isEditMode, isProductAddMode, projectId, getProjectById, getHallByName, getCompanyByCompanyId, getCompanyById, selectedCompanyId])
+  }, [isEditMode, isProductAddMode, projectId, getProductById, getHallByName, getCompanyByCompanyId, getCompanyById, selectedCompanyId])
+
+  // 新規作成時はホール名/担当営業から案件名を自動補完（ユーザーが編集したら追随しない）
+  useEffect(() => {
+    if (isEditMode) return
+    if (isProductMode) return
+    if (projectNameTouched) return
+    const auto = `${hallName}${acquirerName ? ` - ${acquirerName}` : ""}`.trim()
+    if (!auto) return
+    setProjectName(auto)
+  }, [acquirerName, hallName, isEditMode, isProductMode, projectNameTouched])
 
   useEffect(() => {
     if (projectData.date) {
@@ -1571,10 +1629,10 @@ export function ProjectRegistration({
     ],
   }
 
-  // 開催日時と予定の重複チェック
+  // 実施日時と予定の重複チェック
   const checkCompanionAvailability = (companionName: string): "available" | "busy" => {
     if (!eventDate || !startTime || !endTime) {
-      // 開催日時が入力されていない場合は、デフォルトのステータスを返す
+      // 実施日時が入力されていない場合は、デフォルトのステータスを返す
       const defaultStatus: { [key: string]: "available" | "busy" } = {
         "田中 太郎": "available",
         "佐藤 花子": "available",
@@ -1930,6 +1988,30 @@ export function ProjectRegistration({
                 className="bg-slate-50"
               />
             </div>
+            <div className="space-y-2 col-span-2">
+              <Label htmlFor="projectName">案件名</Label>
+              <Input
+                id="projectName"
+                value={projectName}
+                onChange={(e) => {
+                  setProjectName(e.target.value)
+                  setProjectNameTouched(true)
+                  setErrors((prev) => {
+                    if (prev.projectName) {
+                      const next = { ...prev }
+                      delete next.projectName
+                      return next
+                    }
+                    return prev
+                  })
+                }}
+                placeholder="例: マルハン渋谷店 - 山田 太郎"
+                className={errors.projectName ? "border-red-500" : ""}
+              />
+              {errors.projectName && (
+                <p ref={(el) => { errorRefs.current.projectName = el }} className="text-sm text-red-600">{errors.projectName}</p>
+              )}
+            </div>
             <div className="space-y-2">
               <Label htmlFor="acquirerName">ホール担当営業</Label>
               <Input
@@ -2117,7 +2199,7 @@ export function ProjectRegistration({
                         )}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor={`eventDate-${productInfo.id}`}>開催日</Label>
+                        <Label htmlFor={`eventDate-${productInfo.id}`}>実施日</Label>
                         <Input
                           id={`eventDate-${productInfo.id}`}
                           type="date"
@@ -3149,7 +3231,7 @@ export function ProjectRegistration({
 
       {/* 商材を追加ボタンと案件を作成ボタン */}
       <div className="flex justify-center gap-4 mt-4">
-        {!isProductMode && productInfos.length < 5 && (
+        {!isProductMode && !isEditMode && productInfos.length < 5 && (
           <Button
             onClick={addProductInfo}
             variant="outline"
@@ -3263,7 +3345,7 @@ export function ProjectRegistration({
                         const slotId = getSlotId(dayIdx, timeIdx)
                         const isSelected = selectedSlots.has(slotId)
 
-                        // 開催日時をチェック（eventDate, startTime, endTimeを使用）
+                        // 実施日時をチェック（eventDate, startTime, endTimeを使用）
                         let isEventTime = false
                         if (eventDate && startTime && endTime) {
                           const eventDateObj = new Date(eventDate)
@@ -3407,7 +3489,7 @@ export function ProjectRegistration({
                     {modalWeekData.weekDays.map((day, dayIdx) => {
                       const isBusy = getBusySlots(dayIdx, timeIdx, modalPersonName, modalWeekData.weekDays)
                       
-                      // 開催日時をチェック
+                      // 実施日時をチェック
                       let isEventTime = false
                       if (eventDate && startTime && endTime) {
                         const eventDateObj = new Date(eventDate)

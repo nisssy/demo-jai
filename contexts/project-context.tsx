@@ -4,23 +4,18 @@ import { createContext, useContext, useState, useCallback, useEffect, useMemo, u
 import { useToast } from "@/hooks/use-toast"
 import type { ProjectData, Role } from "@/types/project"
 import { clearDemoDbStorage, loadDemoDbFromStorageMeta, saveDemoDbToStorage } from "@/lib/demo-db/storage"
-import type { CompanyData, HallData, DemoProject } from "@/lib/demo-db/types"
+import type { CompanyData, HallData, DemoProductEntity, DemoProject, DemoProjectEntity } from "@/lib/demo-db/types"
+import { denormalizeProjects, type DemoDbV3Data } from "@/lib/demo-db/denormalize"
 import {
-  addProject,
-  addProjects,
   findCompanyByCompanyId as findCompanyByCompanyIdRepo,
   findCompanyById as findCompanyByIdRepo,
   findHallByName as findHallByNameRepo,
-  findProjectById as findProjectByIdRepo,
-  generateProjectNumber as generateProjectNumberRepo,
   getHallsByCompanyId as getHallsByCompanyIdRepo,
-  patchProject,
-  removeProject,
   searchCompanies as searchCompaniesRepo,
   searchHalls as searchHallsRepo,
 } from "@/lib/demo-db/repository"
 
-type Project = DemoProject
+type Product = DemoProject
 
 export type { CompanyData, HallData }
 
@@ -33,14 +28,17 @@ type ProjectContextType = {
   addNotification: (message: string) => void
   // デモ用擬似DBの操作
   resetDemoData: () => void
-  // 仮想DB操作関数
-  getProjects: () => Project[]
-  createProject: (project: Omit<Project, "id">) => Project
-  createProjects: (projects: Omit<Project, "id">[]) => Project[]
-  updateProject: (id: number, updates: Partial<Project>) => Project | null
-  deleteProject: (id: number) => boolean
-  getProjectById: (id: number) => Project | null
-  generateProjectNumber: (existingProjects: Project[]) => string
+  // 案件(Project)操作関数（正規化）
+  getProjects: () => DemoProjectEntity[]
+  getProjectByProjectNumber: (projectNumber: string) => DemoProjectEntity | null
+  // 商材(Product)操作関数（UIが主に扱う）
+  getProducts: () => Product[]
+  createProduct: (product: Omit<Product, "id">) => Product
+  createProducts: (products: Omit<Product, "id">[]) => Product[]
+  updateProduct: (id: number, updates: Partial<Product>) => Product | null
+  deleteProduct: (id: number) => boolean
+  getProductById: (id: number) => Product | null
+  generateProjectNumber: (existingProjects: Array<{ projectNumber?: string }>) => string
   // ホールデータ操作関数
   getHalls: () => HallData[]
   getHallByName: (name: string) => HallData | null
@@ -125,8 +123,8 @@ const getCompanyAndHallInfo = (hallName: string): { companyName: string; company
   }
 }
 
-// 初期案件データ（10ホール × 2案件 × 3商材 = 60商材）
-const initialProjects: Project[] = [
+// 初期データ（10ホール × 2案件 × 3商材 = 60商材）: 旧形式（1行=商材）
+const initialProjects: Product[] = [
   // マルハン渋谷店 - 山田 太郎
   // 案件No 1
   {
@@ -1599,7 +1597,7 @@ const initialProjects: Project[] = [
     reportRequired: "要",
     ...getCompanyAndHallInfo("ガイア池袋店"),
   },
-  // イベント終了処理中のテストデータ（開催日が過去の日付）
+// イベント終了処理中のテストデータ（実施日が過去の日付）
   {
     id: 67,
     projectNumber: "19",
@@ -1719,6 +1717,7 @@ const initialProjects: Project[] = [
 
 function getDemoDbSeed() {
   return {
+    // seedは旧形式（商材行）で保持しているので、Provider側で正規化して使う
     projects: initialProjects,
     halls: initialHalls,
     companies: initialCompanies,
@@ -1736,20 +1735,149 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const didResaveOnLoad = initialLoadMeta?.didResave ?? false
   const didNotifyMigrationRef = useRef(false)
 
-  // 案件データを独立したstateとして管理（仮想DB）
-  const [projects, setProjects] = useState<Project[]>(() => {
-    return (initialDb.projects as Project[] | undefined) ?? initialSeed.projects
+  const initialV3 = useMemo((): DemoDbV3Data => {
+    const companies = (initialDb.companies as CompanyData[] | undefined) ?? initialSeed.companies
+    const halls = (initialDb.halls as HallData[] | undefined) ?? initialSeed.halls
+
+    const maybeProducts = (initialDb as any).products
+    const isV3 = Array.isArray(maybeProducts)
+    if (isV3) {
+      const today = new Date().toISOString().split("T")[0]
+      const rawProjects = ((initialDb as any).projects as DemoProjectEntity[] | undefined) ?? []
+      const projects = rawProjects.map((p) => ({
+        ...p,
+        createdAt: p.createdAt || today,
+        updatedAt: p.updatedAt || p.createdAt || today,
+      }))
+      return {
+        projects,
+        products: ((initialDb as any).products as DemoProductEntity[] | undefined) ?? [],
+        halls,
+        companies,
+      }
+    }
+
+    const legacyRows = ((initialDb as any).projects as DemoProject[] | undefined) ?? initialSeed.projects
+    const grouped = new Map<string, DemoProject[]>()
+    for (const row of legacyRows) {
+      const pn = row.projectNumber || `legacy:${row.id}`
+      grouped.set(pn, [...(grouped.get(pn) ?? []), row])
+    }
+
+    let nextProjectId = 1
+    const projects: DemoProjectEntity[] = []
+    const products: DemoProductEntity[] = []
+    let nextProductId = 1
+    const today = new Date().toISOString().split("T")[0]
+
+    for (const [projectNumber, rows] of grouped.entries()) {
+      const first = rows[0]
+      const projectId = nextProjectId++
+      const hallName = first.hallName || first.clientName
+      const hall = hallName ? halls.find((h) => h.name === hallName) : undefined
+      const company = hall ? companies.find((c) => c.id === hall.companyId) : undefined
+
+      projects.push({
+        id: projectId,
+        projectNumber,
+        projectName: first.projectName,
+        hallName,
+        hallCode: first.hallId || hall?.hallId,
+        companyId: first.companyId || company?.companyId,
+        companyName: first.companyName || company?.name,
+        salesPersonName: first.salesPersonName || hall?.salesPersonName,
+        requestDate: first.requestDate,
+        hallRefId: hall?.id,
+        createdAt: today,
+        updatedAt: today,
+      })
+
+      for (const row of rows) {
+        const newId = nextProductId++
+        products.push({
+          id: newId,
+          projectId,
+          // それ以外 = 商材属性
+          clientName: row.clientName,
+          date: row.date,
+          venue: row.venue,
+          talent: row.talent,
+          estimateAmount: row.estimateAmount,
+          status: row.status,
+          projectStatus: row.projectStatus,
+          category: row.category,
+          eventType: row.eventType,
+          eventProductName: row.eventProductName,
+          eventDate: row.eventDate,
+          estimatedBillingAmount: row.estimatedBillingAmount,
+          startTime: row.startTime,
+          endTime: row.endTime,
+          companionCount: row.companionCount,
+          directorCount: row.directorCount,
+          mcCount: row.mcCount,
+          selectedCompanions: row.selectedCompanions,
+          selectedDirectors: row.selectedDirectors,
+          selectedMcs: row.selectedMcs,
+          correctionRequest: row.correctionRequest,
+          correctionComment: row.correctionComment,
+          temporaryHoldFailureComment: row.temporaryHoldFailureComment,
+          confirmedCompanions: row.confirmedCompanions,
+          confirmedDirectors: row.confirmedDirectors,
+          confirmedMcs: row.confirmedMcs,
+          companionCostumes: row.companionCostumes,
+          mustSeeFlag: row.mustSeeFlag,
+          mustSeePublication: row.mustSeePublication,
+          publicationDate: row.publicationDate,
+          publicationTime: row.publicationTime,
+          reportRequired: row.reportRequired,
+          pachitownLinked: (row as any).pachitownLinked,
+          pachitownLinkedDate: (row as any).pachitownLinkedDate,
+          xAccountPostText: (row as any).xAccountPostText,
+          surveySent: (row as any).surveySent,
+          surveySentDate: (row as any).surveySentDate,
+          surveyResult: (row as any).surveyResult,
+          castingCost: (row as any).castingCost,
+          transportationFee: (row as any).transportationFee,
+          accommodationFee: (row as any).accommodationFee,
+          postPRCost: (row as any).postPRCost,
+          isTransportationAutoFilled: (row as any).isTransportationAutoFilled,
+          isAccommodationAutoFilled: (row as any).isAccommodationAutoFilled,
+          quoteGenerated: (row as any).quoteGenerated,
+          quoteData: (row as any).quoteData,
+        } as any)
+      }
+    }
+
+    return { projects, products, halls, companies }
+  }, [initialDb, initialSeed.companies, initialSeed.halls, initialSeed.projects])
+
+  // v3: 正規化DB（projects=案件, products=商材）
+  const [projectEntities, setProjectEntities] = useState<DemoProjectEntity[]>(() => {
+    return initialV3.projects
+  })
+  const [productEntities, setProductEntities] = useState<DemoProductEntity[]>(() => {
+    return initialV3.products
   })
   
   // ホールデータを独立したstateとして管理（仮想DB）
   const [halls, setHalls] = useState<HallData[]>(() => {
-    return (initialDb.halls as HallData[] | undefined) ?? initialSeed.halls
+    return initialV3.halls
   })
   
   // 法人データを独立したstateとして管理（仮想DB）
   const [companies, setCompanies] = useState<CompanyData[]>(() => {
-    return (initialDb.companies as CompanyData[] | undefined) ?? initialSeed.companies
+    return initialV3.companies
   })
+
+  const denormalizedProducts = useMemo(() => {
+    const data: DemoDbV3Data = {
+      projects: projectEntities,
+      products: productEntities,
+      halls,
+      companies,
+    }
+    return denormalizeProjects(data)
+  }, [companies, halls, productEntities, projectEntities])
 
   const [projectData, setProjectData] = useState<ProjectData>({
     projectName: "",
@@ -1765,21 +1893,21 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     status: "proposed",
     validationErrors: [],
     correctionRequest: "",
-    projects: projects, // 参照として設定
+    projects: denormalizedProducts, // 参照として設定（従来互換: 1行=商材）
   })
 
-  // 案件データが更新されたらprojectDataも更新
+  // DBが更新されたらprojectDataも更新
   useEffect(() => {
     setProjectData((prev) => ({
       ...prev,
-      projects: projects,
+      projects: denormalizedProducts,
     }))
-  }, [projects])
+  }, [denormalizedProducts])
 
   // デモ用擬似DBをlocalStorageに永続化（projects/halls/companies 全保存）
   useEffect(() => {
-    saveDemoDbToStorage({ projects, halls, companies })
-  }, [projects, halls, companies])
+    saveDemoDbToStorage({ projects: projectEntities, products: productEntities, halls, companies } as any)
+  }, [projectEntities, productEntities, halls, companies])
 
   const addNotification = useCallback((message: string) => {
     setNotifications((prev) => [message, ...prev])
@@ -1802,67 +1930,296 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     clearDemoDbStorage()
     setCompanies(seed.companies)
     setHalls(seed.halls)
-    setProjects(seed.projects)
+    // seed(旧形式)をv3へ変換してセット
+    const legacyRows = seed.projects
+    const grouped = new Map<string, DemoProject[]>()
+    for (const row of legacyRows) {
+      const pn = row.projectNumber || `legacy:${row.id}`
+      grouped.set(pn, [...(grouped.get(pn) ?? []), row])
+    }
+
+    let nextProjectId = 1
+    const projectsV3: DemoProjectEntity[] = []
+    const productsV3: DemoProductEntity[] = []
+    let nextProductId = 1
+    const today = new Date().toISOString().split("T")[0]
+
+    for (const [projectNumber, rows] of grouped.entries()) {
+      const first = rows[0]
+      const projectId = nextProjectId++
+      const hallName = first.hallName || first.clientName
+      const hall = hallName ? seed.halls.find((h) => h.name === hallName) : undefined
+      const company = hall ? seed.companies.find((c) => c.id === hall.companyId) : undefined
+
+      projectsV3.push({
+        id: projectId,
+        projectNumber,
+        projectName: first.projectName,
+        hallName,
+        hallCode: first.hallId || hall?.hallId,
+        companyId: first.companyId || company?.companyId,
+        companyName: first.companyName || company?.name,
+        salesPersonName: first.salesPersonName || hall?.salesPersonName,
+        requestDate: first.requestDate,
+        hallRefId: hall?.id,
+        createdAt: today,
+        updatedAt: today,
+      })
+
+      for (const row of rows) {
+        const newId = nextProductId++
+        productsV3.push({
+          id: newId,
+          projectId,
+          clientName: row.clientName,
+          date: row.date,
+          venue: row.venue,
+          talent: row.talent,
+          estimateAmount: row.estimateAmount,
+          status: row.status,
+          projectStatus: row.projectStatus,
+          category: row.category,
+          eventType: row.eventType,
+          eventProductName: row.eventProductName,
+          eventDate: row.eventDate,
+          estimatedBillingAmount: row.estimatedBillingAmount,
+          startTime: row.startTime,
+          endTime: row.endTime,
+          companionCount: row.companionCount,
+          directorCount: row.directorCount,
+          mcCount: row.mcCount,
+          selectedCompanions: row.selectedCompanions,
+          selectedDirectors: row.selectedDirectors,
+          selectedMcs: row.selectedMcs,
+          correctionRequest: row.correctionRequest,
+          correctionComment: row.correctionComment,
+          temporaryHoldFailureComment: row.temporaryHoldFailureComment,
+          confirmedCompanions: row.confirmedCompanions,
+          confirmedDirectors: row.confirmedDirectors,
+          confirmedMcs: row.confirmedMcs,
+          companionCostumes: row.companionCostumes,
+          mustSeeFlag: row.mustSeeFlag,
+          mustSeePublication: row.mustSeePublication,
+          publicationDate: row.publicationDate,
+          publicationTime: row.publicationTime,
+          reportRequired: row.reportRequired,
+          pachitownLinked: (row as any).pachitownLinked,
+          pachitownLinkedDate: (row as any).pachitownLinkedDate,
+          xAccountPostText: (row as any).xAccountPostText,
+          surveySent: (row as any).surveySent,
+          surveySentDate: (row as any).surveySentDate,
+          surveyResult: (row as any).surveyResult,
+          castingCost: (row as any).castingCost,
+          transportationFee: (row as any).transportationFee,
+          accommodationFee: (row as any).accommodationFee,
+          postPRCost: (row as any).postPRCost,
+          isTransportationAutoFilled: (row as any).isTransportationAutoFilled,
+          isAccommodationAutoFilled: (row as any).isAccommodationAutoFilled,
+          quoteGenerated: (row as any).quoteGenerated,
+          quoteData: (row as any).quoteData,
+        } as any)
+      }
+    }
+
+    setProjectEntities(projectsV3)
+    setProductEntities(productsV3)
     addNotification("デモデータを初期化しました")
   }, [addNotification])
 
   // 仮想DB操作関数
   const getProjects = useCallback(() => {
-    return projects
-  }, [projects])
+    return projectEntities
+  }, [projectEntities])
 
-  const generateProjectNumber = useCallback((existingProjects: Project[]) => generateProjectNumberRepo(existingProjects), [])
+  const getProjectByProjectNumber = useCallback(
+    (projectNumber: string): DemoProjectEntity | null => {
+      return projectEntities.find((p) => p.projectNumber === projectNumber) ?? null
+    },
+    [projectEntities],
+  )
 
-  const createProject = useCallback((projectInput: Omit<Project, "id">): Project => {
-    let createdProject: Project | null = null
-    setProjects((prev) => {
-      const { nextProjects, created } = addProject(prev, projectInput)
-      createdProject = created as Project
-      setProjectData((pd) => ({ ...pd, projects: nextProjects }))
-      return nextProjects as Project[]
+  const getProducts = useCallback(() => {
+    return denormalizedProducts
+  }, [denormalizedProducts])
+
+  const generateProjectNumber = useCallback((existingProjects: Array<{ projectNumber?: string }>) => {
+    let maxNumber = 0
+    existingProjects.forEach((p) => {
+      if (p.projectNumber) {
+        const num = Number.parseInt(p.projectNumber)
+        if (!Number.isNaN(num) && num > maxNumber) maxNumber = num
+      }
     })
-    if (!createdProject) {
-      throw new Error("Failed to create project")
+    return String(maxNumber + 1)
+  }, [])
+
+  const createProduct = useCallback((productInput: Omit<Product, "id">): Product => {
+    const today = new Date().toISOString().split("T")[0]
+    // legacy 1行=商材 を分解して v3(Project/Product) に格納
+    const pn = productInput.projectNumber || generateProjectNumber(projectEntities)
+    const existing = projectEntities.find((p) => p.projectNumber === pn)
+
+    const projectId = existing?.id ?? (projectEntities.reduce((m, p) => Math.max(m, p.id), 0) + 1)
+    const hallName = productInput.hallName || productInput.clientName
+    const hall = hallName ? halls.find((h) => h.name === hallName) : undefined
+
+    const nextProjectEntities = existing
+      ? projectEntities.map((p) => (p.id === existing.id ? ({ ...p, updatedAt: today } as any) : p))
+      : [
+          ...projectEntities,
+          {
+            id: projectId,
+            projectNumber: pn,
+            // 基本情報 = Project属性
+            projectName: productInput.projectName,
+            companyId: productInput.companyId,
+            companyName: productInput.companyName,
+            hallName: hallName,
+            hallCode: productInput.hallId,
+            salesPersonName: productInput.salesPersonName,
+            requestDate: productInput.requestDate,
+            hallRefId: hall?.id,
+            createdAt: today,
+            updatedAt: today,
+          } as DemoProjectEntity,
+        ]
+
+    const nextProductId = productEntities.reduce((m, p) => Math.max(m, p.id), 0) + 1
+    const product: DemoProductEntity = {
+      id: nextProductId,
+      projectId,
+      // それ以外 = Product属性
+      clientName: productInput.clientName,
+      date: productInput.date,
+      venue: productInput.venue,
+      talent: productInput.talent,
+      estimateAmount: productInput.estimateAmount,
+      status: productInput.status,
+      projectStatus: productInput.projectStatus,
+      category: productInput.category,
+      eventType: productInput.eventType,
+      eventProductName: productInput.eventProductName,
+      eventDate: productInput.eventDate,
+      estimatedBillingAmount: (productInput as any).estimatedBillingAmount,
+      startTime: (productInput as any).startTime,
+      endTime: (productInput as any).endTime,
+      companionCount: (productInput as any).companionCount,
+      directorCount: (productInput as any).directorCount,
+      mcCount: (productInput as any).mcCount,
+      selectedCompanions: (productInput as any).selectedCompanions,
+      selectedDirectors: (productInput as any).selectedDirectors,
+      selectedMcs: (productInput as any).selectedMcs,
+      correctionRequest: (productInput as any).correctionRequest,
+      correctionComment: (productInput as any).correctionComment,
+      temporaryHoldFailureComment: (productInput as any).temporaryHoldFailureComment,
+      confirmedCompanions: (productInput as any).confirmedCompanions,
+      confirmedDirectors: (productInput as any).confirmedDirectors,
+      confirmedMcs: (productInput as any).confirmedMcs,
+      companionCostumes: (productInput as any).companionCostumes,
+      mustSeeFlag: (productInput as any).mustSeeFlag,
+      mustSeePublication: (productInput as any).mustSeePublication,
+      publicationDate: (productInput as any).publicationDate,
+      publicationTime: (productInput as any).publicationTime,
+      reportRequired: (productInput as any).reportRequired,
+      pachitownLinked: (productInput as any).pachitownLinked,
+      pachitownLinkedDate: (productInput as any).pachitownLinkedDate,
+      xAccountPostText: (productInput as any).xAccountPostText,
+      surveySent: (productInput as any).surveySent,
+      surveySentDate: (productInput as any).surveySentDate,
+      surveyResult: (productInput as any).surveyResult,
+      castingCost: (productInput as any).castingCost,
+      transportationFee: (productInput as any).transportationFee,
+      accommodationFee: (productInput as any).accommodationFee,
+      postPRCost: (productInput as any).postPRCost,
+      isTransportationAutoFilled: (productInput as any).isTransportationAutoFilled,
+      isAccommodationAutoFilled: (productInput as any).isAccommodationAutoFilled,
+      quoteGenerated: (productInput as any).quoteGenerated,
+      quoteData: (productInput as any).quoteData,
     }
-    return createdProject
-  }, [])
 
-  const createProjects = useCallback((newProjects: Omit<Project, "id">[]): Project[] => {
-    let createdProjects: Project[] = []
-    setProjects((prev) => {
-      const { nextProjects, created } = addProjects(prev, newProjects)
-      createdProjects = created as Project[]
-      setProjectData((pd) => ({ ...pd, projects: nextProjects }))
-      return nextProjects as Project[]
+    setProjectEntities(nextProjectEntities)
+    setProductEntities([...productEntities, product])
+
+    const created = denormalizeProjects({ projects: nextProjectEntities, products: [...productEntities, product], halls, companies }).find(
+      (p) => p.id === nextProductId,
+    )
+    if (!created) throw new Error("Failed to create project(product)")
+    return created
+  }, [companies, generateProjectNumber, halls, productEntities, projectEntities])
+
+  const createProducts = useCallback((newProducts: Omit<Product, "id">[]): Product[] => {
+    const created: Product[] = []
+    newProducts.forEach((p) => {
+      created.push(createProduct(p))
     })
-    return createdProjects
-  }, [])
+    return created
+  }, [createProduct])
 
-  const updateProject = useCallback((id: number, updates: Partial<Project>): Project | null => {
-    let updatedProject: Project | null = null
-    setProjects((prev) => {
-      const { nextProjects, updated } = patchProject(prev, id, updates)
-      updatedProject = updated as Project | null
-      setProjectData((pd) => ({ ...pd, projects: nextProjects }))
-      return nextProjects as Project[]
+  const updateProduct = useCallback((id: number, updates: Partial<Product>): Product | null => {
+    const product = productEntities.find((p) => p.id === id)
+    if (!product) return null
+
+    const project = projectEntities.find((p) => p.id === product.projectId)
+    const today = new Date().toISOString().split("T")[0]
+    const projectLevelKeys = new Set([
+      "projectNumber",
+      "projectName",
+      "salesPersonName",
+      "requestDate",
+      "hallName",
+      "hallId",
+      "companyId",
+      "companyName",
+    ])
+
+    const projectUpdates: any = {}
+    const productUpdates: any = {}
+    Object.entries(updates as any).forEach(([k, v]) => {
+      if (projectLevelKeys.has(k as any)) projectUpdates[k] = v
+      else productUpdates[k] = v
     })
-    return updatedProject
-  }, [])
 
-  const deleteProject = useCallback((id: number): boolean => {
-    let deleted = false
-    setProjects((prev) => {
-      const { nextProjects, removed } = removeProject(prev, id)
-      deleted = removed
-      setProjectData((pd) => ({ ...pd, projects: nextProjects }))
-      return nextProjects as Project[]
+    const mappedProjectUpdates: any = {}
+    Object.entries(projectUpdates).forEach(([k, v]) => {
+      if (k === "hallId") mappedProjectUpdates.hallCode = v
+      else mappedProjectUpdates[k] = v
     })
-    return deleted
-  }, [])
 
-  const getProjectById = useCallback((id: number): Project | null => {
-    return findProjectByIdRepo(projects, id) as Project | null
-  }, [projects])
+    // hallRefId は hallName/hallCode 変更時に更新を試みる（見つからなければそのまま）
+    if (mappedProjectUpdates.hallName && typeof mappedProjectUpdates.hallName === "string") {
+      const hall = halls.find((h) => h.name === mappedProjectUpdates.hallName)
+      if (hall) mappedProjectUpdates.hallRefId = hall.id
+    }
+
+    const nextProjects = project
+      ? projectEntities.map((p) =>
+          p.id === project.id ? ({ ...p, ...mappedProjectUpdates, updatedAt: today } as any) : p,
+        )
+      : projectEntities
+
+    const nextProducts = productEntities.map((p) => (p.id === id ? ({ ...p, ...productUpdates } as any) : p))
+
+    setProjectEntities(nextProjects)
+    setProductEntities(nextProducts)
+
+    const updated = denormalizeProjects({ projects: nextProjects, products: nextProducts, halls, companies }).find((p) => p.id === id) ?? null
+    return updated
+  }, [companies, halls, productEntities, projectEntities])
+
+  const deleteProduct = useCallback((id: number): boolean => {
+    const product = productEntities.find((p) => p.id === id)
+    if (!product) return false
+    const nextProducts = productEntities.filter((p) => p.id !== id)
+    const stillHasProducts = nextProducts.some((p) => p.projectId === product.projectId)
+    const nextProjects = stillHasProducts ? projectEntities : projectEntities.filter((p) => p.id !== product.projectId)
+    setProductEntities(nextProducts)
+    setProjectEntities(nextProjects)
+    return true
+  }, [productEntities, projectEntities])
+
+  const getProductById = useCallback((id: number): Product | null => {
+    return denormalizedProducts.find((p) => p.id === id) ?? null
+  }, [denormalizedProducts])
 
   // ホールデータ操作関数
   const getHalls = useCallback(() => {
@@ -1909,11 +2266,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         addNotification,
         resetDemoData,
         getProjects,
-        createProject,
-        createProjects,
-        updateProject,
-        deleteProject,
-        getProjectById,
+        getProjectByProjectNumber,
+        getProducts,
+        createProduct,
+        createProducts,
+        updateProduct,
+        deleteProduct,
+        getProductById,
         generateProjectNumber,
         getHalls,
         getHallByName,

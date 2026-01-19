@@ -16,7 +16,7 @@ function ProjectArrangementPageContent() {
   const router = useAppRouter()
   const params = useParams()
   const projectId = params?.id ? (typeof params.id === 'string' ? Number(params.id) : Array.isArray(params.id) ? Number(params.id[0]) : null) : null
-  const { getProjectById, updateProject, addNotification } = useProject()
+  const { getProductById, updateProduct, addNotification } = useProject()
   const [isLoading, setIsLoading] = useState(true)
   const [project, setProject] = useState<DemoProject | null>(null)
   
@@ -150,7 +150,7 @@ function ProjectArrangementPageContent() {
       return
     }
     
-    if (!getProjectById) {
+    if (!getProductById) {
       setIsLoading(false)
       hasInitialized.current = false
       return
@@ -163,7 +163,7 @@ function ProjectArrangementPageContent() {
     hasInitialized.current = true
     
     try {
-      const loadedProject = projectId !== null && typeof projectId === 'number' ? getProjectById(projectId) : null
+      const loadedProject = projectId !== null && typeof projectId === 'number' ? getProductById(projectId) : null
       if (!loadedProject) {
         addNotification("案件が見つかりませんでした")
         router.push("/")
@@ -250,7 +250,7 @@ function ProjectArrangementPageContent() {
         hasInitialized.current = false
       }
     }
-  }, [projectId, getProjectById, router, addNotification, companionMasterData, getCostumeBySize])
+  }, [projectId, getProductById, router, addNotification, companionMasterData, getCostumeBySize])
 
   if (isLoading) {
     return (
@@ -268,7 +268,7 @@ function ProjectArrangementPageContent() {
 
   const handleSave = () => {
     if (projectId === null || typeof projectId !== 'number') return
-    updateProject(projectId, {
+    updateProduct(projectId, {
       confirmedCompanions: confirmedCompanions.filter(c => c.trim() !== ""),
       confirmedDirectors: confirmedDirectors.filter(d => d.trim() !== ""),
       confirmedMcs: confirmedMcs.filter(m => m.trim() !== ""),
@@ -281,7 +281,7 @@ function ProjectArrangementPageContent() {
 
   const handleSaveAndBack = () => {
     if (projectId === null || typeof projectId !== 'number') return
-    updateProject(projectId, {
+    updateProduct(projectId, {
       confirmedCompanions: confirmedCompanions.filter(c => c.trim() !== ""),
       confirmedDirectors: confirmedDirectors.filter(d => d.trim() !== ""),
       confirmedMcs: confirmedMcs.filter(m => m.trim() !== ""),
@@ -297,14 +297,14 @@ function ProjectArrangementPageContent() {
     const companion = confirmedCompanions[index]
     if (!companion || !companion.trim()) return
     
-    const currentProject = getProjectById(projectId)
+    const currentProject = getProductById(projectId)
     if (!currentProject) return
     
     const existingCompanions = currentProject.confirmedCompanions || []
     const newCompanions = [...existingCompanions]
     newCompanions[index] = companion
     
-    updateProject(projectId, {
+    updateProduct(projectId, {
       confirmedCompanions: newCompanions.filter(c => c && c.trim() !== ""),
     })
     addNotification(`コンパニオン${index + 1}を保存しました`)
@@ -315,11 +315,11 @@ function ProjectArrangementPageContent() {
     const costume = companionCostumes[companionName]
     if (!costume) return
     
-    const currentProject = getProjectById(projectId)
+    const currentProject = getProductById(projectId)
     if (!currentProject) return
     
     const existingCostumes = currentProject.companionCostumes || {}
-    updateProject(projectId, {
+    updateProduct(projectId, {
       companionCostumes: { ...existingCostumes, [companionName]: costume },
     })
     addNotification(`${companionName}の衣装を保存しました`)
@@ -330,14 +330,14 @@ function ProjectArrangementPageContent() {
     const director = confirmedDirectors[index]
     if (!director || !director.trim()) return
     
-    const currentProject = getProjectById(projectId)
+    const currentProject = getProductById(projectId)
     if (!currentProject) return
     
     const existingDirectors = currentProject.confirmedDirectors || []
     const newDirectors = [...existingDirectors]
     newDirectors[index] = director
     
-    updateProject(projectId, {
+    updateProduct(projectId, {
       confirmedDirectors: newDirectors.filter(d => d && d.trim() !== ""),
     })
     addNotification(`ディレクター${index + 1}を保存しました`)
@@ -348,14 +348,14 @@ function ProjectArrangementPageContent() {
     const mc = confirmedMcs[index]
     if (!mc || !mc.trim()) return
     
-    const currentProject = getProjectById(projectId)
+    const currentProject = getProductById(projectId)
     if (!currentProject) return
     
     const existingMcs = currentProject.confirmedMcs || []
     const newMcs = [...existingMcs]
     newMcs[index] = mc
     
-    updateProject(projectId, {
+    updateProduct(projectId, {
       confirmedMcs: newMcs.filter(m => m && m.trim() !== ""),
     })
     addNotification(`MC${index + 1}を保存しました`)
@@ -400,7 +400,7 @@ function ProjectArrangementPageContent() {
                 <p className="font-medium">{project.clientName}</p>
               </div>
               <div>
-                <Label className="text-sm text-slate-600">開催日</Label>
+                <Label className="text-sm text-slate-600">実施日</Label>
                 <p className="font-medium">{project.eventDate || project.date}</p>
               </div>
             </div>

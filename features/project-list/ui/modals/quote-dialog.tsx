@@ -50,11 +50,11 @@ type QuoteDialogProps = {
   onRequestClose: () => void
 
   // deps
-  updateProject: (id: number, updates: Partial<DemoProject>) => DemoProject | null
+  updateProduct: (id: number, updates: Partial<DemoProject>) => DemoProject | null
   addNotification: (message: string) => void
 }
 
-export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updateProject, addNotification }: QuoteDialogProps) {
+export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updateProduct, addNotification }: QuoteDialogProps) {
   const [quoteStep, setQuoteStep] = useState<QuoteStep>("select")
   const [quoteGenerated, setQuoteGenerated] = useState(false)
   const [emailGenerated, setEmailGenerated] = useState(false)
@@ -242,7 +242,7 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
                             <div className="flex-1">
                               <div className="font-medium text-slate-900">{productName}</div>
                               <div className="text-sm text-slate-600">
-                                開催日: {eventDate} | 見積金額: {estimatedAmount}
+                                実施日: {eventDate} | 見積金額: {estimatedAmount}
                               </div>
                             </div>
                           </div>
@@ -653,7 +653,7 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
                       selectedProjectForQuote.products
                         .filter((p) => selectedProductsForQuote.has(p.id))
                         .forEach((product) => {
-                          updateProject(product.id, {
+                          updateProduct(product.id, {
                             ...product,
                             quoteGenerated: true,
                             quoteData: updatedQuoteData,
@@ -720,7 +720,7 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
                           <div className="font-medium text-slate-900">{quoteProjectData.projectName}</div>
                         </div>
                         <div>
-                          <div className="text-xs text-slate-500 mb-1">開催日</div>
+                          <div className="text-xs text-slate-500 mb-1">実施日</div>
                           <div className="font-medium text-slate-900">{quoteProjectData.date}</div>
                         </div>
                       </div>
@@ -830,7 +830,7 @@ DMM の営業担当でございます。
                         selectedProjectForQuote.products
                           .filter((p) => selectedProductsForQuote.has(p.id))
                           .forEach((product) => {
-                            updateProject(product.id, {
+                            updateProduct(product.id, {
                               ...product,
                               projectStatus: "見積送付完了",
                             })

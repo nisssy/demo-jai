@@ -14,7 +14,7 @@ ${quoteData.clientName} 御中
 下記の通りお見積もりいたします。
 
 案件名: ${quoteData.projectName}
-開催日: ${quoteData.date}
+実施日: ${quoteData.date}
 会場: ${quoteData.venue}
 担当営業: ${quoteData.talent}
 

@@ -11,7 +11,7 @@ export default function ProjectEditPage() {
   const params = useParams()
   const searchParams = useSearchParams()
   const projectId = params?.id ? Number(params.id) : null
-  const { projectData, setProjectData, addNotification, getProjectById } = useProject()
+  const { projectData, setProjectData, addNotification, getProductById } = useProject()
   const [isLoading, setIsLoading] = useState(true)
   const tab = searchParams?.get("tab")
   const addProduct = searchParams?.get("addProduct") === "true"
@@ -25,8 +25,8 @@ export default function ProjectEditPage() {
       return
     }
     
-    if (projectId && getProjectById) {
-      const project = getProjectById(projectId)
+    if (projectId && getProductById) {
+      const project = getProductById(projectId)
       if (!project) {
         addNotification("案件が見つかりませんでした")
         router.push("/")
@@ -45,7 +45,7 @@ export default function ProjectEditPage() {
     } else {
       setIsLoading(false)
     }
-  }, [projectId, getProjectById, router, addNotification, tab, addProduct])
+  }, [projectId, getProductById, router, addNotification, tab, addProduct])
 
   if (isLoading) {
     return (

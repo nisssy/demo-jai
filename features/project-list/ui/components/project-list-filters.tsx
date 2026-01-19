@@ -16,6 +16,18 @@ export type ProjectListFiltersProps = {
   // free text
   searchProjectNumber: string
   onSearchProjectNumberChange: (v: string) => void
+  searchProjectName: string
+  onSearchProjectNameChange: (v: string) => void
+  searchSalesPersonName: string
+  onSearchSalesPersonNameChange: (v: string) => void
+
+  // date (mode switch)
+  searchDateMode: "execution" | "created"
+  onSearchDateModeChange: (v: "execution" | "created") => void
+  searchDateFrom: string
+  onSearchDateFromChange: (v: string) => void
+  searchDateTo: string
+  onSearchDateToChange: (v: string) => void
 
   // selects
   searchCategory: string | null
@@ -45,6 +57,16 @@ export function ProjectListFilters(props: ProjectListFiltersProps) {
   const {
     searchProjectNumber,
     onSearchProjectNumberChange,
+    searchProjectName,
+    onSearchProjectNameChange,
+    searchSalesPersonName,
+    onSearchSalesPersonNameChange,
+    searchDateMode,
+    onSearchDateModeChange,
+    searchDateFrom,
+    onSearchDateFromChange,
+    searchDateTo,
+    onSearchDateToChange,
     searchCategory,
     onSearchCategoryChange,
     searchEventType,
@@ -64,10 +86,25 @@ export function ProjectListFilters(props: ProjectListFiltersProps) {
     getCompanyByCompanyId,
   } = props
 
-  const hasAnyFilter = Boolean(searchProjectNumber || searchCategory || searchEventType || selectedHallName || selectedCompanyId)
+  const hasAnyFilter = Boolean(
+    searchProjectNumber ||
+      searchProjectName ||
+      searchSalesPersonName ||
+      searchDateFrom ||
+      searchDateTo ||
+      searchCategory ||
+      searchEventType ||
+      selectedHallName ||
+      selectedCompanyId,
+  )
 
   const clearAll = () => {
     onSearchProjectNumberChange("")
+    onSearchProjectNameChange("")
+    onSearchSalesPersonNameChange("")
+    onSearchDateModeChange("execution")
+    onSearchDateFromChange("")
+    onSearchDateToChange("")
     onSearchCategoryChange(null)
     onSearchEventTypeChange(null)
     onSelectedHallNameChange(null)
@@ -98,6 +135,52 @@ export function ProjectListFilters(props: ProjectListFiltersProps) {
               onChange={(e) => onSearchProjectNumberChange(e.target.value)}
               className="bg-white"
             />
+          </div>
+
+          {/* 案件名検索 */}
+          <div className="space-y-2">
+            <Label htmlFor="search-project-name" className="text-sm font-semibold">
+              案件名
+            </Label>
+            <Input
+              id="search-project-name"
+              placeholder="案件名を入力..."
+              value={searchProjectName}
+              onChange={(e) => onSearchProjectNameChange(e.target.value)}
+              className="bg-white"
+            />
+          </div>
+
+          {/* ホール担当営業検索 */}
+          <div className="space-y-2">
+            <Label htmlFor="search-sales-person" className="text-sm font-semibold">
+              ホール担当営業
+            </Label>
+            <Input
+              id="search-sales-person"
+              placeholder="担当営業を入力..."
+              value={searchSalesPersonName}
+              onChange={(e) => onSearchSalesPersonNameChange(e.target.value)}
+              className="bg-white"
+            />
+          </div>
+
+          {/* 日付検索 */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">日付</Label>
+            <div className="grid grid-cols-3 gap-2">
+              <Select value={searchDateMode} onValueChange={(v) => onSearchDateModeChange(v as "execution" | "created")}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="execution">実施日</SelectItem>
+                  <SelectItem value="created">作成日</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input type="date" value={searchDateFrom} onChange={(e) => onSearchDateFromChange(e.target.value)} className="bg-white" />
+              <Input type="date" value={searchDateTo} onChange={(e) => onSearchDateToChange(e.target.value)} className="bg-white" />
+            </div>
           </div>
 
           {/* 商材カテゴリ検索 */}
@@ -250,6 +333,52 @@ export function ProjectListFilters(props: ProjectListFiltersProps) {
                     onClick={(e) => {
                       e.stopPropagation()
                       onSearchProjectNumberChange("")
+                    }}
+                    className="ml-1 hover:text-red-600 cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              )}
+              {searchProjectName && (
+                <Badge variant="secondary" className="gap-1">
+                  案件名: {searchProjectName}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onSearchProjectNameChange("")
+                    }}
+                    className="ml-1 hover:text-red-600 cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              )}
+              {searchSalesPersonName && (
+                <Badge variant="secondary" className="gap-1">
+                  担当営業: {searchSalesPersonName}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onSearchSalesPersonNameChange("")
+                    }}
+                    className="ml-1 hover:text-red-600 cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              )}
+              {(searchDateFrom || searchDateTo) && (
+                <Badge variant="secondary" className="gap-1">
+                  {searchDateMode === "execution" ? "実施日" : "作成日"}: {searchDateFrom || "-"} 〜 {searchDateTo || "-"}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onSearchDateFromChange("")
+                      onSearchDateToChange("")
                     }}
                     className="ml-1 hover:text-red-600 cursor-pointer"
                   >

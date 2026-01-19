@@ -14,15 +14,15 @@ function ProjectCorrectionPageContent() {
   const params = useParams()
   const searchParams = useSearchParams()
   const projectId = params?.id ? Number(params.id) : null
-  const { projectData, setProjectData, addNotification, getProjectById, updateProject } = useProject()
+  const { projectData, setProjectData, addNotification, getProductById, updateProduct } = useProject()
   const [isLoading, setIsLoading] = useState(true)
   const [correctionComment, setCorrectionComment] = useState("")
   const [correctionRequest, setCorrectionRequest] = useState("")
   const tab = searchParams?.get("tab")
 
   useEffect(() => {
-    if (projectId && getProjectById) {
-      const project = getProjectById(projectId)
+    if (projectId && getProductById) {
+      const project = getProductById(projectId)
       if (!project) {
         addNotification("案件が見つかりませんでした")
         router.push("/")
@@ -36,7 +36,7 @@ function ProjectCorrectionPageContent() {
     } else {
       setIsLoading(false)
     }
-  }, [projectId, getProjectById, router, addNotification])
+  }, [projectId, getProductById, router, addNotification])
 
   if (isLoading) {
     return (
@@ -60,7 +60,7 @@ function ProjectCorrectionPageContent() {
     if (!projectId) return
     
     // プロジェクトを更新し、ステータスを「イベントチーム確認中」に変更
-    updateProject(projectId, {
+    updateProduct(projectId, {
       projectStatus: "イベントチーム確認中",
       correctionComment: correctionComment,
     })

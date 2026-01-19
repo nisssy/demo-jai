@@ -49,7 +49,7 @@ export function PrDialog({ open, onOpenChange, project, onGenerate, isGenerating
                 <span className="ml-2 font-medium">{project?.talent}</span>
               </div>
               <div>
-                <span className="text-slate-600">開催日:</span>
+                <span className="text-slate-600">実施日:</span>
                 <span className="ml-2 font-medium">{project?.date}</span>
               </div>
             </div>

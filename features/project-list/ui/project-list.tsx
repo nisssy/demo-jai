@@ -48,7 +48,7 @@ import {
   X,
 } from "lucide-react"
 import type { ProjectData } from "@/types/project"
-import { useState, useMemo, useEffect, useRef } from "react"
+import { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import { useProject } from "@/contexts/project-context"
 import { useAppRouter } from "@/hooks/use-app-router"
 import type { ProjectItem, ProjectListProps, ValidationResult } from "@/features/project-list/model/types"
@@ -144,8 +144,9 @@ export function ProjectList({
   initialTab = "projects",
 }: ProjectListProps) {
   const router = useAppRouter()
-  const { getProjects, updateProject, getHalls, searchHalls, searchCompanies, getCompanyByCompanyId } = useProject()
+  const { getProjects, getProducts, updateProduct, getHalls, searchHalls, searchCompanies, getCompanyByCompanyId } = useProject()
   const allProjects = getProjects()
+  const allProducts = getProducts()
   const [activeTab, setActiveTab] = useState<"projects" | "corrections" | "temporaryHoldFailure">(initialTab as "projects" | "corrections" | "temporaryHoldFailure")
   
   // initialTabが変更されたときにactiveTabを更新
@@ -153,17 +154,16 @@ export function ProjectList({
     setActiveTab(initialTab as "projects" | "corrections" | "temporaryHoldFailure")
   }, [initialTab])
   
-  // 修正依頼がきている案件（projectStatus === "営業修正中"）
-  const correctionRequests = useMemo(() => {
-    return allProjects.filter((p) => p.projectStatus === "営業修正中")
-  }, [allProjects])
-
-  // 仮押さえ不可の通知がきている案件（projectStatus === "営業確認中" かつ temporaryHoldFailureComment が存在）
-  const temporaryHoldFailureRequests = useMemo(() => {
-    return allProjects.filter((p) => 
-      p.projectStatus === "営業確認中" && p.temporaryHoldFailureComment
-    )
-  }, [allProjects])
+  // ユーティリティ: 商材を案件Noでグループ化
+  const groupProductsByProjectNumber = useCallback((products: DemoProject[]) => {
+    const grouped: Record<string, DemoProject[]> = {}
+    products.forEach((p) => {
+      const pn = p.projectNumber || "未分類"
+      if (!grouped[pn]) grouped[pn] = []
+      grouped[pn].push(p)
+    })
+    return grouped
+  }, [])
   
   const [searchQuery, setSearchQuery] = useState("")
   const [searchOpen, setSearchOpen] = useState(false)
@@ -171,71 +171,163 @@ export function ProjectList({
   const [selectedHallName, setSelectedHallName] = useState<string | null>(null)
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null)
   const [searchProjectNumber, setSearchProjectNumber] = useState("")
+  const [searchProjectName, setSearchProjectName] = useState("")
+  const [searchSalesPersonName, setSearchSalesPersonName] = useState("")
+  const [searchDateMode, setSearchDateMode] = useState<"execution" | "created">("execution")
+  const [searchDateFrom, setSearchDateFrom] = useState("")
+  const [searchDateTo, setSearchDateTo] = useState("")
   const [searchCategory, setSearchCategory] = useState<string | null>(null)
   const [searchEventType, setSearchEventType] = useState<string | null>(null)
+
+  const parseDate = useCallback((raw?: string | null): Date | null => {
+    if (!raw) return null
+    const s = String(raw).trim()
+    if (!s) return null
+    const normalized = s.replace(/-/g, "/")
+    const [y, m, d] = normalized.split("/").map(Number)
+    if (!y || !m || !d) return null
+    const dt = new Date(y, m - 1, d)
+    if (Number.isNaN(dt.getTime())) return null
+    dt.setHours(0, 0, 0, 0)
+    return dt
+  }, [])
+
+  const inRange = useCallback(
+    (dt: Date | null) => {
+      if (!dt) return false
+      const from = parseDate(searchDateFrom)
+      const to = parseDate(searchDateTo)
+      if (from && dt < from) return false
+      if (to && dt > to) return false
+      return true
+    },
+    [parseDate, searchDateFrom, searchDateTo],
+  )
   
-  // 案件Noの降順でソート
+  // 案件一覧が空になるケース（移行途中/データ不整合）に備え、ProductsからProjectを合成するフォールバック
+  const synthesizedProjectsFromProducts = useMemo(() => {
+    const byPn = new Map<string, (typeof allProjects)[number]>()
+    allProducts.forEach((prod) => {
+      const pn = String(prod.projectNumber || "")
+      if (!pn) return
+      if (byPn.has(pn)) return
+      byPn.set(pn, {
+        id: -1,
+        projectNumber: pn,
+        projectName: prod.projectName,
+        companyId: prod.companyId,
+        companyName: prod.companyName,
+        hallName: prod.hallName,
+        hallCode: prod.hallId,
+        salesPersonName: prod.salesPersonName,
+        requestDate: prod.requestDate,
+      } as any)
+    })
+    return Array.from(byPn.values())
+  }, [allProducts, allProjects])
+
+  const projectsForList = allProjects.length > 0 ? allProjects : synthesizedProjectsFromProducts
+
+  // 案件(Project)を案件Noの降順でソート
   const sortedProjects = useMemo(() => {
-    return [...allProjects].sort((a, b) => {
-      const projectNumberA = parseInt(a.projectNumber || "0")
-      const projectNumberB = parseInt(b.projectNumber || "0")
-      
-      // 降順（大きい案件Noが先）
+    return [...projectsForList].sort((a, b) => {
+      const projectNumberA = parseInt(String(a.projectNumber || "0"))
+      const projectNumberB = parseInt(String(b.projectNumber || "0"))
       return projectNumberB - projectNumberA
     })
-  }, [allProjects])
+  }, [projectsForList])
 
-  // 検索条件でフィルタリング
-  const filteredProjects = useMemo(() => {
-    return sortedProjects.filter((project) => {
-      // ホール名でフィルタリング
+  // 案件側の検索条件（ホール/法人/案件No/案件名/担当営業/作成日・実施日）でフィルタ
+  const eligibleProjects = useMemo(() => {
+    return sortedProjects.filter((p) => {
       if (selectedHallName) {
-        const hallName = project.hallName || project.clientName || ""
+        const hallName = String(p.hallName || p.clientName || "")
         if (hallName !== selectedHallName) return false
       }
-      
-      // 法人IDでフィルタリング
       if (selectedCompanyId) {
-        const companyId = project.companyId || ""
+        const companyId = String(p.companyId || "")
         if (companyId !== selectedCompanyId) return false
       }
-      
-      // 案件Noでフィルタリング
       if (searchProjectNumber) {
-        const projectNumber = String(project.projectNumber || "")
-        if (!projectNumber.includes(searchProjectNumber)) return false
+        const pn = String(p.projectNumber || "")
+        if (!pn.includes(searchProjectNumber)) return false
       }
-      
-      // 商材カテゴリでフィルタリング
-      if (searchCategory) {
-        const category = String(project.category || "")
-        if (category !== searchCategory) return false
+      if (searchProjectName) {
+        const name = String(p.projectName || "")
+        if (!name.toLowerCase().includes(searchProjectName.toLowerCase())) return false
       }
-      
-      // イベント区分でフィルタリング
-      if (searchEventType) {
-        const eventType = String(project.eventType || "")
-        if (eventType !== searchEventType) return false
+      if (searchSalesPersonName) {
+        const sp = String(p.salesPersonName || "")
+        if (!sp.toLowerCase().includes(searchSalesPersonName.toLowerCase())) return false
       }
-      
+      if (searchDateFrom || searchDateTo) {
+        if (searchDateMode === "created") {
+          const dt = parseDate((p as any).createdAt)
+          if (!inRange(dt)) return false
+        } else {
+          // 実施日: 同一案件Noの商材の実施日(eventDate/date)のいずれかが範囲内
+          const pn = String(p.projectNumber || "")
+          const anyHit = allProducts
+            .filter((prod) => String(prod.projectNumber || "") === pn)
+            .some((prod) => inRange(parseDate(prod.eventDate || prod.date)))
+          if (!anyHit) return false
+        }
+      }
       return true
     })
-  }, [sortedProjects, selectedHallName, selectedCompanyId, searchProjectNumber, searchCategory, searchEventType])
+  }, [
+    allProducts,
+    inRange,
+    parseDate,
+    searchDateFrom,
+    searchDateMode,
+    searchDateTo,
+    searchProjectName,
+    searchProjectNumber,
+    searchSalesPersonName,
+    selectedCompanyId,
+    selectedHallName,
+    sortedProjects,
+  ])
 
-  // 案件Noごとにグループ化
-  const projectsByProjectNumber = useMemo(() => {
-    const grouped: { [projectNumber: string]: typeof sortedProjects } = {}
-    
-    filteredProjects.forEach((project) => {
-      const projectNumber = project.projectNumber || "未分類"
-      if (!grouped[projectNumber]) {
-        grouped[projectNumber] = []
+  const eligibleProjectNumbers = useMemo(() => new Set(eligibleProjects.map((p) => p.projectNumber)), [eligibleProjects])
+
+  // タブ共通: 商材側の検索条件（カテゴリ/イベント区分）でフィルタ
+  const filteredProductsBase = useMemo(() => {
+    return allProducts.filter((prod) => {
+      const pn = prod.projectNumber || ""
+      if (!eligibleProjectNumbers.has(pn)) return false
+      if (searchCategory) {
+        if (String(prod.category || "") !== searchCategory) return false
       }
-      grouped[projectNumber].push(project)
+      if (searchEventType) {
+        if (String(prod.eventType || "") !== searchEventType) return false
+      }
+      return true
     })
-    
-    return grouped
-  }, [filteredProjects])
+  }, [allProducts, eligibleProjectNumbers, searchCategory, searchEventType])
+
+  const productsByProjectNumberProjectsTab = useMemo(() => {
+    return groupProductsByProjectNumber(filteredProductsBase)
+  }, [filteredProductsBase, groupProductsByProjectNumber])
+
+  const productsByProjectNumberCorrectionsTab = useMemo(() => {
+    return groupProductsByProjectNumber(filteredProductsBase.filter((p) => p.projectStatus === "営業修正中"))
+  }, [filteredProductsBase, groupProductsByProjectNumber])
+
+  const productsByProjectNumberTemporaryHoldFailureTab = useMemo(() => {
+    return groupProductsByProjectNumber(
+      filteredProductsBase.filter((p) => p.projectStatus === "営業確認中" && !!p.temporaryHoldFailureComment),
+    )
+  }, [filteredProductsBase, groupProductsByProjectNumber])
+
+  const correctionRequestsCount = useMemo(() => {
+    return Object.values(productsByProjectNumberCorrectionsTab).reduce((sum, arr) => sum + arr.length, 0)
+  }, [productsByProjectNumberCorrectionsTab])
+
+  const temporaryHoldFailureRequestsCount = useMemo(() => {
+    return Object.values(productsByProjectNumberTemporaryHoldFailureTab).reduce((sum, arr) => sum + arr.length, 0)
+  }, [productsByProjectNumberTemporaryHoldFailureTab])
 
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -252,7 +344,7 @@ export function ProjectList({
 
   const [isPRModalOpen, setIsPRModalOpen] = useState(false)
   const [isCostModalOpen, setIsCostModalOpen] = useState(false)
-  const [selectedModalProject, setSelectedModalProject] = useState<(typeof sortedProjects)[0] | null>(null)
+  const [selectedModalProject, setSelectedModalProject] = useState<(typeof allProducts)[0] | null>(null)
 
   const [prGenerated, setPrGenerated] = useState(false)
   const [prText, setPrText] = useState("")
@@ -283,7 +375,7 @@ export function ProjectList({
     } else {
       // 仮想DBで案件を更新
       if (typeof project.id === 'number') {
-        updateProject(project.id, { status: "proposed" })
+        updateProduct(project.id, { status: "proposed" })
       }
     }
   }
@@ -303,7 +395,7 @@ export function ProjectList({
       }
 
       if (project.venue === "東京ドーム") {
-        errors.push("開催日が会場の定休日と重複しています")
+        errors.push("実施日が会場の定休日と重複しています")
       }
 
       errors.push("タレントのスケジュールが重複している可能性があります")
@@ -325,7 +417,7 @@ export function ProjectList({
 
     if (project.venue === "パチンコ店舗フロア") {
       if (!project.date) {
-        errors.push("開催日が未設定です")
+        errors.push("実施日が未設定です")
       }
     }
 
@@ -389,12 +481,12 @@ Co・Dir担当`
     onNext()
   }
 
-  const handleOpenPRModal = (project: (typeof sortedProjects)[0]) => {
+  const handleOpenPRModal = (project: (typeof allProducts)[0]) => {
     setSelectedModalProject(project)
     setIsPRModalOpen(true)
   }
 
-  const handleOpenCostModal = (project: (typeof sortedProjects)[0]) => {
+  const handleOpenCostModal = (project: (typeof allProducts)[0]) => {
     setSelectedModalProject(project)
     setIsCostModalOpen(true)
   }
@@ -501,8 +593,8 @@ Co・Dir担当`
               className="relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
             >
               修正確認依頼
-              {correctionRequests.length > 0 && (
-                <Badge className="ml-1.5 bg-red-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">{correctionRequests.length}</Badge>
+              {correctionRequestsCount > 0 && (
+                <Badge className="ml-1.5 bg-red-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">{correctionRequestsCount}</Badge>
               )}
             </TabsTrigger>
             <TabsTrigger 
@@ -510,8 +602,8 @@ Co・Dir担当`
               className="relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
             >
               仮押さえ不可
-              {temporaryHoldFailureRequests.length > 0 && (
-                <Badge className="ml-1.5 bg-red-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">{temporaryHoldFailureRequests.length}</Badge>
+              {temporaryHoldFailureRequestsCount > 0 && (
+                <Badge className="ml-1.5 bg-red-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">{temporaryHoldFailureRequestsCount}</Badge>
               )}
             </TabsTrigger>
           </TabsList>
@@ -529,6 +621,16 @@ Co・Dir担当`
           <ProjectListFilters
             searchProjectNumber={searchProjectNumber}
             onSearchProjectNumberChange={setSearchProjectNumber}
+            searchProjectName={searchProjectName}
+            onSearchProjectNameChange={setSearchProjectName}
+            searchSalesPersonName={searchSalesPersonName}
+            onSearchSalesPersonNameChange={setSearchSalesPersonName}
+            searchDateMode={searchDateMode}
+            onSearchDateModeChange={setSearchDateMode}
+            searchDateFrom={searchDateFrom}
+            onSearchDateFromChange={setSearchDateFrom}
+            searchDateTo={searchDateTo}
+            onSearchDateToChange={setSearchDateTo}
             searchCategory={searchCategory}
             onSearchCategoryChange={setSearchCategory}
             searchEventType={searchEventType}
@@ -548,29 +650,27 @@ Co・Dir担当`
             getCompanyByCompanyId={getCompanyByCompanyId}
           />
 
-      {Object.keys(projectsByProjectNumber).length === 0 ? (
+      {Object.keys(productsByProjectNumberProjectsTab).length === 0 ? (
         <div className="text-center py-12 text-slate-500">
-          {(searchProjectNumber || searchCategory || searchEventType || selectedHallName || selectedCompanyId) 
+          {(searchProjectNumber || searchProjectName || searchSalesPersonName || searchDateFrom || searchDateTo || searchCategory || searchEventType || selectedHallName || selectedCompanyId) 
             ? "検索結果が見つかりませんでした" 
             : "案件がありません"}
         </div>
       ) : (
       <div className="space-y-6">
-        {Object.entries(projectsByProjectNumber)
-          .sort(([a], [b]) => {
-            // 案件Noの降順でソート
-            const numA = parseInt(a) || 0
-            const numB = parseInt(b) || 0
-            return numB - numA
-          })
-          .map(([projectNumber, projectProducts]) => {
+        {eligibleProjects
+          .filter((p) => (productsByProjectNumberProjectsTab[p.projectNumber]?.length ?? 0) > 0)
+          .map((p) => {
+          const projectNumber = p.projectNumber
+          const projectProducts = productsByProjectNumberProjectsTab[projectNumber] ?? []
           const firstProduct = projectProducts[0]
-          const hallName = firstProduct.hallName || firstProduct.clientName || "未分類"
-          const salesPersonName = firstProduct.salesPersonName || "-"
-          const requestDate = firstProduct.requestDate || "-"
-          const companyName = firstProduct.companyName || "-"
-          const companyId = firstProduct.companyId || "-"
-          const hallId = firstProduct.hallId || "-"
+          const hallName = p.hallName || p.clientName || firstProduct?.hallName || firstProduct?.clientName || "未分類"
+          const salesPersonName = p.salesPersonName || firstProduct?.salesPersonName || "-"
+          const requestDate = p.requestDate || firstProduct?.requestDate || "-"
+          const companyName = p.companyName || firstProduct?.companyName || "-"
+          const companyId = p.companyId || firstProduct?.companyId || "-"
+          const hallId = p.hallCode || firstProduct?.hallId || "-"
+          const projectName = p.projectName || firstProduct?.projectName || "-"
           
           return (
             <Card key={projectNumber} className="hover:shadow-md transition-shadow">
@@ -579,10 +679,15 @@ Co・Dir担当`
                 <div className="mb-4 pb-4 border-b-2 border-slate-300">
                   <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div className="flex items-center gap-3 flex-shrink-0">
-                      <h2 className="text-3xl font-bold text-slate-900 whitespace-nowrap">案件No: {projectNumber}</h2>
-                      <Badge variant="outline" className="ml-2 whitespace-nowrap">
-                        {projectProducts.length}件の商材
-                      </Badge>
+                      <div className="flex flex-col gap-1">
+                        <h2 className="text-3xl font-bold text-slate-900 whitespace-nowrap">{projectName}</h2>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-medium text-slate-600 whitespace-nowrap">案件No: {projectNumber}</span>
+                          <Badge variant="outline" className="whitespace-nowrap">
+                            {projectProducts.length}件の商材
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
                       <div className="flex items-center gap-2">
@@ -594,7 +699,7 @@ Co・Dir担当`
                       </div>
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4" />
-                        <span>ホール名: <span className="font-medium text-slate-900">{hallName}</span></span>
+                        <span>ホール名: <span className="font-medium text-slate-900">{String(hallName ?? "-")}</span></span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span>ホールID: <span className="font-medium text-slate-900">{hallId}</span></span>
@@ -609,6 +714,14 @@ Co・Dir担当`
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <Button
+                        onClick={() => router.push(`/project-number/${projectNumber}/edit`)}
+                        variant="outline"
+                        className="gap-2"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                        案件を編集
+                      </Button>
                       <Button
                         onClick={() => {
                           setSelectedProjectForQuote({ projectNumber, products: projectProducts })
@@ -718,7 +831,7 @@ Co・Dir担当`
         getStatusBadge={getStatusBadge}
         projectData={projectData}
         setProjectData={setProjectData}
-        updateProject={updateProject}
+        updateProduct={updateProduct}
         addNotification={addNotification}
       />
       <ValidationDialog
@@ -769,99 +882,251 @@ Co・Dir担当`
 
         <TabsContent value="corrections" className="mt-0">
           {/* 修正依頼一覧 */}
-          {correctionRequests.length === 0 ? (
+          {correctionRequestsCount === 0 ? (
             <div className="text-center py-12 text-slate-500">
               修正依頼はありません
             </div>
           ) : (
             <div className="space-y-6">
-              {correctionRequests.map((project) => {
-                const projectItem: ProjectItem = {
-                  id: project.id,
-                  projectNumber: project.projectNumber,
-                  projectName: project.projectName,
-                  clientName: project.clientName,
-                  talent: project.talent,
-                  date: project.date,
-                  venue: project.venue,
-                  status: project.status,
-                  estimateAmount: project.estimateAmount,
-                  salesPersonName: project.salesPersonName,
-                  requestDate: project.requestDate,
-                  hallName: project.hallName,
-                  hallId: project.hallId,
-                  companyId: project.companyId,
-                  companyName: project.companyName,
-                  projectStatus: project.projectStatus,
-                  category: project.category,
-                  eventType: project.eventType,
-                  eventProductName: project.eventProductName,
-                  eventDate: project.eventDate,
-                }
-                const correctionRequest = project.correctionRequest || ""
-                return (
-                  <ProjectAlertCard
-                    key={project.id}
-                    project={project}
-                    projectItem={projectItem}
-                    statusBadge={getStatusBadge(projectItem.projectStatus)}
-                    alertTitle="修正依頼内容"
-                    alertText={correctionRequest}
-                    actionLabel="修正"
-                    onAction={() => router.push(`/project/${project.id}/correction?tab=corrections`)}
-                  />
-                )
-              })}
+              {eligibleProjects
+                .filter((p) => (productsByProjectNumberCorrectionsTab[p.projectNumber]?.length ?? 0) > 0)
+                .map((p) => {
+                  const projectNumber = p.projectNumber
+                  const projectProducts = productsByProjectNumberCorrectionsTab[projectNumber] ?? []
+                  const firstProduct = projectProducts[0]
+
+                  const hallName = p.hallName || p.clientName || firstProduct?.hallName || firstProduct?.clientName || "未分類"
+                  const salesPersonName = p.salesPersonName || firstProduct?.salesPersonName || "-"
+                  const requestDate = p.requestDate || firstProduct?.requestDate || "-"
+                  const companyName = p.companyName || firstProduct?.companyName || "-"
+                  const companyId = p.companyId || firstProduct?.companyId || "-"
+                  const hallId = p.hallCode || firstProduct?.hallId || "-"
+                  const projectName = p.projectName || firstProduct?.projectName || "-"
+
+                  return (
+                    <Card key={projectNumber} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-6">
+                        <div className="mb-4 pb-4 border-b-2 border-slate-300">
+                          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                            <div className="flex items-center gap-3 flex-shrink-0">
+                              <div className="flex flex-col gap-1">
+                                <h2 className="text-3xl font-bold text-slate-900 whitespace-nowrap">{projectName}</h2>
+                                <div className="flex items-center gap-3">
+                                  <span className="text-sm font-medium text-slate-600 whitespace-nowrap">案件No: {projectNumber}</span>
+                                  <Badge variant="outline" className="whitespace-nowrap">
+                                    {projectProducts.length}件の修正対象商材
+                                  </Badge>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
+                              <div className="flex items-center gap-2">
+                                <Building2 className="h-4 w-4" />
+                                <span>法人名: <span className="font-medium text-slate-900">{companyName}</span></span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span>法人ID: <span className="font-medium text-slate-900">{companyId}</span></span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4" />
+                                <span>ホール名: <span className="font-medium text-slate-900">{String(hallName ?? "-")}</span></span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span>ホールID: <span className="font-medium text-slate-900">{hallId}</span></span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4" />
+                                <span>担当営業: <span className="font-medium text-slate-900">{salesPersonName}</span></span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4" />
+                                <span>依頼日: <span className="font-medium text-slate-900">{requestDate}</span></span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <Button
+                                onClick={() => router.push(`/project-number/${projectNumber}/edit`)}
+                                variant="outline"
+                                className="gap-2"
+                              >
+                                <Edit2 className="h-4 w-4" />
+                                案件を編集
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          {projectProducts.map((project) => {
+                            const projectItem: ProjectItem = {
+                              id: project.id,
+                              projectNumber: project.projectNumber,
+                              projectName: project.projectName,
+                              clientName: project.clientName,
+                              talent: project.talent,
+                              date: project.date,
+                              venue: project.venue,
+                              status: project.status,
+                              estimateAmount: project.estimateAmount,
+                              salesPersonName: project.salesPersonName,
+                              requestDate: project.requestDate,
+                              hallName: project.hallName,
+                              hallId: project.hallId,
+                              companyId: project.companyId,
+                              companyName: project.companyName,
+                              projectStatus: project.projectStatus,
+                              category: project.category,
+                              eventType: project.eventType,
+                              eventProductName: project.eventProductName,
+                              eventDate: project.eventDate,
+                            }
+                            const correctionRequest = project.correctionRequest || ""
+                            return (
+                              <ProjectAlertCard
+                                key={project.id}
+                                project={project}
+                                projectItem={projectItem}
+                                statusBadge={getStatusBadge(projectItem.projectStatus)}
+                                alertTitle="修正依頼内容"
+                                alertText={correctionRequest}
+                                actionLabel="修正"
+                                onAction={() => router.push(`/project/${project.id}/correction?tab=corrections`)}
+                              />
+                            )
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
             </div>
           )}
         </TabsContent>
 
         <TabsContent value="temporaryHoldFailure" className="mt-0">
           {/* 仮押さえ不可一覧 */}
-          {temporaryHoldFailureRequests.length === 0 ? (
+          {temporaryHoldFailureRequestsCount === 0 ? (
             <div className="text-center py-12 text-slate-500">
               仮押さえ不可の通知はありません
             </div>
           ) : (
             <div className="space-y-6">
-              {temporaryHoldFailureRequests.map((project) => {
-                const projectItem: ProjectItem = {
-                  id: project.id,
-                  projectNumber: project.projectNumber,
-                  projectName: project.projectName,
-                  clientName: project.clientName,
-                  talent: project.talent,
-                  date: project.date,
-                  venue: project.venue,
-                  status: project.status,
-                  estimateAmount: project.estimateAmount,
-                  salesPersonName: project.salesPersonName,
-                  requestDate: project.requestDate,
-                  hallName: project.hallName,
-                  hallId: project.hallId,
-                  companyId: project.companyId,
-                  companyName: project.companyName,
-                  projectStatus: project.projectStatus,
-                  category: project.category,
-                  eventType: project.eventType,
-                  eventProductName: project.eventProductName,
-                  eventDate: project.eventDate,
-                }
-                const temporaryHoldFailureComment = project.temporaryHoldFailureComment || ""
-                return (
-                  <ProjectAlertCard
-                    key={project.id}
-                    project={project}
-                    projectItem={projectItem}
-                    statusBadge={getStatusBadge(projectItem.projectStatus)}
-                    alertTitle="仮押さえ不可の理由"
-                    alertText={temporaryHoldFailureComment}
-                    actionLabel="編集"
-                    actionIcon={<Edit2 className="h-4 w-4" />}
-                    onAction={() => router.push(`/project/${project.id}`)}
-                  />
-                )
-              })}
+              {eligibleProjects
+                .filter((p) => (productsByProjectNumberTemporaryHoldFailureTab[p.projectNumber]?.length ?? 0) > 0)
+                .map((p) => {
+                  const projectNumber = p.projectNumber
+                  const projectProducts = productsByProjectNumberTemporaryHoldFailureTab[projectNumber] ?? []
+                  const firstProduct = projectProducts[0]
+
+                  const hallName = p.hallName || p.clientName || firstProduct?.hallName || firstProduct?.clientName || "未分類"
+                  const salesPersonName = p.salesPersonName || firstProduct?.salesPersonName || "-"
+                  const requestDate = p.requestDate || firstProduct?.requestDate || "-"
+                  const companyName = p.companyName || firstProduct?.companyName || "-"
+                  const companyId = p.companyId || firstProduct?.companyId || "-"
+                  const hallId = p.hallCode || firstProduct?.hallId || "-"
+                  const projectName = p.projectName || firstProduct?.projectName || "-"
+
+                  return (
+                    <Card key={projectNumber} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-6">
+                        <div className="mb-4 pb-4 border-b-2 border-slate-300">
+                          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                            <div className="flex items-center gap-3 flex-shrink-0">
+                              <div className="flex flex-col gap-1">
+                                <h2 className="text-3xl font-bold text-slate-900 whitespace-nowrap">{projectName}</h2>
+                                <div className="flex items-center gap-3">
+                                  <span className="text-sm font-medium text-slate-600 whitespace-nowrap">案件No: {projectNumber}</span>
+                                  <Badge variant="outline" className="whitespace-nowrap">
+                                    {projectProducts.length}件の仮押さえ不可商材
+                                  </Badge>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
+                              <div className="flex items-center gap-2">
+                                <Building2 className="h-4 w-4" />
+                                <span>法人名: <span className="font-medium text-slate-900">{companyName}</span></span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span>法人ID: <span className="font-medium text-slate-900">{companyId}</span></span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4" />
+                                <span>ホール名: <span className="font-medium text-slate-900">{String(hallName ?? "-")}</span></span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span>ホールID: <span className="font-medium text-slate-900">{hallId}</span></span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4" />
+                                <span>担当営業: <span className="font-medium text-slate-900">{salesPersonName}</span></span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4" />
+                                <span>依頼日: <span className="font-medium text-slate-900">{requestDate}</span></span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <Button
+                                onClick={() => router.push(`/project-number/${projectNumber}/edit`)}
+                                variant="outline"
+                                className="gap-2"
+                              >
+                                <Edit2 className="h-4 w-4" />
+                                案件を編集
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          {projectProducts.map((project) => {
+                            const projectItem: ProjectItem = {
+                              id: project.id,
+                              projectNumber: project.projectNumber,
+                              projectName: project.projectName,
+                              clientName: project.clientName,
+                              talent: project.talent,
+                              date: project.date,
+                              venue: project.venue,
+                              status: project.status,
+                              estimateAmount: project.estimateAmount,
+                              salesPersonName: project.salesPersonName,
+                              requestDate: project.requestDate,
+                              hallName: project.hallName,
+                              hallId: project.hallId,
+                              companyId: project.companyId,
+                              companyName: project.companyName,
+                              projectStatus: project.projectStatus,
+                              category: project.category,
+                              eventType: project.eventType,
+                              eventProductName: project.eventProductName,
+                              eventDate: project.eventDate,
+                            }
+                            const temporaryHoldFailureComment = project.temporaryHoldFailureComment || ""
+                            return (
+                              <ProjectAlertCard
+                                key={project.id}
+                                project={project}
+                                projectItem={projectItem}
+                                statusBadge={getStatusBadge(projectItem.projectStatus)}
+                                alertTitle="仮押さえ不可の理由"
+                                alertText={temporaryHoldFailureComment}
+                                actionLabel="編集"
+                                actionIcon={<Edit2 className="h-4 w-4" />}
+                                onAction={() => router.push(`/project/${project.id}`)}
+                              />
+                            )
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
             </div>
           )}
         </TabsContent>
@@ -879,7 +1144,7 @@ Co・Dir担当`
           setIsQuoteModalOpen(false)
             setSelectedProjectForQuote(null)
         }}
-        updateProject={updateProject}
+        updateProduct={updateProduct}
         addNotification={addNotification}
       />
                             </div>

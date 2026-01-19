@@ -37,22 +37,22 @@ describe("lib/demo-db/storage", () => {
   })
 
   test("safeParseDemoDbSnapshot: migrates version mismatch when shape is valid", () => {
-    const raw = JSON.stringify({ version: DEMO_DB_STORAGE_VERSION - 1, data: { projects: [], halls: [], companies: [] } })
+    const raw = JSON.stringify({ version: DEMO_DB_STORAGE_VERSION - 1, data: { projects: [], products: [], halls: [], companies: [] } })
     const parsed = safeParseDemoDbSnapshot(raw)
     expect(parsed?.version).toBe(DEMO_DB_STORAGE_VERSION)
     expect(parsed?.data.projects).toEqual([])
   })
 
   test("safeParseDemoDbSnapshot: accepts valid shape + version", () => {
-    const raw = JSON.stringify({ version: DEMO_DB_STORAGE_VERSION, data: { projects: [], halls: [], companies: [] } })
+    const raw = JSON.stringify({ version: DEMO_DB_STORAGE_VERSION, data: { projects: [], products: [], halls: [], companies: [] } })
     const parsed = safeParseDemoDbSnapshot(raw)
     expect(parsed?.version).toBe(DEMO_DB_STORAGE_VERSION)
     expect(parsed?.data.projects).toEqual([])
   })
 
-  test("safeParseDemoDbSnapshot: accepts projects with optional demo fields", () => {
+  test("safeParseDemoDbSnapshot: migrates legacy (v2) snapshot rows into v3 projects/products", () => {
     const raw = JSON.stringify({
-      version: DEMO_DB_STORAGE_VERSION,
+      version: 2,
       data: {
         projects: [
           {
@@ -81,8 +81,11 @@ describe("lib/demo-db/storage", () => {
     })
     const parsed = safeParseDemoDbSnapshot(raw)
     expect(parsed).not.toBeNull()
-    expect(parsed?.data.projects[0].pachitownLinked).toBe(true)
-    expect(parsed?.data.projects[0].castingCost).toBe(123)
+    expect(parsed?.data.projects).toHaveLength(1)
+    expect(parsed?.data.products).toHaveLength(1)
+    // passthrough fields should be preserved on product entity for backward-compat denormalization layer
+    expect((parsed?.data.products[0] as any).pachitownLinked).toBe(true)
+    expect((parsed?.data.products[0] as any).castingCost).toBe(123)
   })
 
   test("safeParseDemoDbSnapshot: tolerates legacy snapshots with missing arrays (salvage what it can)", () => {
@@ -107,12 +110,13 @@ describe("lib/demo-db/storage", () => {
     const parsed = safeParseDemoDbSnapshot(raw)
     expect(parsed?.version).toBe(DEMO_DB_STORAGE_VERSION)
     expect(parsed?.data.projects.length).toBe(1)
+    expect(parsed?.data.products.length).toBe(1)
     expect(parsed?.data.halls).toEqual([])
     expect(parsed?.data.companies).toEqual([])
   })
 
   test("safeParseDemoDbSnapshot: rejects future versions", () => {
-    const raw = JSON.stringify({ version: DEMO_DB_STORAGE_VERSION + 1, data: { projects: [], halls: [], companies: [] } })
+    const raw = JSON.stringify({ version: DEMO_DB_STORAGE_VERSION + 1, data: { projects: [], products: [], halls: [], companies: [] } })
     expect(safeParseDemoDbSnapshot(raw)).toBeNull()
   })
 
@@ -127,7 +131,7 @@ describe("lib/demo-db/storage", () => {
 
     expect(loadDemoDbFromStorage()).toBeNull()
 
-    saveDemoDbToStorage({ projects: [], halls: [], companies: [] })
+    saveDemoDbToStorage({ projects: [], products: [], halls: [], companies: [] })
     expect(state.has(DEMO_DB_STORAGE_KEY)).toBe(true)
 
     const loaded = loadDemoDbFromStorage()
@@ -144,7 +148,7 @@ describe("lib/demo-db/storage", () => {
 
     const legacyRaw = JSON.stringify({
       version: DEMO_DB_STORAGE_VERSION - 1,
-      data: { projects: [], halls: [], companies: [] },
+      data: { projects: [], products: [], halls: [], companies: [] },
     })
     storage.setItem(DEMO_DB_STORAGE_KEY, legacyRaw)
 

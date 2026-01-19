@@ -29,8 +29,8 @@ export function EventTeamDashboard({
   addNotification,
 }: EventTeamDashboardProps) {
   const router = useAppRouter()
-  const { getProjects, updateProject } = useProject()
-  const allProjects = useMemo(() => getProjects(), [getProjects])
+  const { getProducts, updateProduct } = useProject()
+  const allProjects = useMemo(() => getProducts(), [getProducts])
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [showCastingInfoModal, setShowCastingInfoModal] = useState(false)
   const [showTemporaryHoldModal, setShowTemporaryHoldModal] = useState(false)
@@ -131,7 +131,7 @@ export function EventTeamDashboard({
     return allProjects.filter((p) => p.projectStatus === "イベントチーム確認中")
   }, [allProjects])
 
-  // イベント終了処理中の案件（開催日の翌日以降のイベント）
+  // イベント終了処理中の案件（実施日の翌日以降のイベント）
   const postEventProjects = useMemo(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -148,7 +148,7 @@ export function EventTeamDashboard({
       const projectDate = new Date(year, month - 1, day)
       projectDate.setHours(0, 0, 0, 0)
 
-      // 開催日の翌日以降（開催日より前の日）かつ手配進行中またはそれ以降のステータスの案件
+      // 実施日の翌日以降（実施日より前の日）かつ手配進行中またはそれ以降のステータスの案件
       return projectDate < today && (
         p.projectStatus === "手配進行中" ||
         p.projectStatus === "イベント終了処理中"
@@ -156,15 +156,15 @@ export function EventTeamDashboard({
     })
   }, [allProjects])
 
-  // 開催日の翌日以降の案件のステータスを自動更新（更新済みフラグ）
+  // 実施日の翌日以降の案件のステータスを自動更新（更新済みフラグ）
   const updatedProjectsRef = useRef<Set<number>>(new Set())
-  const updateProjectRef = useRef(updateProject)
+  const updateProjectRef = useRef(updateProduct)
   const lastProjectsIdsRef = useRef<string>("")
   
-  // updateProject の最新の参照を保持
+  // updateProduct の最新の参照を保持
   useEffect(() => {
-    updateProjectRef.current = updateProject
-  }, [updateProject])
+    updateProjectRef.current = updateProduct
+  }, [updateProduct])
   
   useEffect(() => {
     // プロジェクトIDのリストを文字列化して比較（変更検知）
@@ -190,7 +190,7 @@ export function EventTeamDashboard({
             const projectDate = new Date(year, month - 1, day)
             projectDate.setHours(0, 0, 0, 0)
             
-            // 開催日の翌日以降（開催日より前の日）にステータスを更新
+            // 実施日の翌日以降（実施日より前の日）にステータスを更新
             if (projectDate < today) {
               updatedProjectsRef.current.add(p.id)
               updateProjectRef.current(p.id, { projectStatus: "イベント終了処理中" })
@@ -223,7 +223,7 @@ export function EventTeamDashboard({
 
   const handleConfirmTemporaryHold = () => {
     if (!selectedProject) return
-    updateProject(selectedProject.id, { projectStatus: "仮押さえ済み" })
+    updateProduct(selectedProject.id, { projectStatus: "仮押さえ済み" })
     addNotification("仮押さえを完了しました")
     setShowTemporaryHoldModal(false)
     setSelectedProject(null)
@@ -241,7 +241,7 @@ export function EventTeamDashboard({
       addNotification("コメントを入力してください")
       return
     }
-    updateProject(selectedProject.id, {
+    updateProduct(selectedProject.id, {
       projectStatus: "営業確認中",
       temporaryHoldFailureComment: temporaryHoldFailureComment,
     })
@@ -258,7 +258,7 @@ export function EventTeamDashboard({
 
   const handleConfirmContent = () => {
     if (!selectedProject) return
-    updateProject(selectedProject.id, { projectStatus: "手配進行中" })
+    updateProduct(selectedProject.id, { projectStatus: "手配進行中" })
     addNotification("内容確認を完了しました")
     setShowConfirmationModal(false)
     setSelectedProject(null)
@@ -272,7 +272,7 @@ export function EventTeamDashboard({
   const handleSubmitCorrection = () => {
     if (!selectedProject || !correctionRequest.trim()) return
     // 修正依頼を営業に送信（ステータスを「営業修正中」に変更）
-    updateProject(selectedProject.id, { 
+    updateProduct(selectedProject.id, { 
       projectStatus: "営業修正中",
       correctionRequest: correctionRequest,
     })
@@ -383,10 +383,10 @@ export function EventTeamDashboard({
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="sticky left-0 bg-white z-10">案件No</TableHead>
-                          <TableHead>案件名</TableHead>
+                          <TableHead className="sticky left-0 bg-white z-10">案件名</TableHead>
+                          <TableHead>案件No</TableHead>
                           <TableHead>クライアント</TableHead>
-                          <TableHead>開催日</TableHead>
+                          <TableHead>実施日</TableHead>
                           <TableHead>コンパニオン確定</TableHead>
                           <TableHead>ディレクター確定</TableHead>
                           <TableHead>MC確定</TableHead>
@@ -406,8 +406,8 @@ export function EventTeamDashboard({
                           
                           return (
                             <TableRow key={project.id}>
-                              <TableCell className="font-medium sticky left-0 bg-white z-10">{project.projectNumber}</TableCell>
-                              <TableCell>{project.projectName}</TableCell>
+                              <TableCell className="font-medium sticky left-0 bg-white z-10">{project.projectName}</TableCell>
+                              <TableCell>{project.projectNumber}</TableCell>
                               <TableCell>{project.clientName}</TableCell>
                               <TableCell>{project.date}</TableCell>
                               <TableCell>
@@ -555,10 +555,10 @@ export function EventTeamDashboard({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>案件No</TableHead>
                       <TableHead>案件名</TableHead>
+                      <TableHead>案件No</TableHead>
                       <TableHead>クライアント</TableHead>
-                      <TableHead>開催日</TableHead>
+                      <TableHead>実施日</TableHead>
                       <TableHead>ステータス</TableHead>
                       <TableHead>操作</TableHead>
                     </TableRow>
@@ -566,8 +566,8 @@ export function EventTeamDashboard({
                   <TableBody>
                     {temporaryHoldRequests.map((project) => (
                       <TableRow key={project.id}>
-                        <TableCell className="font-medium">{project.projectNumber}</TableCell>
-                        <TableCell>{project.projectName}</TableCell>
+                        <TableCell className="font-medium">{project.projectName}</TableCell>
+                        <TableCell>{project.projectNumber}</TableCell>
                         <TableCell>{project.clientName}</TableCell>
                         <TableCell>{project.date}</TableCell>
                         <TableCell>{getStatusBadge(project.projectStatus || "")}</TableCell>
@@ -612,7 +612,7 @@ export function EventTeamDashboard({
             <CardHeader>
               <CardTitle className="text-lg font-semibold text-slate-900">イベント終了処理中</CardTitle>
               <CardDescription className="text-slate-600">
-                開催日の翌日以降のイベントのコスト入力を行ってください
+                実施日の翌日以降のイベントのコスト入力を行ってください
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -626,10 +626,10 @@ export function EventTeamDashboard({
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="sticky left-0 bg-white z-10">案件No</TableHead>
-                          <TableHead>案件名</TableHead>
+                          <TableHead className="sticky left-0 bg-white z-10">案件名</TableHead>
+                          <TableHead>案件No</TableHead>
                           <TableHead>クライアント</TableHead>
-                          <TableHead>開催日</TableHead>
+                          <TableHead>実施日</TableHead>
                           <TableHead>ステータス</TableHead>
                           <TableHead className="sticky right-0 bg-white z-10">操作</TableHead>
                         </TableRow>
@@ -638,8 +638,8 @@ export function EventTeamDashboard({
                         {postEventProjects.map((project) => {
                           return (
                             <TableRow key={project.id}>
-                              <TableCell className="font-medium sticky left-0 bg-white z-10">{project.projectNumber}</TableCell>
-                              <TableCell>{project.projectName}</TableCell>
+                              <TableCell className="font-medium sticky left-0 bg-white z-10">{project.projectName}</TableCell>
+                              <TableCell>{project.projectNumber}</TableCell>
                               <TableCell>{project.clientName}</TableCell>
                               <TableCell>{project.date}</TableCell>
                               <TableCell>{getStatusBadge(project.projectStatus || "")}</TableCell>
@@ -660,7 +660,7 @@ export function EventTeamDashboard({
                                     variant="outline"
                                     onClick={() => {
                                       // クライアントへのアンケート送付
-                                      updateProject(project.id, { surveySent: true, surveySentDate: new Date().toISOString().split('T')[0] })
+                                      updateProduct(project.id, { surveySent: true, surveySentDate: new Date().toISOString().split('T')[0] })
                                       addNotification("クライアントへのアンケートを送付しました")
                                     }}
                                     className="gap-2"
@@ -727,10 +727,10 @@ export function EventTeamDashboard({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>案件No</TableHead>
                       <TableHead>案件名</TableHead>
+                      <TableHead>案件No</TableHead>
                       <TableHead>クライアント</TableHead>
-                      <TableHead>開催日</TableHead>
+                      <TableHead>実施日</TableHead>
                       <TableHead>ステータス</TableHead>
                       <TableHead>操作</TableHead>
                     </TableRow>
@@ -738,8 +738,8 @@ export function EventTeamDashboard({
                   <TableBody>
                     {confirmationRequests.map((project) => (
                       <TableRow key={project.id}>
-                        <TableCell className="font-medium">{project.projectNumber}</TableCell>
-                        <TableCell>{project.projectName}</TableCell>
+                        <TableCell className="font-medium">{project.projectName}</TableCell>
+                        <TableCell>{project.projectNumber}</TableCell>
                         <TableCell>{project.clientName}</TableCell>
                         <TableCell>{project.date}</TableCell>
                         <TableCell>{getStatusBadge(project.projectStatus || "")}</TableCell>
@@ -770,7 +770,7 @@ export function EventTeamDashboard({
           <DialogHeader>
             <DialogTitle>キャスティング情報</DialogTitle>
             <DialogDescription>
-              イベントの開催日時とキャスティング情報を確認してください
+              イベントの実施日時とキャスティング情報を確認してください
             </DialogDescription>
           </DialogHeader>
           {selectedProject && (
@@ -779,15 +779,15 @@ export function EventTeamDashboard({
                 <h4 className="font-semibold text-lg mb-3">イベント情報</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm text-slate-600">案件No</Label>
-                    <p className="font-medium">{selectedProject.projectNumber}</p>
-                  </div>
-                  <div>
                     <Label className="text-sm text-slate-600">案件名</Label>
                     <p className="font-medium">{selectedProject.projectName}</p>
                   </div>
                   <div>
-                    <Label className="text-sm text-slate-600">開催日</Label>
+                    <Label className="text-sm text-slate-600">案件No</Label>
+                    <p className="font-medium">{selectedProject.projectNumber}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-slate-600">実施日</Label>
                     <p className="font-medium">{selectedProject.eventDate || selectedProject.date}</p>
                   </div>
                   <div>
@@ -902,19 +902,19 @@ export function EventTeamDashboard({
               <div className="bg-slate-50 p-4 rounded-lg space-y-3">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm text-slate-600">案件No</Label>
-                    <p className="font-medium">{selectedProject.projectNumber}</p>
-                  </div>
-                  <div>
                     <Label className="text-sm text-slate-600">案件名</Label>
                     <p className="font-medium">{selectedProject.projectName}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-slate-600">案件No</Label>
+                    <p className="font-medium">{selectedProject.projectNumber}</p>
                   </div>
                   <div>
                     <Label className="text-sm text-slate-600">クライアント</Label>
                     <p className="font-medium">{selectedProject.clientName}</p>
                   </div>
                   <div>
-                    <Label className="text-sm text-slate-600">開催日</Label>
+                    <Label className="text-sm text-slate-600">実施日</Label>
                     <p className="font-medium">{selectedProject.date}</p>
                   </div>
                   <div>
@@ -964,19 +964,19 @@ export function EventTeamDashboard({
               <div className="bg-slate-50 p-4 rounded-lg space-y-3">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm text-slate-600">案件No</Label>
-                    <p className="font-medium">{selectedProject.projectNumber}</p>
-                  </div>
-                  <div>
                     <Label className="text-sm text-slate-600">案件名</Label>
                     <p className="font-medium">{selectedProject.projectName}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-slate-600">案件No</Label>
+                    <p className="font-medium">{selectedProject.projectNumber}</p>
                   </div>
                   <div>
                     <Label className="text-sm text-slate-600">クライアント</Label>
                     <p className="font-medium">{selectedProject.clientName}</p>
                   </div>
                   <div>
-                    <Label className="text-sm text-slate-600">開催日</Label>
+                    <Label className="text-sm text-slate-600">実施日</Label>
                     <p className="font-medium">{selectedProject.date}</p>
                   </div>
                 </div>
@@ -1025,19 +1025,19 @@ export function EventTeamDashboard({
                 <h4 className="font-semibold text-lg mb-3">案件情報</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm text-slate-600">案件No</Label>
-                    <p className="font-medium">{selectedProject.projectNumber}</p>
-                  </div>
-                  <div>
                     <Label className="text-sm text-slate-600">案件名</Label>
                     <p className="font-medium">{selectedProject.projectName}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-slate-600">案件No</Label>
+                    <p className="font-medium">{selectedProject.projectNumber}</p>
                   </div>
                   <div>
                     <Label className="text-sm text-slate-600">クライアント</Label>
                     <p className="font-medium">{selectedProject.clientName}</p>
                   </div>
                   <div>
-                    <Label className="text-sm text-slate-600">開催日</Label>
+                    <Label className="text-sm text-slate-600">実施日</Label>
                     <p className="font-medium">{selectedProject.date}</p>
                   </div>
                   <div>
@@ -1175,7 +1175,7 @@ export function EventTeamDashboard({
                 if (actions.length > 0) {
                   // ぱちタウン連携が実行された場合、連携情報を保存
                   if (autoArrangementChecks.pachitown && selectedProject) {
-                    updateProject(selectedProject.id, {
+                    updateProduct(selectedProject.id, {
                       pachitownLinked: true,
                       pachitownLinkedDate: new Date().toISOString().split('T')[0],
                     })
@@ -1214,19 +1214,19 @@ export function EventTeamDashboard({
                 <h4 className="font-semibold text-lg mb-3">案件情報</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm text-slate-600">案件No</Label>
-                    <p className="font-medium">{selectedProject.projectNumber}</p>
-                  </div>
-                  <div>
                     <Label className="text-sm text-slate-600">案件名</Label>
                     <p className="font-medium">{selectedProject.projectName}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-slate-600">案件No</Label>
+                    <p className="font-medium">{selectedProject.projectNumber}</p>
                   </div>
                   <div>
                     <Label className="text-sm text-slate-600">クライアント</Label>
                     <p className="font-medium">{selectedProject.clientName}</p>
                   </div>
                   <div>
-                    <Label className="text-sm text-slate-600">開催日</Label>
+                    <Label className="text-sm text-slate-600">実施日</Label>
                     <p className="font-medium">{selectedProject.eventDate || selectedProject.date}</p>
                   </div>
                 </div>
@@ -1329,7 +1329,7 @@ export function EventTeamDashboard({
                       <div>{selectedProject.projectName}</div>
                     </div>
                     <div className="p-2 bg-white rounded border">
-                      <div className="text-xs text-slate-500 mb-1">開催日</div>
+                      <div className="text-xs text-slate-500 mb-1">実施日</div>
                       <div>{selectedProject.eventDate || selectedProject.date}</div>
                     </div>
                     <div className="p-2 bg-white rounded border">
@@ -1388,7 +1388,7 @@ export function EventTeamDashboard({
                       ["項目", "金額"],
                       ["案件No", cowboyData.projectNumber],
                       ["案件名", cowboyData.projectName],
-                      ["開催日", cowboyData.eventDate],
+                      ["実施日", cowboyData.eventDate],
                       ["キャスティング費用", `¥${cowboyData.castingCost.toLocaleString()}`],
                       ["交通費", `¥${cowboyData.transportationFee.toLocaleString()}`],
                       ["宿泊費", `¥${cowboyData.accommodationFee.toLocaleString()}`],

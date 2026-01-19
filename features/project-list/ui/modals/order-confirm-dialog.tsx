@@ -26,7 +26,7 @@ export type OrderConfirmDialogProps = {
   getStatusBadge: (status?: string) => React.ReactNode
   projectData: ProjectData
   setProjectData: (data: ProjectData) => void
-  updateProject: (id: number, updates: Partial<DemoProject>) => DemoProject | null
+  updateProduct: (id: number, updates: Partial<DemoProject>) => DemoProject | null
   addNotification: (message: string) => void
 }
 
@@ -39,7 +39,7 @@ export function OrderConfirmDialog({
   getStatusBadge,
   projectData,
   setProjectData,
-  updateProject,
+  updateProduct,
   addNotification,
 }: OrderConfirmDialogProps) {
   const initialContractAmount = useMemo(() => extractDigits(project?.estimateAmount ?? ""), [project?.estimateAmount])
@@ -76,7 +76,7 @@ export function OrderConfirmDialog({
       })
 
       if (typeof project.id === "number") {
-        updateProject(project.id, {
+        updateProduct(project.id, {
           status: "ordered",
           projectStatus: "イベントチーム確認中",
         })
@@ -162,7 +162,7 @@ export function OrderConfirmDialog({
                 </div>
                 <div className="flex items-center gap-2 text-slate-600">
                   <Calendar className="h-4 w-4" />
-                  <span>開催日:</span>
+                  <span>実施日:</span>
                   <span className="ml-2 font-medium text-slate-900">{project?.eventDate || project?.date || "-"}</span>
                 </div>
               </div>

@@ -26,11 +26,13 @@ export function ProjectProductCard({ project, projectItem, statusBadge, onClick,
           <div className="flex-1 space-y-4">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">案件No: {projectItem.projectNumber ?? "-"}</span>
+                <div className="flex items-center gap-3 mb-1">
+                  <h3 className="text-base font-semibold text-slate-900">{projectItem.eventProductName || project.projectName}</h3>
                   {statusBadge}
                 </div>
-                <h3 className="text-base font-semibold text-slate-900 mb-1">{projectItem.eventProductName || project.projectName}</h3>
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">案件No: {projectItem.projectNumber ?? "-"}</span>
+                </div>
                 <p className="text-sm text-slate-600">{project.clientName}</p>
               </div>
               <div className="flex flex-col items-end" onClick={(e) => e.stopPropagation()}>
@@ -50,7 +52,7 @@ export function ProjectProductCard({ project, projectItem, statusBadge, onClick,
 
             <div className="grid grid-cols-3 gap-4 pt-3 border-t border-slate-100">
               <div>
-                <div className="text-xs text-slate-500 mb-1">開催日</div>
+                <div className="text-xs text-slate-500 mb-1">実施日</div>
                 <div className="text-sm font-medium text-slate-900 flex items-center gap-1.5">
                   <Calendar className="h-3.5 w-3.5" />
                   {projectItem.eventDate || project.date || "-"}

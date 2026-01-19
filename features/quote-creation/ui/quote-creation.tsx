@@ -61,7 +61,7 @@ DMM の営業担当でございます。
 
 【案件概要】
 案件名: ${projectData.projectName}
-開催日: ${projectData.date}
+実施日: ${projectData.date}
 会場: ${projectData.venue}
 コンパニオン: ${projectData.talent}
 
@@ -199,7 +199,7 @@ DMM 営業部`
                           <span className="font-medium">{projectData.projectName}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-600">開催日:</span>
+                          <span className="text-slate-600">実施日:</span>
                           <span className="font-medium">{projectData.date}</span>
                         </div>
                         <div className="flex justify-between">

@@ -77,7 +77,7 @@ export function ValidationDialog({
                   <span className="ml-2 font-medium">{validationProject?.talent}</span>
                 </div>
                 <div>
-                  <span className="text-slate-600">開催日:</span>
+                  <span className="text-slate-600">実施日:</span>
                   <span className="ml-2 font-medium">{validationProject?.date}</span>
                 </div>
               </div>

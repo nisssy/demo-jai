@@ -150,7 +150,7 @@ export function ProjectArrangements({ projectData, onNext, onBack }: ProjectArra
                   <span className="ml-2 font-medium">{projectData.talent}</span>
                 </div>
                 <div>
-                  <span className="text-slate-600">開催日:</span>
+                  <span className="text-slate-600">実施日:</span>
                   <span className="ml-2 font-medium">{projectData.date}</span>
                 </div>
               </div>
@@ -216,7 +216,7 @@ export function ProjectArrangements({ projectData, onNext, onBack }: ProjectArra
                   <span className="ml-2 font-medium">{projectData.venue}</span>
                 </div>
                 <div>
-                  <span className="text-slate-600">開催日:</span>
+                  <span className="text-slate-600">実施日:</span>
                   <span className="ml-2 font-medium">{projectData.date}</span>
                 </div>
               </div>
@@ -480,7 +480,7 @@ export function ProjectArrangements({ projectData, onNext, onBack }: ProjectArra
             </div>
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-slate-500" />
-              <span className="text-slate-600">開催日:</span>
+              <span className="text-slate-600">実施日:</span>
               <span className="font-medium">{projectData.date}</span>
             </div>
             <div className="flex items-center gap-2">

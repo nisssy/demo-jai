@@ -18,7 +18,7 @@ function ProjectAutoArrangementPageContent() {
   const params = useParams()
   const searchParams = useSearchParams()
   const projectId = params?.id ? (typeof params.id === 'string' ? Number(params.id) : Array.isArray(params.id) ? Number(params.id[0]) : null) : null
-  const { getProjectById, updateProject, addNotification } = useProject()
+  const { getProductById, updateProduct, addNotification } = useProject()
   const [isLoading, setIsLoading] = useState(true)
   const [project, setProject] = useState<DemoProject | null>(null)
   const [autoArrangementChecks, setAutoArrangementChecks] = useState({
@@ -77,9 +77,9 @@ function ProjectAutoArrangementPageContent() {
   }
   
   useEffect(() => {
-    if (projectId !== null && typeof projectId === 'number' && getProjectById && !hasInitialized.current) {
+    if (projectId !== null && typeof projectId === 'number' && getProductById && !hasInitialized.current) {
       hasInitialized.current = true
-      const loadedProject = getProjectById(projectId)
+      const loadedProject = getProductById(projectId)
       if (!loadedProject) {
         addNotification("案件が見つかりませんでした")
         router.push("/")
@@ -113,7 +113,7 @@ function ProjectAutoArrangementPageContent() {
       setIsLoading(false)
       hasInitialized.current = false
     }
-  }, [projectId, getProjectById, router, addNotification])
+  }, [projectId, getProductById, router, addNotification])
 
   if (isLoading) {
     return (
@@ -149,14 +149,14 @@ function ProjectAutoArrangementPageContent() {
     
     if (actions.length > 0) {
       // 投稿文を保存（必要に応じて）
-      if (autoArrangementChecks.xAccount && projectId !== null && typeof projectId === 'number' && updateProject) {
-        updateProject(projectId, {
+      if (autoArrangementChecks.xAccount && projectId !== null && typeof projectId === 'number' && updateProduct) {
+        updateProduct(projectId, {
           xAccountPostText: xAccountPostText,
         })
       }
       // ぱちタウン連携が実行された場合、連携情報を保存
-      if (autoArrangementChecks.pachitown && projectId !== null && typeof projectId === 'number' && updateProject) {
-        updateProject(projectId, {
+      if (autoArrangementChecks.pachitown && projectId !== null && typeof projectId === 'number' && updateProduct) {
+        updateProduct(projectId, {
           pachitownLinked: true,
           pachitownLinkedDate: new Date().toISOString().split('T')[0],
         })
@@ -206,7 +206,7 @@ function ProjectAutoArrangementPageContent() {
                 <p className="font-medium">{project.clientName}</p>
               </div>
               <div>
-                <Label className="text-sm text-slate-600">開催日</Label>
+                <Label className="text-sm text-slate-600">実施日</Label>
                 <p className="font-medium">{project.eventDate || project.date}</p>
               </div>
             </div>

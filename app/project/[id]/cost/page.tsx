@@ -77,7 +77,7 @@ function ProjectCostPageContent() {
   const router = useAppRouter()
   const params = useParams()
   const projectId = params?.id ? Number(params.id) : null
-  const { getProjectById, updateProject, addNotification } = useProject()
+  const { getProductById, updateProduct, addNotification } = useProject()
   const [isLoading, setIsLoading] = useState(true)
   const [project, setProject] = useState<DemoProject | null>(null)
   
@@ -158,9 +158,9 @@ function ProjectCostPageContent() {
   const hasInitialized = useRef(false)
   
   useEffect(() => {
-    if (projectId !== null && typeof projectId === 'number' && getProjectById && !hasInitialized.current) {
+    if (projectId !== null && typeof projectId === 'number' && getProductById && !hasInitialized.current) {
       hasInitialized.current = true
-      const loadedProject = getProjectById(projectId)
+      const loadedProject = getProductById(projectId)
       if (!loadedProject) {
         addNotification("案件が見つかりませんでした")
         router.push("/")
@@ -194,7 +194,7 @@ function ProjectCostPageContent() {
       setIsLoading(false)
       hasInitialized.current = false
     }
-  }, [projectId, getProjectById, router, addNotification, calculateCastingCost])
+  }, [projectId, getProductById, router, addNotification, calculateCastingCost])
 
   // プロジェクトが変更されたらキャスティングコストを再計算
   useEffect(() => {
@@ -224,7 +224,7 @@ function ProjectCostPageContent() {
 
   const handleSave = () => {
     if (!projectId) return
-    updateProject(projectId, {
+    updateProduct(projectId, {
       castingCost: castingCost,
       transportationFee: transportationFee,
       accommodationFee: accommodationFee,
@@ -281,7 +281,7 @@ function ProjectCostPageContent() {
                 <p className="font-medium">{project.clientName}</p>
               </div>
               <div>
-                <Label className="text-sm text-slate-600">開催日</Label>
+                <Label className="text-sm text-slate-600">実施日</Label>
                 <p className="font-medium">{project.eventDate || project.date}</p>
               </div>
             </div>

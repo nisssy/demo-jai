@@ -9,13 +9,13 @@ export default function ProductRegistrationPage() {
   const router = useAppRouter()
   const params = useParams()
   const projectId = params.id ? Number(params.id) : null
-  const { projectData, setProjectData, addNotification, getProjectById } = useProject()
+  const { projectData, setProjectData, addNotification, getProductById } = useProject()
 
   if (!projectId) {
     return <div>案件IDが不正です</div>
   }
 
-  const project = getProjectById(projectId)
+  const project = getProductById(projectId)
   if (!project) {
     return <div>案件が見つかりません</div>
   }
