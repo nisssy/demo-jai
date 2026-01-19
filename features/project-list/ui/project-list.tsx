@@ -178,7 +178,7 @@ export function ProjectList({
   const [searchDateTo, setSearchDateTo] = useState("")
   const [searchCategory, setSearchCategory] = useState<string | null>(null)
   const [searchEventType, setSearchEventType] = useState<string | null>(null)
-
+  
   const parseDate = useCallback((raw?: string | null): Date | null => {
     if (!raw) return null
     const s = String(raw).trim()
@@ -684,8 +684,8 @@ Co・Dir担当`
                         <div className="flex items-center gap-3">
                           <span className="text-sm font-medium text-slate-600 whitespace-nowrap">案件No: {projectNumber}</span>
                           <Badge variant="outline" className="whitespace-nowrap">
-                            {projectProducts.length}件の商材
-                          </Badge>
+                        {projectProducts.length}件の商材
+                      </Badge>
                         </div>
                       </div>
                     </div>
@@ -960,47 +960,47 @@ Co・Dir担当`
 
                         <div className="space-y-3">
                           {projectProducts.map((project) => {
-                            const projectItem: ProjectItem = {
-                              id: project.id,
-                              projectNumber: project.projectNumber,
-                              projectName: project.projectName,
-                              clientName: project.clientName,
-                              talent: project.talent,
-                              date: project.date,
-                              venue: project.venue,
-                              status: project.status,
-                              estimateAmount: project.estimateAmount,
-                              salesPersonName: project.salesPersonName,
-                              requestDate: project.requestDate,
-                              hallName: project.hallName,
-                              hallId: project.hallId,
-                              companyId: project.companyId,
-                              companyName: project.companyName,
-                              projectStatus: project.projectStatus,
-                              category: project.category,
-                              eventType: project.eventType,
-                              eventProductName: project.eventProductName,
-                              eventDate: project.eventDate,
-                            }
-                            const correctionRequest = project.correctionRequest || ""
-                            return (
-                              <ProjectAlertCard
-                                key={project.id}
-                                project={project}
-                                projectItem={projectItem}
-                                statusBadge={getStatusBadge(projectItem.projectStatus)}
-                                alertTitle="修正依頼内容"
-                                alertText={correctionRequest}
-                                actionLabel="修正"
-                                onAction={() => router.push(`/project/${project.id}/correction?tab=corrections`)}
-                              />
+                const projectItem: ProjectItem = {
+                  id: project.id,
+                  projectNumber: project.projectNumber,
+                  projectName: project.projectName,
+                  clientName: project.clientName,
+                  talent: project.talent,
+                  date: project.date,
+                  venue: project.venue,
+                  status: project.status,
+                  estimateAmount: project.estimateAmount,
+                  salesPersonName: project.salesPersonName,
+                  requestDate: project.requestDate,
+                  hallName: project.hallName,
+                  hallId: project.hallId,
+                  companyId: project.companyId,
+                  companyName: project.companyName,
+                  projectStatus: project.projectStatus,
+                  category: project.category,
+                  eventType: project.eventType,
+                  eventProductName: project.eventProductName,
+                  eventDate: project.eventDate,
+                }
+                const correctionRequest = project.correctionRequest || ""
+                return (
+                  <ProjectAlertCard
+                    key={project.id}
+                    project={project}
+                    projectItem={projectItem}
+                    statusBadge={getStatusBadge(projectItem.projectStatus)}
+                    alertTitle="修正依頼内容"
+                    alertText={correctionRequest}
+                    actionLabel="修正"
+                    onAction={() => router.push(`/project/${project.id}/correction?tab=corrections`)}
+                  />
                             )
                           })}
                         </div>
                       </CardContent>
                     </Card>
-                  )
-                })}
+                )
+              })}
             </div>
           )}
         </TabsContent>
@@ -1085,48 +1085,48 @@ Co・Dir担当`
 
                         <div className="space-y-3">
                           {projectProducts.map((project) => {
-                            const projectItem: ProjectItem = {
-                              id: project.id,
-                              projectNumber: project.projectNumber,
-                              projectName: project.projectName,
-                              clientName: project.clientName,
-                              talent: project.talent,
-                              date: project.date,
-                              venue: project.venue,
-                              status: project.status,
-                              estimateAmount: project.estimateAmount,
-                              salesPersonName: project.salesPersonName,
-                              requestDate: project.requestDate,
-                              hallName: project.hallName,
-                              hallId: project.hallId,
-                              companyId: project.companyId,
-                              companyName: project.companyName,
-                              projectStatus: project.projectStatus,
-                              category: project.category,
-                              eventType: project.eventType,
-                              eventProductName: project.eventProductName,
-                              eventDate: project.eventDate,
-                            }
-                            const temporaryHoldFailureComment = project.temporaryHoldFailureComment || ""
-                            return (
-                              <ProjectAlertCard
-                                key={project.id}
-                                project={project}
-                                projectItem={projectItem}
-                                statusBadge={getStatusBadge(projectItem.projectStatus)}
-                                alertTitle="仮押さえ不可の理由"
-                                alertText={temporaryHoldFailureComment}
-                                actionLabel="編集"
-                                actionIcon={<Edit2 className="h-4 w-4" />}
-                                onAction={() => router.push(`/project/${project.id}`)}
-                              />
+                const projectItem: ProjectItem = {
+                  id: project.id,
+                  projectNumber: project.projectNumber,
+                  projectName: project.projectName,
+                  clientName: project.clientName,
+                  talent: project.talent,
+                  date: project.date,
+                  venue: project.venue,
+                  status: project.status,
+                  estimateAmount: project.estimateAmount,
+                  salesPersonName: project.salesPersonName,
+                  requestDate: project.requestDate,
+                  hallName: project.hallName,
+                  hallId: project.hallId,
+                  companyId: project.companyId,
+                  companyName: project.companyName,
+                  projectStatus: project.projectStatus,
+                  category: project.category,
+                  eventType: project.eventType,
+                  eventProductName: project.eventProductName,
+                  eventDate: project.eventDate,
+                }
+                const temporaryHoldFailureComment = project.temporaryHoldFailureComment || ""
+                return (
+                  <ProjectAlertCard
+                    key={project.id}
+                    project={project}
+                    projectItem={projectItem}
+                    statusBadge={getStatusBadge(projectItem.projectStatus)}
+                    alertTitle="仮押さえ不可の理由"
+                    alertText={temporaryHoldFailureComment}
+                    actionLabel="編集"
+                    actionIcon={<Edit2 className="h-4 w-4" />}
+                    onAction={() => router.push(`/project/${project.id}`)}
+                  />
                             )
                           })}
                         </div>
                       </CardContent>
                     </Card>
-                  )
-                })}
+                )
+              })}
             </div>
           )}
         </TabsContent>

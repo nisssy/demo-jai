@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { Check, Download, Eye, EyeOff, Mail, Plus, Send } from "lucide-react"
+import { Check, Download, Mail, Plus, Send } from "lucide-react"
 
 type QuoteStep = "select" | "recipient" | "template" | "quote" | "email"
 
@@ -59,13 +59,12 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
   const [quoteGenerated, setQuoteGenerated] = useState(false)
   const [emailGenerated, setEmailGenerated] = useState(false)
   const [selectedProductsForQuote, setSelectedProductsForQuote] = useState<Set<number>>(new Set())
-  const [showPDF, setShowPDF] = useState(false)
   const [isLoadingSend, setIsLoadingSend] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null)
   const [quoteRecipient, setQuoteRecipient] = useState<QuoteRecipient>("hall")
   const [editableQuoteItems, setEditableQuoteItems] = useState<EditableQuoteItem[]>([])
-  const [editingItemId, setEditingItemId] = useState<string | null>(null)
-  const [editingSubitemId, setEditingSubitemId] = useState<{ itemId: string; subitemId: string } | null>(null)
+  const [isEditingAllItems, setIsEditingAllItems] = useState(false)
+  const editableQuoteItemsBackupRef = useRef<EditableQuoteItem[] | null>(null)
   const quoteItemsScrollRef = useRef<HTMLDivElement>(null)
   const itemRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
 
@@ -150,13 +149,12 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
     setQuoteGenerated(false)
     setEmailGenerated(false)
     setSelectedProductsForQuote(new Set())
-    setShowPDF(false)
     setIsLoadingSend(false)
     setSelectedTemplate(null)
     setQuoteRecipient("hall")
     setEditableQuoteItems([])
-    setEditingItemId(null)
-    setEditingSubitemId(null)
+    setIsEditingAllItems(false)
+    editableQuoteItemsBackupRef.current = null
     itemRefs.current = {}
     setQuoteProjectData({
       projectName: "",
@@ -186,6 +184,55 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
   }
 
   const selectedProjectForQuote = project
+
+  const selectedProducts = useMemo(() => {
+    if (!selectedProjectForQuote) return []
+    return selectedProjectForQuote.products.filter((p) => selectedProductsForQuote.has(p.id))
+  }, [selectedProductsForQuote, selectedProjectForQuote])
+
+  const selectedProductsTotal = useMemo(() => {
+    if (!selectedProjectForQuote) return 0
+    const parseEstimateAmount = (raw?: string) => {
+      if (!raw) return 0
+      const num = Number(String(raw).replace(/[^\d]/g, ""))
+      return Number.isFinite(num) ? num : 0
+    }
+    return selectedProducts.reduce((sum, p) => {
+      const n = typeof p.estimatedBillingAmount === "number" ? p.estimatedBillingAmount : parseEstimateAmount(p.estimateAmount)
+      return sum + (Number.isFinite(n) ? n : 0)
+    }, 0)
+  }, [selectedProducts, selectedProjectForQuote])
+
+  // 商材ごとの項目を計算（見積書編集画面で編集した項目を各商材の比率で分割）
+  const productQuoteItems = useMemo(() => {
+    if (!selectedProjectForQuote || selectedProducts.length === 0 || quoteProjectData.quoteItems.length === 0) return []
+    const parseEstimateAmount = (raw?: string) => {
+      if (!raw) return 0
+      const num = Number(String(raw).replace(/[^\d]/g, ""))
+      return Number.isFinite(num) ? num : 0
+    }
+    const totalAmount = selectedProductsTotal
+    if (totalAmount === 0) return []
+
+    return selectedProducts.map((product) => {
+      const productAmount = typeof product.estimatedBillingAmount === "number" 
+        ? product.estimatedBillingAmount 
+        : parseEstimateAmount(product.estimateAmount)
+      const ratio = totalAmount > 0 ? productAmount / totalAmount : 0
+
+      return {
+        product,
+        items: quoteProjectData.quoteItems.map((item) => ({
+          item: item.item,
+          amount: Math.round(item.amount * ratio),
+          subitems: item.subitems?.map((subitem) => ({
+            item: subitem.item,
+            amount: Math.round(subitem.amount * ratio),
+          })),
+        })),
+      }
+    })
+  }, [selectedProducts, selectedProductsTotal, quoteProjectData.quoteItems, selectedProjectForQuote])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -256,9 +303,17 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
                       <Button
                         onClick={() => {
                           if (selectedProductsForQuote.size > 0) {
-                            const selectedProducts = selectedProjectForQuote.products.filter((p) => selectedProductsForQuote.has(p.id))
                             const firstProduct = selectedProducts[0]
+                            if (!firstProduct) {
+                              addNotification("見積に含める商材が取得できませんでした。再度選択してください。")
+                              setQuoteStep("select")
+                              return
+                            }
                             const hallName = firstProduct.hallName || firstProduct.clientName
+                            const contractAmount = selectedProducts.reduce((sum, p) => {
+                              const v = typeof p.estimatedBillingAmount === "number" ? p.estimatedBillingAmount : Number(String(p.estimateAmount || "").replace(/[^\d]/g, ""))
+                              return sum + (Number.isFinite(v) ? v : 0)
+                            }, 0)
 
                             const defaultItems = [
                               {
@@ -283,7 +338,7 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
                               talentStatus: "available",
                               quoteItems: defaultItems,
                               emailDraft: "",
-                              contractAmount: "",
+                              contractAmount: String(Math.round(contractAmount)),
                               billingAddress: "",
                               status: "proposed",
                               validationErrors: [],
@@ -316,8 +371,14 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
               <div className="flex-1 overflow-y-auto py-4">
                 {selectedProjectForQuote &&
                   (() => {
-                    const selectedProducts = selectedProjectForQuote.products.filter((p) => selectedProductsForQuote.has(p.id))
                     const firstProduct = selectedProducts[0]
+                    if (!firstProduct) {
+                      return (
+                        <div className="bg-slate-50 p-4 rounded-lg">
+                          <div className="text-sm text-slate-700">見積に含める商材が未選択です。前の画面に戻って商材を選択してください。</div>
+                        </div>
+                      )
+                    }
                     const hallName = firstProduct.hallName || firstProduct.clientName
                     const companyName = firstProduct.companyName || ""
 
@@ -385,8 +446,12 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
                 <Button
                   onClick={() => {
                     if (selectedProjectForQuote) {
-                      const selectedProducts = selectedProjectForQuote.products.filter((p) => selectedProductsForQuote.has(p.id))
                       const firstProduct = selectedProducts[0]
+                      if (!firstProduct) {
+                        addNotification("見積に含める商材が未選択です")
+                        setQuoteStep("select")
+                        return
+                      }
                       const hallName = firstProduct.hallName || firstProduct.clientName
                       const companyName = firstProduct.companyName || ""
                       const recipientName = quoteRecipient === "company" ? companyName : hallName
@@ -457,29 +522,71 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-slate-700">見積書項目</h3>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        const newItem: EditableQuoteItem = {
-                          id: `item-${Date.now()}`,
-                          item: "新しい項目",
-                          amount: 0,
-                          visible: true,
-                        }
-                        setEditableQuoteItems([...editableQuoteItems, newItem])
-                        setEditingItemId(newItem.id)
-                        setTimeout(() => {
-                          const itemElement = itemRefs.current[newItem.id]
-                          if (itemElement && quoteItemsScrollRef.current) {
-                            itemElement.scrollIntoView({ behavior: "smooth", block: "center" })
-                          }
-                        }, 100)
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      項目を追加
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {isEditingAllItems ? (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              if (editableQuoteItemsBackupRef.current) {
+                                setEditableQuoteItems(editableQuoteItemsBackupRef.current)
+                              }
+                              editableQuoteItemsBackupRef.current = null
+                              setIsEditingAllItems(false)
+                            }}
+                          >
+                            キャンセル
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              editableQuoteItemsBackupRef.current = null
+                              setIsEditingAllItems(false)
+                            }}
+                          >
+                            保存
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            editableQuoteItemsBackupRef.current = JSON.parse(JSON.stringify(editableQuoteItems)) as EditableQuoteItem[]
+                            setIsEditingAllItems(true)
+                          }}
+                          disabled={editableQuoteItems.length === 0}
+                        >
+                          編集
+                        </Button>
+                      )}
+
+                      {isEditingAllItems && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const newItem: EditableQuoteItem = {
+                              id: `item-${Date.now()}`,
+                              item: "新しい項目",
+                              amount: 0,
+                              visible: true,
+                            }
+                            setEditableQuoteItems([...editableQuoteItems, newItem])
+                            setTimeout(() => {
+                              const itemElement = itemRefs.current[newItem.id]
+                              if (itemElement && quoteItemsScrollRef.current) {
+                                itemElement.scrollIntoView({ behavior: "smooth", block: "center" })
+                              }
+                            }, 100)
+                          }}
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          項目を追加
+                        </Button>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -498,12 +605,13 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
                               <div className="flex items-start gap-3">
                                 <Switch
                                   checked={item.visible}
+                                  disabled={!isEditingAllItems}
                                   onCheckedChange={(checked) => {
                                     setEditableQuoteItems(editableQuoteItems.map((i) => (i.id === item.id ? { ...i, visible: checked } : i)))
                                   }}
                                 />
                                 <div className="flex-1 space-y-2">
-                                  {editingItemId === item.id ? (
+                                  {isEditingAllItems ? (
                                     <div className="space-y-2">
                                       <div className="flex gap-2">
                                         <Input
@@ -523,10 +631,11 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
                                           className="w-32"
                                           placeholder="金額"
                                         />
-                                        <Button size="sm" variant="ghost" onClick={() => setEditingItemId(null)}>
-                                          <Check className="h-4 w-4" />
+                                        <Button size="sm" variant="outline" onClick={() => setEditableQuoteItems(editableQuoteItems.filter((i) => i.id !== item.id))}>
+                                          削除
                                         </Button>
                                       </div>
+
                                       <div className="pl-4 space-y-2 border-l-2 border-slate-200">
                                         {item.subitems && item.subitems.length > 0 && (
                                           <>
@@ -544,48 +653,47 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
                                                     )
                                                   }}
                                                 />
-                                                {editingSubitemId?.itemId === item.id && editingSubitemId?.subitemId === subitem.id ? (
-                                                  <>
-                                                    <Input
-                                                      value={subitem.item}
-                                                      onChange={(e) => {
-                                                        setEditableQuoteItems(
-                                                          editableQuoteItems.map((i) =>
-                                                            i.id === item.id ? { ...i, subitems: i.subitems?.map((s) => (s.id === subitem.id ? { ...s, item: e.target.value } : s)) } : i,
-                                                          ),
-                                                        )
-                                                      }}
-                                                      className="flex-1"
-                                                    />
-                                                    <Input
-                                                      type="number"
-                                                      value={subitem.amount}
-                                                      onChange={(e) => {
-                                                        setEditableQuoteItems(
-                                                          editableQuoteItems.map((i) =>
-                                                            i.id === item.id ? { ...i, subitems: i.subitems?.map((s) => (s.id === subitem.id ? { ...s, amount: Number(e.target.value) } : s)) } : i,
-                                                          ),
-                                                        )
-                                                      }}
-                                                      className="w-32"
-                                                    />
-                                                    <Button size="sm" variant="ghost" onClick={() => setEditingSubitemId(null)}>
-                                                      <Check className="h-4 w-4" />
-                                                    </Button>
-                                                  </>
-                                                ) : (
-                                                  <>
-                                                    <div className="flex-1 text-sm text-slate-700">{subitem.item}</div>
-                                                    <div className="w-32 text-right text-sm text-slate-700">¥{subitem.amount.toLocaleString()}</div>
-                                                    <Button size="sm" variant="ghost" onClick={() => setEditingSubitemId({ itemId: item.id, subitemId: subitem.id })}>
-                                                      編集
-                                                    </Button>
-                                                  </>
-                                                )}
+                                                <Input
+                                                  value={subitem.item}
+                                                  onChange={(e) => {
+                                                    setEditableQuoteItems(
+                                                      editableQuoteItems.map((i) =>
+                                                        i.id === item.id ? { ...i, subitems: i.subitems?.map((s) => (s.id === subitem.id ? { ...s, item: e.target.value } : s)) } : i,
+                                                      ),
+                                                    )
+                                                  }}
+                                                  className="flex-1"
+                                                />
+                                                <Input
+                                                  type="number"
+                                                  value={subitem.amount}
+                                                  onChange={(e) => {
+                                                    setEditableQuoteItems(
+                                                      editableQuoteItems.map((i) =>
+                                                        i.id === item.id ? { ...i, subitems: i.subitems?.map((s) => (s.id === subitem.id ? { ...s, amount: Number(e.target.value) } : s)) } : i,
+                                                      ),
+                                                    )
+                                                  }}
+                                                  className="w-32"
+                                                />
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  onClick={() => {
+                                                    setEditableQuoteItems(
+                                                      editableQuoteItems.map((i) =>
+                                                        i.id === item.id ? { ...i, subitems: (i.subitems || []).filter((s) => s.id !== subitem.id) } : i,
+                                                      ),
+                                                    )
+                                                  }}
+                                                >
+                                                  削除
+                                                </Button>
                                               </div>
                                             ))}
                                           </>
                                         )}
+
                                         <Button
                                           size="sm"
                                           variant="outline"
@@ -597,7 +705,6 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
                                               visible: true,
                                             }
                                             setEditableQuoteItems(editableQuoteItems.map((i) => (i.id === item.id ? { ...i, subitems: [...(i.subitems || []), next] } : i)))
-                                            setEditingSubitemId({ itemId: item.id, subitemId: next.id })
                                           }}
                                         >
                                           内訳を追加
@@ -605,19 +712,26 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
                                       </div>
                                     </div>
                                   ) : (
-                                    <div className="flex items-center justify-between">
-                                      <div>
-                                        <div className="font-medium text-slate-900">{item.item}</div>
-                                        <div className="text-sm text-slate-600">¥{item.amount.toLocaleString()}</div>
+                                    <div className="space-y-2">
+                                      <div className="flex items-center justify-between">
+                                        <div>
+                                          <div className="font-medium text-slate-900">{item.item}</div>
+                                          <div className="text-sm text-slate-600">¥{item.amount.toLocaleString()}</div>
+                                        </div>
                                       </div>
-                                      <div className="flex gap-2">
-                                        <Button size="sm" variant="outline" onClick={() => setEditingItemId(item.id)}>
-                                          編集
-                                        </Button>
-                                        <Button size="sm" variant="outline" onClick={() => setEditableQuoteItems(editableQuoteItems.filter((i) => i.id !== item.id))}>
-                                          削除
-                                        </Button>
-                                      </div>
+
+                                      {item.subitems && item.subitems.length > 0 && (
+                                        <div className="pl-4 space-y-1 border-l-2 border-slate-200">
+                                          {item.subitems
+                                            .filter((s) => s.visible)
+                                            .map((subitem) => (
+                                              <div key={subitem.id} className="flex items-center justify-between text-sm text-slate-600">
+                                                <div className="flex-1">{subitem.item}</div>
+                                                <div className="w-32 text-right">¥{subitem.amount.toLocaleString()}</div>
+                                              </div>
+                                            ))}
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </div>
@@ -645,7 +759,7 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
                         amount: i.amount,
                         subitems: i.subitems?.filter((s) => s.visible).map((s) => ({ item: s.item, amount: s.amount })),
                       }))
-                    const updatedQuoteData: ProjectData = { ...quoteProjectData, quoteItems }
+                    const updatedQuoteData: ProjectData = { ...quoteProjectData, quoteItems, contractAmount: String(Math.round(selectedProductsTotal)) }
                     setQuoteProjectData(updatedQuoteData)
 
                     // 選択された商材に見積生成情報を保存（デモ用）
@@ -661,7 +775,6 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
                         })
                     }
                     setQuoteStep("quote")
-                    setShowPDF(false)
                     setQuoteGenerated(true)
                   }}
                   disabled={editableQuoteItems.filter((i) => i.visible).length === 0}
@@ -678,95 +791,102 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
                 <DialogDescription>生成した見積書を確認してください</DialogDescription>
               </DialogHeader>
 
-              <div className="flex-1 overflow-y-auto py-4 space-y-4 min-h-0">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">PDFプレビュー</Badge>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={() => setShowPDF(!showPDF)} className="gap-2">
-                    {showPDF ? (
-                      <>
-                        <EyeOff className="h-4 w-4" />
-                        PDFを隠す
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="h-4 w-4" />
-                        PDFを表示
-                      </>
-                    )}
-                  </Button>
+              <div className="flex-1 overflow-y-auto py-4 space-y-4 min-h-0" style={{ maxHeight: "calc(85vh - 200px)" }}>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">PDFプレビュー</Badge>
                 </div>
 
-                {showPDF ? (
-                  <div className="bg-white border-2 border-slate-300 rounded-lg shadow-lg p-4">
+                <div className="bg-white border-2 border-slate-300 rounded-lg shadow-lg p-4">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-bold text-slate-900">見積書</h2>
+                      <div className="text-right text-sm text-slate-600">
+                        <div>発行日: {new Date().toLocaleDateString("ja-JP")}</div>
+                        <div>案件No: {selectedProjectForQuote?.projectNumber}</div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="text-lg font-medium">{quoteProjectData.clientName} 御中</div>
+                      <p className="text-sm text-slate-600">下記の通りお見積もりいたします。</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200">
+                      <div>
+                        <div className="text-xs text-slate-500 mb-1">案件名</div>
+                        <div className="font-medium text-slate-900">{quoteProjectData.projectName}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-500 mb-1">実施日</div>
+                        <div className="font-medium text-slate-900">{quoteProjectData.date}</div>
+                      </div>
+                    </div>
+
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h2 className="text-2xl font-bold text-slate-900">見積書</h2>
-                        <div className="text-right text-sm text-slate-600">
-                          <div>発行日: {new Date().toLocaleDateString("ja-JP")}</div>
-                          <div>案件No: {selectedProjectForQuote?.projectNumber}</div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="text-lg font-medium">{quoteProjectData.clientName} 御中</div>
-                        <p className="text-sm text-slate-600">下記の通りお見積もりいたします。</p>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200">
-                        <div>
-                          <div className="text-xs text-slate-500 mb-1">案件名</div>
-                          <div className="font-medium text-slate-900">{quoteProjectData.projectName}</div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-slate-500 mb-1">実施日</div>
-                          <div className="font-medium text-slate-900">{quoteProjectData.date}</div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-3">
-                        <h3 className="font-bold text-slate-900">見積明細</h3>
-                        <table className="w-full border border-slate-300">
-                          <thead className="bg-slate-100">
-                            <tr>
-                              <th className="text-left p-3 text-sm font-medium text-slate-700 border-b border-slate-300">項目</th>
-                              <th className="text-right p-3 text-sm font-medium text-slate-700 border-b border-slate-300">金額</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {quoteProjectData.quoteItems.map((item, idx) => (
-                              <>
-                                <tr key={idx} className="border-b border-slate-200">
-                                  <td className="p-3 text-sm font-medium">{item.item}</td>
-                                  <td className="p-3 text-sm text-right font-medium">¥{item.amount.toLocaleString()}</td>
+                      <h3 className="font-bold text-slate-900">見積明細</h3>
+                      {productQuoteItems.map((productQuote, productIdx) => {
+                        const productName = productQuote.product.eventProductName || productQuote.product.projectName
+                        const productDate = productQuote.product.eventDate || productQuote.product.date
+                        const productTotal = productQuote.items.reduce((sum, item) => sum + item.amount, 0)
+                        return (
+                          <div key={productIdx} className="space-y-2">
+                            <div className="bg-slate-50 p-2 rounded border border-slate-200">
+                              <div className="font-semibold text-slate-900">{productName}</div>
+                              <div className="text-xs text-slate-600">実施日: {productDate}</div>
+                            </div>
+                            <table className="w-full border border-slate-300">
+                              <thead className="bg-slate-100">
+                                <tr>
+                                  <th className="text-left p-3 text-sm font-medium text-slate-700 border-b border-slate-300">項目</th>
+                                  <th className="text-right p-3 text-sm font-medium text-slate-700 border-b border-slate-300">金額</th>
                                 </tr>
-                                {item.subitems?.map((subitem: { item: string; amount: number }, subIdx: number) => (
-                                  <tr key={`${idx}-${subIdx}`} className="border-b border-slate-100 bg-slate-50/50">
-                                    <td className="p-2 pl-6 text-sm text-slate-600">{subitem.item}</td>
-                                    <td className="p-2 text-sm text-right text-slate-600">¥{subitem.amount.toLocaleString()}</td>
-                                  </tr>
+                              </thead>
+                              <tbody>
+                                {productQuote.items.map((item, idx) => (
+                                  <>
+                                    <tr key={idx} className="border-b border-slate-200">
+                                      <td className="p-3 text-sm font-medium">{item.item}</td>
+                                      <td className="p-3 text-sm text-right font-medium">¥{item.amount.toLocaleString()}</td>
+                                    </tr>
+                                    {item.subitems?.map((subitem, subIdx) => (
+                                      <tr key={`${idx}-${subIdx}`} className="border-b border-slate-100 bg-slate-50/50">
+                                        <td className="p-2 pl-6 text-sm text-slate-600">{subitem.item}</td>
+                                        <td className="p-2 text-sm text-right text-slate-600">¥{subitem.amount.toLocaleString()}</td>
+                                      </tr>
+                                    ))}
+                                  </>
                                 ))}
-                              </>
-                            ))}
-                          </tbody>
-                          <tfoot className="bg-slate-100 border-t-2 border-slate-400">
+                              </tbody>
+                              <tfoot className="bg-slate-100 border-t border-slate-300">
+                                <tr>
+                                  <td className="p-2 text-sm font-semibold text-slate-700">小計</td>
+                                  <td className="p-2 text-sm text-right font-semibold text-slate-700">
+                                    ¥{productTotal.toLocaleString()}
+                                  </td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+                        )
+                      })}
+                      <div className="border-t-2 border-slate-400 pt-2">
+                        <table className="w-full">
+                          <tfoot className="bg-slate-100">
                             <tr>
                               <td className="p-3 text-sm font-bold">合計金額（税込）</td>
                               <td className="p-3 text-sm text-right font-bold text-blue-600 text-lg">
-                                ¥{(quoteProjectData.quoteItems?.reduce((sum, item) => sum + item.amount, 0) || 0).toLocaleString()}
+                                ¥{Math.round(selectedProductsTotal).toLocaleString()}
                               </td>
                             </tr>
                           </tfoot>
                         </table>
+                        <div className="text-xs text-slate-500 mt-2">
+                          ※ 合計金額は「選択した商材の合計見積金額」を表示しています
+                        </div>
                       </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="h-64 flex items-center justify-center text-slate-400 border-2 border-dashed border-slate-300 rounded-lg">
-                    PDFプレビューを表示するには「PDFを表示」を押してください
-                  </div>
-                )}
+                </div>
               </div>
 
               <div className="mt-4 flex justify-end gap-2 border-t pt-4 flex-shrink-0">

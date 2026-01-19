@@ -21,7 +21,11 @@ ${quoteData.clientName} 御中
 見積明細:
 ${quoteData.quoteItems.map((item) => `${item.item}: ¥${item.amount.toLocaleString()}`).join("\n")}
 
-合計金額（税込）: ¥${quoteData.quoteItems.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
+${(() => {
+  const explicit = Number(String(quoteData.contractAmount || "").replace(/[^\d]/g, ""))
+  const total = Number.isFinite(explicit) && explicit > 0 ? explicit : quoteData.quoteItems.reduce((sum, item) => sum + item.amount, 0)
+  return `合計金額（税込）: ¥${Math.round(total).toLocaleString()}`
+})()}
 `
 }
 
