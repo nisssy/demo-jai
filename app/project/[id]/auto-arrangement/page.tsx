@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea"
 import { ChevronLeft, Send } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import type { DemoProject } from "@/lib/demo-db/types"
 
 function ProjectAutoArrangementPageContent() {
   const router = useAppRouter()
@@ -19,7 +20,7 @@ function ProjectAutoArrangementPageContent() {
   const projectId = params?.id ? (typeof params.id === 'string' ? Number(params.id) : Array.isArray(params.id) ? Number(params.id[0]) : null) : null
   const { getProjectById, updateProject, addNotification } = useProject()
   const [isLoading, setIsLoading] = useState(true)
-  const [project, setProject] = useState<any>(null)
+  const [project, setProject] = useState<DemoProject | null>(null)
   const [autoArrangementChecks, setAutoArrangementChecks] = useState({
     pachitown: false,
     report: false,
@@ -31,7 +32,7 @@ function ProjectAutoArrangementPageContent() {
   const hasInitialized = useRef(false)
 
   // Xアカウント投稿文を自動生成する関数
-  const generateXAccountPostText = (projectData: any): string => {
+  const generateXAccountPostText = (projectData: DemoProject): string => {
     const eventDate = projectData.eventDate || projectData.date
     const venue = projectData.venue || projectData.hallName || "〇〇店"
     const projectName = projectData.projectName || ""
@@ -48,8 +49,8 @@ function ProjectAutoArrangementPageContent() {
     }
     
     // 確定コンパニオン情報を取得
-    const confirmedCompanions = (projectData as any).confirmedCompanions || []
-    const selectedCompanions = (projectData as any).selectedCompanions || []
+    const confirmedCompanions = projectData.confirmedCompanions || []
+    const selectedCompanions = projectData.selectedCompanions || []
     const companions = confirmedCompanions.length > 0 
       ? confirmedCompanions.filter((c: string) => c && c !== "未定")
       : selectedCompanions.filter((c: string) => c && c !== "未定")
@@ -87,8 +88,8 @@ function ProjectAutoArrangementPageContent() {
       setProject(loadedProject)
       
       // 初期チェック状態を設定
-      const mustSeePublication = (loadedProject as any).mustSeePublication || "不要"
-      const reportRequired = (loadedProject as any).reportRequired || "不要"
+      const mustSeePublication = loadedProject.mustSeePublication || "不要"
+      const reportRequired = loadedProject.reportRequired || "不要"
       
       setAutoArrangementChecks({
         pachitown: mustSeePublication === "要",
@@ -98,7 +99,7 @@ function ProjectAutoArrangementPageContent() {
       })
       
       // 既存の投稿文があれば読み込む、なければ自動生成
-      const existingPostText = (loadedProject as any).xAccountPostText
+      const existingPostText = loadedProject.xAccountPostText
       if (existingPostText) {
         setXAccountPostText(existingPostText)
       } else {
@@ -151,14 +152,14 @@ function ProjectAutoArrangementPageContent() {
       if (autoArrangementChecks.xAccount && projectId !== null && typeof projectId === 'number' && updateProject) {
         updateProject(projectId, {
           xAccountPostText: xAccountPostText,
-        } as any)
+        })
       }
       // ぱちタウン連携が実行された場合、連携情報を保存
       if (autoArrangementChecks.pachitown && projectId !== null && typeof projectId === 'number' && updateProject) {
         updateProject(projectId, {
           pachitownLinked: true,
           pachitownLinkedDate: new Date().toISOString().split('T')[0],
-        } as any)
+        })
       }
       addNotification(`以下の操作を実行しました: ${actions.join("、")}`)
     } else {
@@ -223,7 +224,7 @@ function ProjectAutoArrangementPageContent() {
           <CardContent>
             <div className="space-y-4">
               <div className="space-y-3">
-                {(project as any).mustSeePublication === "要" && (
+                {project.mustSeePublication === "要" && (
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="pachitown"
@@ -237,7 +238,7 @@ function ProjectAutoArrangementPageContent() {
                     </Label>
                   </div>
                 )}
-                {(project as any).reportRequired === "要" && (
+                {project.reportRequired === "要" && (
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="report"

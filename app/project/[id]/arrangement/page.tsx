@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChevronLeft, Send } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import type { DemoProject } from "@/lib/demo-db/types"
 
 function ProjectArrangementPageContent() {
   const router = useAppRouter()
@@ -17,7 +18,7 @@ function ProjectArrangementPageContent() {
   const projectId = params?.id ? (typeof params.id === 'string' ? Number(params.id) : Array.isArray(params.id) ? Number(params.id[0]) : null) : null
   const { getProjectById, updateProject, addNotification } = useProject()
   const [isLoading, setIsLoading] = useState(true)
-  const [project, setProject] = useState<any>(null)
+  const [project, setProject] = useState<DemoProject | null>(null)
   
   // キャスト確定情報の状態
   const [confirmedCompanions, setConfirmedCompanions] = useState<string[]>([])
@@ -173,15 +174,15 @@ function ProjectArrangementPageContent() {
       setProject(loadedProject)
       
       // 既存の確定情報を読み込む
-      const existingConfirmedCompanions = (loadedProject as any).confirmedCompanions || []
-      const existingConfirmedDirectors = (loadedProject as any).confirmedDirectors || []
-      const existingConfirmedMcs = (loadedProject as any).confirmedMcs || []
-      const existingCostumes = (loadedProject as any).companionCostumes || {}
+      const existingConfirmedCompanions = loadedProject.confirmedCompanions || []
+      const existingConfirmedDirectors = loadedProject.confirmedDirectors || []
+      const existingConfirmedMcs = loadedProject.confirmedMcs || []
+      const existingCostumes = loadedProject.companionCostumes || {}
       
       // 案件に登録されたキャスト情報を取得
-      const selectedCompanions = (loadedProject as any).selectedCompanions || []
-      const selectedDirectors = (loadedProject as any).selectedDirectors || []
-      const selectedMcs = (loadedProject as any).selectedMcs || []
+      const selectedCompanions = loadedProject.selectedCompanions || []
+      const selectedDirectors = loadedProject.selectedDirectors || []
+      const selectedMcs = loadedProject.selectedMcs || []
       
       // 必要人数分の配列を初期化
       const companionCount = Number(loadedProject.companionCount) || 0
@@ -272,7 +273,7 @@ function ProjectArrangementPageContent() {
       confirmedDirectors: confirmedDirectors.filter(d => d.trim() !== ""),
       confirmedMcs: confirmedMcs.filter(m => m.trim() !== ""),
       companionCostumes: companionCostumes,
-    } as any)
+    })
     addNotification("手配情報を保存しました")
     // 各種自動手配実行画面に遷移
     router.push(`/project/${projectId}/auto-arrangement`)
@@ -285,7 +286,7 @@ function ProjectArrangementPageContent() {
       confirmedDirectors: confirmedDirectors.filter(d => d.trim() !== ""),
       confirmedMcs: confirmedMcs.filter(m => m.trim() !== ""),
       companionCostumes: companionCostumes,
-    } as any)
+    })
     addNotification("手配情報を保存しました")
     router.push("/")
   }
@@ -299,13 +300,13 @@ function ProjectArrangementPageContent() {
     const currentProject = getProjectById(projectId)
     if (!currentProject) return
     
-    const existingCompanions = (currentProject as any).confirmedCompanions || []
+    const existingCompanions = currentProject.confirmedCompanions || []
     const newCompanions = [...existingCompanions]
     newCompanions[index] = companion
     
     updateProject(projectId, {
       confirmedCompanions: newCompanions.filter(c => c && c.trim() !== ""),
-    } as any)
+    })
     addNotification(`コンパニオン${index + 1}を保存しました`)
   }
 
@@ -317,10 +318,10 @@ function ProjectArrangementPageContent() {
     const currentProject = getProjectById(projectId)
     if (!currentProject) return
     
-    const existingCostumes = (currentProject as any).companionCostumes || {}
+    const existingCostumes = currentProject.companionCostumes || {}
     updateProject(projectId, {
       companionCostumes: { ...existingCostumes, [companionName]: costume },
-    } as any)
+    })
     addNotification(`${companionName}の衣装を保存しました`)
   }
 
@@ -332,13 +333,13 @@ function ProjectArrangementPageContent() {
     const currentProject = getProjectById(projectId)
     if (!currentProject) return
     
-    const existingDirectors = (currentProject as any).confirmedDirectors || []
+    const existingDirectors = currentProject.confirmedDirectors || []
     const newDirectors = [...existingDirectors]
     newDirectors[index] = director
     
     updateProject(projectId, {
       confirmedDirectors: newDirectors.filter(d => d && d.trim() !== ""),
-    } as any)
+    })
     addNotification(`ディレクター${index + 1}を保存しました`)
   }
 
@@ -350,13 +351,13 @@ function ProjectArrangementPageContent() {
     const currentProject = getProjectById(projectId)
     if (!currentProject) return
     
-    const existingMcs = (currentProject as any).confirmedMcs || []
+    const existingMcs = currentProject.confirmedMcs || []
     const newMcs = [...existingMcs]
     newMcs[index] = mc
     
     updateProject(projectId, {
       confirmedMcs: newMcs.filter(m => m && m.trim() !== ""),
-    } as any)
+    })
     addNotification(`MC${index + 1}を保存しました`)
   }
 

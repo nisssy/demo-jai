@@ -1,39 +1,28 @@
 "use client"
 
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react"
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef, ReactNode } from "react"
 import { useToast } from "@/hooks/use-toast"
 import type { ProjectData, Role } from "@/types/project"
+import { clearDemoDbStorage, loadDemoDbFromStorageMeta, saveDemoDbToStorage } from "@/lib/demo-db/storage"
+import type { CompanyData, HallData, DemoProject } from "@/lib/demo-db/types"
+import {
+  addProject,
+  addProjects,
+  findCompanyByCompanyId as findCompanyByCompanyIdRepo,
+  findCompanyById as findCompanyByIdRepo,
+  findHallByName as findHallByNameRepo,
+  findProjectById as findProjectByIdRepo,
+  generateProjectNumber as generateProjectNumberRepo,
+  getHallsByCompanyId as getHallsByCompanyIdRepo,
+  patchProject,
+  removeProject,
+  searchCompanies as searchCompaniesRepo,
+  searchHalls as searchHallsRepo,
+} from "@/lib/demo-db/repository"
 
-type Project = NonNullable<ProjectData["projects"]>[number]
+type Project = DemoProject
 
-type DemoDbSnapshot = {
-  version: number
-  data: {
-    projects: Project[]
-    halls: HallData[]
-    companies: CompanyData[]
-  }
-}
-
-const DEMO_DB_STORAGE_KEY = "demo-jai:demo-db"
-const DEMO_DB_STORAGE_VERSION = 1
-
-// 法人データの型定義
-export type CompanyData = {
-  id: number
-  companyId: string
-  name: string
-}
-
-// ホールデータの型定義
-export type HallData = {
-  id: number
-  hallId: string // ホールID
-  name: string
-  salesPersonName: string
-  companyId: number // 法人IDへの参照
-  discountAmount: number // ホールごとの割引金額（5000円〜50000円）
-}
+export type { CompanyData, HallData }
 
 type ProjectContextType = {
   projectData: ProjectData
@@ -1728,41 +1717,7 @@ const initialProjects: Project[] = [
   },
 ]
 
-function safeParseDemoDbSnapshot(raw: string | null): DemoDbSnapshot | null {
-  if (!raw) return null
-  try {
-    const parsed = JSON.parse(raw) as DemoDbSnapshot
-    if (!parsed || typeof parsed !== "object") return null
-    if (parsed.version !== DEMO_DB_STORAGE_VERSION) return null
-    const data = (parsed as any).data
-    if (!data || typeof data !== "object") return null
-    if (!Array.isArray(data.projects) || !Array.isArray(data.halls) || !Array.isArray(data.companies)) return null
-    return parsed
-  } catch {
-    return null
-  }
-}
-
-function loadDemoDbFromStorage(): DemoDbSnapshot | null {
-  if (typeof window === "undefined") return null
-  const raw = window.localStorage.getItem(DEMO_DB_STORAGE_KEY)
-  return safeParseDemoDbSnapshot(raw)
-}
-
-function saveDemoDbToStorage(data: DemoDbSnapshot["data"]) {
-  if (typeof window === "undefined") return
-  const snapshot: DemoDbSnapshot = {
-    version: DEMO_DB_STORAGE_VERSION,
-    data,
-  }
-  try {
-    window.localStorage.setItem(DEMO_DB_STORAGE_KEY, JSON.stringify(snapshot))
-  } catch {
-    // ignore quota / private mode errors in demo
-  }
-}
-
-function getDemoDbSeed(): DemoDbSnapshot["data"] {
+function getDemoDbSeed() {
   return {
     projects: initialProjects,
     halls: initialHalls,
@@ -1775,22 +1730,25 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<string[]>([])
   const { toast } = useToast()
 
+  const initialSeed = useMemo(() => getDemoDbSeed(), [])
+  const initialLoadMeta = useMemo(() => loadDemoDbFromStorageMeta(), [])
+  const initialDb = initialLoadMeta?.snapshot.data ?? initialSeed
+  const didResaveOnLoad = initialLoadMeta?.didResave ?? false
+  const didNotifyMigrationRef = useRef(false)
+
   // 案件データを独立したstateとして管理（仮想DB）
   const [projects, setProjects] = useState<Project[]>(() => {
-    const loaded = loadDemoDbFromStorage()
-    return loaded?.data.projects ?? getDemoDbSeed().projects
+    return (initialDb.projects as Project[] | undefined) ?? initialSeed.projects
   })
   
   // ホールデータを独立したstateとして管理（仮想DB）
   const [halls, setHalls] = useState<HallData[]>(() => {
-    const loaded = loadDemoDbFromStorage()
-    return loaded?.data.halls ?? getDemoDbSeed().halls
+    return (initialDb.halls as HallData[] | undefined) ?? initialSeed.halls
   })
   
   // 法人データを独立したstateとして管理（仮想DB）
   const [companies, setCompanies] = useState<CompanyData[]>(() => {
-    const loaded = loadDemoDbFromStorage()
-    return loaded?.data.companies ?? getDemoDbSeed().companies
+    return (initialDb.companies as CompanyData[] | undefined) ?? initialSeed.companies
   })
 
   const [projectData, setProjectData] = useState<ProjectData>({
@@ -1823,23 +1781,25 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     saveDemoDbToStorage({ projects, halls, companies })
   }, [projects, halls, companies])
 
-  const addNotification = (message: string) => {
+  const addNotification = useCallback((message: string) => {
     setNotifications((prev) => [message, ...prev])
     toast({
       title: "通知",
       description: message,
     })
-  }
+  }, [toast])
+
+  // localStorage のデモデータを自動マイグレーション/補正した場合は、最初の一回だけ通知する
+  useEffect(() => {
+    if (!didResaveOnLoad) return
+    if (didNotifyMigrationRef.current) return
+    didNotifyMigrationRef.current = true
+    addNotification("保存済みのデモデータを最新形式に更新しました")
+  }, [addNotification, didResaveOnLoad])
 
   const resetDemoData = useCallback(() => {
     const seed = getDemoDbSeed()
-    try {
-      if (typeof window !== "undefined") {
-        window.localStorage.removeItem(DEMO_DB_STORAGE_KEY)
-      }
-    } catch {
-      // ignore
-    }
+    clearDemoDbStorage()
     setCompanies(seed.companies)
     setHalls(seed.halls)
     setProjects(seed.projects)
@@ -1851,85 +1811,40 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     return projects
   }, [projects])
 
-  // 案件Noを生成する関数（数字のみ、1からインクリメント）
-  const generateProjectNumber = useCallback((existingProjects: Project[]): string => {
-    // 既存の案件Noから最大値を取得
-    let maxNumber = 0
-    existingProjects.forEach(p => {
-      if (p.projectNumber) {
-        // 数字のみの形式を想定
-        const num = parseInt(p.projectNumber)
-        if (!isNaN(num) && num > maxNumber) {
-          maxNumber = num
-        }
-      }
+  const generateProjectNumber = useCallback((existingProjects: Project[]) => generateProjectNumberRepo(existingProjects), [])
+
+  const createProject = useCallback((projectInput: Omit<Project, "id">): Project => {
+    let createdProject: Project | null = null
+    setProjects((prev) => {
+      const { nextProjects, created } = addProject(prev, projectInput)
+      createdProject = created as Project
+      setProjectData((pd) => ({ ...pd, projects: nextProjects }))
+      return nextProjects as Project[]
     })
-    
-    const nextNumber = maxNumber + 1
-    return String(nextNumber)
+    if (!createdProject) {
+      throw new Error("Failed to create project")
+    }
+    return createdProject
   }, [])
 
-  const createProject = useCallback((project: Omit<Project, "id">): Project => {
-    const existingProjects = projects
-    const maxId = existingProjects.length > 0 
-      ? Math.max(...existingProjects.map(p => typeof p.id === 'number' ? p.id : 0))
-      : 0
-    
-    // 案件Noが指定されていない場合は自動生成
-    const projectNumber = project.projectNumber || generateProjectNumber(existingProjects)
-    
-    const newProject: Project = {
-      ...project,
-      id: maxId + 1,
-      projectNumber,
-    } as Project
-    setProjects((prev) => {
-      const updated = [...prev, newProject]
-      setProjectData((pd) => ({ ...pd, projects: updated }))
-      return updated
-    })
-    return newProject
-  }, [projects, generateProjectNumber])
-
   const createProjects = useCallback((newProjects: Omit<Project, "id">[]): Project[] => {
-    const existingProjects = projects
-    const maxId = existingProjects.length > 0 
-      ? Math.max(...existingProjects.map(p => typeof p.id === 'number' ? p.id : 0))
-      : 0
-    
-    // 各案件に案件Noを割り当て
-    let currentProjects = [...existingProjects]
-    const projectsWithIds: Project[] = newProjects.map((project, index) => {
-      const projectNumber = project.projectNumber || generateProjectNumber(currentProjects)
-      const newProject: Project = {
-        ...project,
-        id: maxId + index + 1,
-        projectNumber,
-      } as Project
-      currentProjects = [...currentProjects, newProject]
-      return newProject
-    })
-    
+    let createdProjects: Project[] = []
     setProjects((prev) => {
-      const updated = [...prev, ...projectsWithIds]
-      setProjectData((pd) => ({ ...pd, projects: updated }))
-      return updated
+      const { nextProjects, created } = addProjects(prev, newProjects)
+      createdProjects = created as Project[]
+      setProjectData((pd) => ({ ...pd, projects: nextProjects }))
+      return nextProjects as Project[]
     })
-    return projectsWithIds
-  }, [projects, generateProjectNumber])
+    return createdProjects
+  }, [])
 
   const updateProject = useCallback((id: number, updates: Partial<Project>): Project | null => {
     let updatedProject: Project | null = null
     setProjects((prev) => {
-      const updated = prev.map((p) => {
-        if (p.id === id) {
-          updatedProject = { ...p, ...updates } as Project
-          return updatedProject
-        }
-        return p
-      })
-      setProjectData((pd) => ({ ...pd, projects: updated }))
-      return updated
+      const { nextProjects, updated } = patchProject(prev, id, updates)
+      updatedProject = updated as Project | null
+      setProjectData((pd) => ({ ...pd, projects: nextProjects }))
+      return nextProjects as Project[]
     })
     return updatedProject
   }, [])
@@ -1937,21 +1852,16 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const deleteProject = useCallback((id: number): boolean => {
     let deleted = false
     setProjects((prev) => {
-      const filtered = prev.filter((p) => {
-        if (p.id === id) {
-          deleted = true
-          return false
-        }
-        return true
-      })
-      setProjectData((pd) => ({ ...pd, projects: filtered }))
-      return filtered
+      const { nextProjects, removed } = removeProject(prev, id)
+      deleted = removed
+      setProjectData((pd) => ({ ...pd, projects: nextProjects }))
+      return nextProjects as Project[]
     })
     return deleted
   }, [])
 
   const getProjectById = useCallback((id: number): Project | null => {
-    return projects.find((p) => p.id === id) || null
+    return findProjectByIdRepo(projects, id) as Project | null
   }, [projects])
 
   // ホールデータ操作関数
@@ -1960,19 +1870,11 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }, [halls])
 
   const getHallByName = useCallback((name: string): HallData | null => {
-    return halls.find((h) => h.name === name) || null
+    return findHallByNameRepo(halls, name)
   }, [halls])
 
   const searchHalls = useCallback((query: string, companyId?: number): HallData[] => {
-    let filteredHalls = halls
-    // 法人IDでフィルタリング
-    if (companyId !== undefined) {
-      filteredHalls = filteredHalls.filter((h) => h.companyId === companyId)
-    }
-    // クエリでフィルタリング
-    if (!query) return filteredHalls
-    const lowerQuery = query.toLowerCase()
-    return filteredHalls.filter((h) => h.name.toLowerCase().includes(lowerQuery))
+    return searchHallsRepo(halls, query, companyId)
   }, [halls])
 
   // 法人データ操作関数
@@ -1981,24 +1883,19 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }, [companies])
 
   const getCompanyById = useCallback((id: number): CompanyData | null => {
-    return companies.find((c) => c.id === id) || null
+    return findCompanyByIdRepo(companies, id)
   }, [companies])
 
   const getCompanyByCompanyId = useCallback((companyId: string): CompanyData | null => {
-    return companies.find((c) => c.companyId === companyId) || null
+    return findCompanyByCompanyIdRepo(companies, companyId)
   }, [companies])
 
   const searchCompanies = useCallback((query: string): CompanyData[] => {
-    if (!query) return companies
-    const lowerQuery = query.toLowerCase()
-    return companies.filter((c) => 
-      c.name.toLowerCase().includes(lowerQuery) || 
-      c.companyId.toLowerCase().includes(lowerQuery)
-    )
+    return searchCompaniesRepo(companies, query)
   }, [companies])
 
   const getHallsByCompanyId = useCallback((companyId: number): HallData[] => {
-    return halls.filter((h) => h.companyId === companyId)
+    return getHallsByCompanyIdRepo(halls, companyId)
   }, [halls])
 
   return (

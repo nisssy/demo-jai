@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChevronLeft, Send } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import type { DemoProject } from "@/lib/demo-db/types"
 
 // キャストのマスタデータ（時給）- 営業画面と同じ値を使用
 const companionHourlyRates: { [key: string]: number } = {
@@ -78,7 +79,7 @@ function ProjectCostPageContent() {
   const projectId = params?.id ? Number(params.id) : null
   const { getProjectById, updateProject, addNotification } = useProject()
   const [isLoading, setIsLoading] = useState(true)
-  const [project, setProject] = useState<any>(null)
+  const [project, setProject] = useState<DemoProject | null>(null)
   
   // キャスティングコストの状態
   const [castingCost, setCastingCost] = useState(0)
@@ -110,9 +111,9 @@ function ProjectCostPageContent() {
     }
     
     // 確定キャストを使用
-    const confirmedCompanions = (project as any).confirmedCompanions || []
-    const confirmedDirectors = (project as any).confirmedDirectors || []
-    const confirmedMcs = (project as any).confirmedMcs || []
+    const confirmedCompanions = project.confirmedCompanions ?? []
+    const confirmedDirectors = project.confirmedDirectors ?? []
+    const confirmedMcs = project.confirmedMcs ?? []
     const startTime = project.startTime || "08:00"
     const endTime = project.endTime || "15:00"
     const durationHours = getDurationInHours(startTime, endTime)
@@ -168,12 +169,12 @@ function ProjectCostPageContent() {
       setProject(loadedProject)
       
       // 既存のコスト情報を読み込む
-      const existingCastingCost = (loadedProject as any).castingCost || 0
-      const existingTransportationFee = (loadedProject as any).transportationFee || 0
-      const existingAccommodationFee = (loadedProject as any).accommodationFee || 0
-      const existingPostPRCost = (loadedProject as any).postPRCost || 50000
-      const isTransportationAuto = (loadedProject as any).isTransportationAutoFilled || false
-      const isAccommodationAuto = (loadedProject as any).isAccommodationAutoFilled || false
+      const existingCastingCost = loadedProject.castingCost || 0
+      const existingTransportationFee = loadedProject.transportationFee || 0
+      const existingAccommodationFee = loadedProject.accommodationFee || 0
+      const existingPostPRCost = loadedProject.postPRCost || 50000
+      const isTransportationAuto = loadedProject.isTransportationAutoFilled || false
+      const isAccommodationAuto = loadedProject.isAccommodationAutoFilled || false
       
       // キャスティングコストを計算（作成段階で選んでいたキャストから）
       const calculated = calculateCastingCost()
@@ -200,7 +201,7 @@ function ProjectCostPageContent() {
     if (project) {
       const calculated = calculateCastingCost()
       // 既存の値がない場合のみ自動計算値を設定
-      if (!(project as any).castingCost) {
+      if (!project.castingCost) {
         setCastingCost(calculated.cost)
         setCastingBreakdown(calculated.breakdown)
       }
@@ -230,7 +231,7 @@ function ProjectCostPageContent() {
       postPRCost: postPRCost,
       isTransportationAutoFilled: isTransportationAutoFilled,
       isAccommodationAutoFilled: isAccommodationAutoFilled,
-    } as any)
+    })
     addNotification("コスト情報を保存しました")
   }
 

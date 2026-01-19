@@ -27,6 +27,9 @@ export type ProjectData = {
     salesPersonName?: string
     requestDate?: string
     hallName?: string
+    hallId?: string
+    companyId?: string
+    companyName?: string
     projectStatus?: string
     category?: string
     eventType?: string
@@ -41,7 +44,6 @@ export type ProjectData = {
     selectedCompanions?: string[]
     selectedDirectors?: string[]
     selectedMcs?: string[]
-    correctionRequest?: string
     correctionComment?: string
     temporaryHoldFailureComment?: string
     confirmedCompanions?: string[]
@@ -53,6 +55,26 @@ export type ProjectData = {
     publicationDate?: string // 掲載日
     publicationTime?: string // 掲載時刻
     reportRequired?: string // レポート要否 (要か不要)
+    pachitownLinked?: boolean
+    pachitownLinkedDate?: string
+    xAccountPostText?: string
+    surveySent?: boolean
+    surveySentDate?: string
+    surveyResult?: {
+      satisfaction?: string
+      comment?: string
+      nextEventDesired?: string
+    }
+    castingCost?: number
+    transportationFee?: number
+    accommodationFee?: number
+    postPRCost?: number
+    isTransportationAutoFilled?: boolean
+    isAccommodationAutoFilled?: boolean
+    correctionRequest?: string
+    // 見積書作成モーダルで保存するデモ用フィールド
+    quoteGenerated?: boolean
+    quoteData?: ProjectData
   }>
 }
 

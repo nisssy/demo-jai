@@ -29,9 +29,9 @@ function ProjectCorrectionPageContent() {
         return
       }
       // 既存のコメントがあれば読み込む
-      setCorrectionComment((project as any).correctionComment || "")
+      setCorrectionComment(project.correctionComment || "")
       // 修正依頼内容を読み込む
-      setCorrectionRequest((project as any).correctionRequest || "")
+      setCorrectionRequest(project.correctionRequest || "")
       setIsLoading(false)
     } else {
       setIsLoading(false)
@@ -63,7 +63,7 @@ function ProjectCorrectionPageContent() {
     updateProject(projectId, {
       projectStatus: "イベントチーム確認中",
       correctionComment: correctionComment,
-    } as any)
+    })
     
     addNotification("修正を完了しました")
     
