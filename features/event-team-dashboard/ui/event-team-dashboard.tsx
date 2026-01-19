@@ -51,6 +51,16 @@ export function EventTeamDashboard({
   })
   const [showSurveyResultModal, setShowSurveyResultModal] = useState(false)
   const [showCostExportModal, setShowCostExportModal] = useState(false)
+  const [costExportDateFrom, setCostExportDateFrom] = useState("")
+  const [costExportDateTo, setCostExportDateTo] = useState("")
+  const [costExportFormat, setCostExportFormat] = useState<"billing" | "cowboy">("billing")
+  const [costExportStatuses, setCostExportStatuses] = useState<{
+    inProgress: boolean
+    postEvent: boolean
+  }>({
+    inProgress: true,
+    postEvent: true,
+  })
   // 旧「仮押さえ不可」モーダル（キャスト別に置き換えたため、実質未使用だが破壊的変更を避けるため残す）
   const [showTemporaryHoldFailureModal, setShowTemporaryHoldFailureModal] = useState(false)
   const [temporaryHoldFailureComment, setTemporaryHoldFailureComment] = useState("")
@@ -430,6 +440,16 @@ export function EventTeamDashboard({
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-slate-900">イベントチーム ダッシュボード</h1>
+        <Button
+          variant="outline"
+          onClick={() => {
+            setShowCostExportModal(true)
+          }}
+          className="gap-2"
+        >
+          <Download className="h-4 w-4" />
+          コスト出力
+        </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)} className="w-full">
@@ -941,6 +961,9 @@ export function EventTeamDashboard({
                               <TableCell>{getStatusBadge(project.projectStatus || "")}</TableCell>
                               <TableCell className="sticky right-0 bg-white z-10">
                                 <div className="flex gap-2">
+                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                    アンケート送付済み
+                                  </Badge>
                                   <Button
                                     size="sm"
                                     variant="default"
@@ -955,41 +978,13 @@ export function EventTeamDashboard({
                                     size="sm"
                                     variant="outline"
                                     onClick={() => {
-                                      // クライアントへのアンケート送付
-                                      updateProduct(project.id, { surveySent: true, surveySentDate: new Date().toISOString().split('T')[0] })
-                                      addNotification("クライアントへのアンケートを送付しました")
-                                    }}
-                                    className="gap-2"
-                                    disabled={project.surveySent === true}
-                                  >
-                                    <Mail className="h-4 w-4" />
-                                    {project.surveySent ? "アンケート送付済み" : "アンケート送付"}
-                                  </Button>
-                                  {project.surveySent && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => {
-                                        setSelectedProject(project)
-                                        setShowSurveyResultModal(true)
-                                      }}
-                                      className="gap-2"
-                                    >
-                                      <FileText className="h-4 w-4" />
-                                      アンケート結果
-                                    </Button>
-                                  )}
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => {
                                       setSelectedProject(project)
-                                      setShowCostExportModal(true)
+                                      setShowSurveyResultModal(true)
                                     }}
                                     className="gap-2"
                                   >
-                                    <Download className="h-4 w-4" />
-                                    コスト出力
+                                    <FileText className="h-4 w-4" />
+                                    アンケート結果
                                   </Button>
                                 </div>
                               </TableCell>
@@ -1834,155 +1829,284 @@ export function EventTeamDashboard({
       </Dialog>
 
       {/* コストデータ出力モーダル */}
-      <Dialog open={showCostExportModal} onOpenChange={setShowCostExportModal}>
+      <Dialog open={showCostExportModal} onOpenChange={(open) => {
+        setShowCostExportModal(open)
+        if (!open) {
+          setCostExportDateFrom("")
+          setCostExportDateTo("")
+          setCostExportFormat("billing")
+          setCostExportStatuses({
+            inProgress: true,
+            postEvent: true,
+          })
+        }
+      }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>コストデータ出力（Cowboy形式）</DialogTitle>
+            <DialogTitle>コストデータ出力</DialogTitle>
             <DialogDescription>
-              会計システム（Cowboy）へのデータエクスポート
+              期間を指定して複数案件のコストデータを出力します
             </DialogDescription>
           </DialogHeader>
-          {selectedProject && (
+          <div className="space-y-6">
+            {/* 期間指定 */}
             <div className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Left: 生データ */}
-                <div className="border-2 border-slate-200 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Badge variant="secondary">DMM 生データ</Badge>
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="p-2 bg-slate-50 rounded">
-                      <div className="font-medium">キャスティング</div>
-                      <div className="text-slate-600">¥{(selectedProject.castingCost || 0).toLocaleString()}</div>
-                    </div>
-                    <div className="p-2 bg-slate-50 rounded">
-                      <div className="font-medium">交通費</div>
-                      <div className="text-slate-600">¥{(selectedProject.transportationFee || 0).toLocaleString()}</div>
-                    </div>
-                    <div className="p-2 bg-slate-50 rounded">
-                      <div className="font-medium">宿泊費</div>
-                      <div className="text-slate-600">¥{(selectedProject.accommodationFee || 0).toLocaleString()}</div>
-                    </div>
-                    <div className="p-2 bg-slate-50 rounded">
-                      <div className="font-medium">ポストPR</div>
-                      <div className="text-slate-600">¥{(selectedProject.postPRCost || 0).toLocaleString()}</div>
-                    </div>
-                    <div className="p-2 bg-blue-50 rounded border border-blue-200">
-                      <div className="font-medium">合計</div>
-                      <div className="text-blue-600 font-semibold">
-                        ¥{(
-                          (selectedProject.castingCost || 0) +
-                          (selectedProject.transportationFee || 0) +
-                          (selectedProject.accommodationFee || 0) +
-                          (selectedProject.postPRCost || 0)
-                        ).toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="costExportDateFrom">開始日</Label>
+                  <Input
+                    id="costExportDateFrom"
+                    type="date"
+                    value={costExportDateFrom}
+                    onChange={(e) => setCostExportDateFrom(e.target.value)}
+                  />
                 </div>
-
-                {/* Right: Cowboy Format */}
-                <div className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50/30">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Badge className="bg-blue-600 text-white">Cowboy形式</Badge>
-                  </div>
-                  <div className="space-y-2 text-sm font-mono">
-                    <div className="p-2 bg-white rounded border">
-                      <div className="text-xs text-slate-500 mb-1">案件No</div>
-                      <div>{selectedProject.projectNumber}</div>
-                    </div>
-                    <div className="p-2 bg-white rounded border">
-                      <div className="text-xs text-slate-500 mb-1">案件名</div>
-                      <div>{selectedProject.projectName}</div>
-                    </div>
-                    <div className="p-2 bg-white rounded border">
-                      <div className="text-xs text-slate-500 mb-1">実施日</div>
-                      <div>{selectedProject.eventDate || selectedProject.date}</div>
-                    </div>
-                    <div className="p-2 bg-white rounded border">
-                      <div className="text-xs text-slate-500 mb-1">キャスティング費用</div>
-                      <div>¥{(selectedProject.castingCost || 0).toLocaleString()}</div>
-                    </div>
-                    <div className="p-2 bg-white rounded border">
-                      <div className="text-xs text-slate-500 mb-1">交通費</div>
-                      <div>¥{(selectedProject.transportationFee || 0).toLocaleString()}</div>
-                    </div>
-                    <div className="p-2 bg-white rounded border">
-                      <div className="text-xs text-slate-500 mb-1">宿泊費</div>
-                      <div>¥{(selectedProject.accommodationFee || 0).toLocaleString()}</div>
-                    </div>
-                    <div className="p-2 bg-white rounded border">
-                      <div className="text-xs text-slate-500 mb-1">PR費用</div>
-                      <div>¥{(selectedProject.postPRCost || 0).toLocaleString()}</div>
-                    </div>
-                    <div className="p-2 bg-blue-100 rounded border-2 border-blue-300">
-                      <div className="text-xs text-slate-500 mb-1">合計金額</div>
-                      <div className="font-bold text-blue-700">
-                        ¥{(
-                          (selectedProject.castingCost || 0) +
-                          (selectedProject.transportationFee || 0) +
-                          (selectedProject.accommodationFee || 0) +
-                          (selectedProject.postPRCost || 0)
-                        ).toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="costExportDateTo">終了日</Label>
+                  <Input
+                    id="costExportDateTo"
+                    type="date"
+                    value={costExportDateTo}
+                    onChange={(e) => setCostExportDateTo(e.target.value)}
+                  />
                 </div>
-              </div>
-              
-              <div className="border-t pt-4">
-                <Button
-                  onClick={() => {
-                    // Cowboy形式のCSVデータを生成
-                    const cowboyData = {
-                      projectNumber: selectedProject.projectNumber,
-                      projectName: selectedProject.projectName,
-                      eventDate: selectedProject.eventDate || selectedProject.date,
-                      castingCost: selectedProject.castingCost || 0,
-                      transportationFee: selectedProject.transportationFee || 0,
-                      accommodationFee: selectedProject.accommodationFee || 0,
-                      postPRCost: selectedProject.postPRCost || 0,
-                      total: (
-                        (selectedProject.castingCost || 0) +
-                        (selectedProject.transportationFee || 0) +
-                        (selectedProject.accommodationFee || 0) +
-                        (selectedProject.postPRCost || 0)
-                      )
-                    }
-                    
-                    // CSV形式でダウンロード
-                    const csvContent = [
-                      ["項目", "金額"],
-                      ["案件No", cowboyData.projectNumber],
-                      ["案件名", cowboyData.projectName],
-                      ["実施日", cowboyData.eventDate],
-                      ["キャスティング費用", `¥${cowboyData.castingCost.toLocaleString()}`],
-                      ["交通費", `¥${cowboyData.transportationFee.toLocaleString()}`],
-                      ["宿泊費", `¥${cowboyData.accommodationFee.toLocaleString()}`],
-                      ["PR費用", `¥${cowboyData.postPRCost.toLocaleString()}`],
-                      ["合計", `¥${cowboyData.total.toLocaleString()}`],
-                    ].map(row => row.join(",")).join("\n")
-                    
-                    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-                    const link = document.createElement("a")
-                    const url = URL.createObjectURL(blob)
-                    link.setAttribute("href", url)
-                    link.setAttribute("download", `cost_${selectedProject.projectNumber}_${cowboyData.eventDate.replace(/\//g, "-")}.csv`)
-                    link.style.visibility = "hidden"
-                    document.body.appendChild(link)
-                    link.click()
-                    document.body.removeChild(link)
-                    
-                    addNotification("コストデータをCowboy形式で出力しました")
-                  }}
-                  className="w-full gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  Cowboy形式でダウンロード
-                </Button>
               </div>
             </div>
-          )}
+
+            {/* ステータス選択 */}
+            <div className="space-y-2">
+              <Label>対象ステータス</Label>
+              <div className="flex flex-col gap-3 p-4 border border-slate-200 rounded-lg bg-slate-50">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="status-in-progress"
+                    checked={costExportStatuses.inProgress}
+                    onCheckedChange={(checked) => {
+                      setCostExportStatuses((prev) => ({ ...prev, inProgress: checked === true }))
+                    }}
+                  />
+                  <Label htmlFor="status-in-progress" className="text-sm font-medium cursor-pointer">
+                    手配進行中
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="status-post-event"
+                    checked={costExportStatuses.postEvent}
+                    onCheckedChange={(checked) => {
+                      setCostExportStatuses((prev) => ({ ...prev, postEvent: checked === true }))
+                    }}
+                  />
+                  <Label htmlFor="status-post-event" className="text-sm font-medium cursor-pointer">
+                    イベント終了処理中
+                  </Label>
+                </div>
+              </div>
+            </div>
+
+            {/* 出力形式選択 */}
+            <div className="space-y-2">
+              <Label>出力形式</Label>
+              <Select value={costExportFormat} onValueChange={(value) => setCostExportFormat(value as "billing" | "cowboy")}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="billing">請求データ(CSV)</SelectItem>
+                  <SelectItem value="cowboy">Cowboy形式</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 対象案件一覧 */}
+            {(() => {
+              if (!costExportDateFrom || !costExportDateTo) {
+                return (
+                  <div className="text-center py-8 text-slate-500">
+                    開始日と終了日を選択してください
+                  </div>
+                )
+              }
+
+              if (!costExportStatuses.inProgress && !costExportStatuses.postEvent) {
+                return (
+                  <div className="text-center py-8 text-slate-500">
+                    少なくとも1つのステータスを選択してください
+                  </div>
+                )
+              }
+
+              const fromDate = new Date(costExportDateFrom)
+              const toDate = new Date(costExportDateTo)
+              toDate.setHours(23, 59, 59, 999)
+
+              const targetProjects = allProjects.filter((p) => {
+                const eventDate = p.eventDate || p.date
+                if (!eventDate) return false
+                const dateStr = eventDate.replace(/-/g, "/")
+                const [year, month, day] = dateStr.split("/").map(Number)
+                if (isNaN(year) || isNaN(month) || isNaN(day)) return false
+                const projectDate = new Date(year, month - 1, day)
+                projectDate.setHours(0, 0, 0, 0)
+                
+                // 日付範囲チェック
+                if (projectDate < fromDate || projectDate > toDate) return false
+                
+                // ステータスチェック
+                const statusMatch = 
+                  (costExportStatuses.inProgress && p.projectStatus === "手配進行中") ||
+                  (costExportStatuses.postEvent && p.projectStatus === "イベント終了処理中")
+                
+                return statusMatch
+              })
+
+              if (targetProjects.length === 0) {
+                return (
+                  <div className="text-center py-8 text-slate-500">
+                    指定期間内に対象案件がありません
+                  </div>
+                )
+              }
+
+              const totalAmount = targetProjects.reduce((sum, p) => {
+                return sum + (
+                  (p.castingCost || 0) +
+                  (p.transportationFee || 0) +
+                  (p.accommodationFee || 0) +
+                  (p.postPRCost || 0)
+                )
+              }, 0)
+
+              return (
+                <div className="space-y-4">
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-slate-700">対象案件数</span>
+                      <span className="text-lg font-semibold text-slate-900">{targetProjects.length}件</span>
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-sm font-medium text-slate-700">合計金額</span>
+                      <span className="text-lg font-semibold text-blue-600">¥{Math.round(totalAmount).toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  <div className="border border-slate-200 rounded-lg overflow-hidden">
+                    <div className="max-h-[300px] overflow-y-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>案件名</TableHead>
+                            <TableHead>案件No</TableHead>
+                            <TableHead>実施日</TableHead>
+                            <TableHead className="text-right">合計金額</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {targetProjects.map((project) => {
+                            const projectTotal = (
+                              (project.castingCost || 0) +
+                              (project.transportationFee || 0) +
+                              (project.accommodationFee || 0) +
+                              (project.postPRCost || 0)
+                            )
+                            return (
+                              <TableRow key={project.id}>
+                                <TableCell className="font-medium">{project.projectName}</TableCell>
+                                <TableCell>{project.projectNumber}</TableCell>
+                                <TableCell>{project.eventDate || project.date}</TableCell>
+                                <TableCell className="text-right">¥{Math.round(projectTotal).toLocaleString()}</TableCell>
+                              </TableRow>
+                            )
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <Button
+                      onClick={() => {
+                        if (costExportFormat === "billing") {
+                          // 請求データ(CSV)形式で出力
+                          const csvRows = [
+                            ["案件No", "案件名", "実施日", "キャスティング費用", "交通費", "宿泊費", "PR費用", "合計金額"],
+                            ...targetProjects.map((p) => {
+                              const total = (
+                                (p.castingCost || 0) +
+                                (p.transportationFee || 0) +
+                                (p.accommodationFee || 0) +
+                                (p.postPRCost || 0)
+                              )
+                              return [
+                                p.projectNumber || "",
+                                p.projectName || "",
+                                p.eventDate || p.date || "",
+                                String(p.castingCost || 0),
+                                String(p.transportationFee || 0),
+                                String(p.accommodationFee || 0),
+                                String(p.postPRCost || 0),
+                                String(Math.round(total)),
+                              ]
+                            }),
+                          ]
+                          const csvContent = csvRows.map(row => row.join(",")).join("\n")
+                          const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+                          const link = document.createElement("a")
+                          const url = URL.createObjectURL(blob)
+                          link.setAttribute("href", url)
+                          link.setAttribute("download", `billing_${costExportDateFrom}_${costExportDateTo}.csv`)
+                          link.style.visibility = "hidden"
+                          document.body.appendChild(link)
+                          link.click()
+                          document.body.removeChild(link)
+                          addNotification(`請求データ(CSV)を出力しました（${targetProjects.length}件）`)
+                        } else {
+                          // Cowboy形式で出力
+                          const csvRows = [
+                            ["案件No", "案件名", "実施日", "キャスティング費用", "交通費", "宿泊費", "PR費用", "合計金額"],
+                            ...targetProjects.map((p) => {
+                              const total = (
+                                (p.castingCost || 0) +
+                                (p.transportationFee || 0) +
+                                (p.accommodationFee || 0) +
+                                (p.postPRCost || 0)
+                              )
+                              return [
+                                p.projectNumber || "",
+                                p.projectName || "",
+                                p.eventDate || p.date || "",
+                                `¥${(p.castingCost || 0).toLocaleString()}`,
+                                `¥${(p.transportationFee || 0).toLocaleString()}`,
+                                `¥${(p.accommodationFee || 0).toLocaleString()}`,
+                                `¥${(p.postPRCost || 0).toLocaleString()}`,
+                                `¥${Math.round(total).toLocaleString()}`,
+                              ]
+                            }),
+                          ]
+                          const csvContent = csvRows.map(row => row.join(",")).join("\n")
+                          const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+                          const link = document.createElement("a")
+                          const url = URL.createObjectURL(blob)
+                          link.setAttribute("href", url)
+                          link.setAttribute("download", `cowboy_${costExportDateFrom}_${costExportDateTo}.csv`)
+                          link.style.visibility = "hidden"
+                          document.body.appendChild(link)
+                          link.click()
+                          document.body.removeChild(link)
+                          addNotification(`Cowboy形式で出力しました（${targetProjects.length}件）`)
+                        }
+                      }}
+                      className="w-full gap-2"
+                      disabled={!costExportDateFrom || !costExportDateTo || (!costExportStatuses.inProgress && !costExportStatuses.postEvent) || targetProjects.length === 0}
+                    >
+                      <Download className="h-4 w-4" />
+                      {costExportFormat === "billing" ? "請求データ(CSV)でダウンロード" : "Cowboy形式でダウンロード"}
+                    </Button>
+                  </div>
+                </div>
+              )
+            })()}
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCostExportModal(false)}>
               閉じる
