@@ -6,7 +6,7 @@ export type ProjectData = {
   date: string
   venue: string
   talent: string
-  talentStatus: "available" | "busy"
+  talentStatus: "available" | "tentative" | "busy"
   quoteItems: Array<{ item: string; amount: number; subitems?: Array<{ item: string; amount: number }> }>
   emailDraft: string
   contractAmount: string
@@ -44,6 +44,14 @@ export type ProjectData = {
     selectedCompanions?: string[]
     selectedDirectors?: string[]
     selectedMcs?: string[]
+    /** キャストごとのブッキング状態（商材の実施期間に対する 本押さえ/仮押さえ） */
+    companionBookingStatus?: Record<string, "tentative" | "confirmed">
+    directorBookingStatus?: Record<string, "tentative" | "confirmed">
+    mcBookingStatus?: Record<string, "tentative" | "confirmed">
+    /** キャストごとの「仮押さえ不可」理由（入っているキャストは仮押さえ不可扱い） */
+    companionTentativeHoldFailureComment?: Record<string, string>
+    directorTentativeHoldFailureComment?: Record<string, string>
+    mcTentativeHoldFailureComment?: Record<string, string>
     correctionComment?: string
     temporaryHoldFailureComment?: string
     confirmedCompanions?: string[]

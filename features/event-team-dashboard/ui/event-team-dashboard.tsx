@@ -4,12 +4,15 @@ import { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calendar, MapPin, User, Building2, CheckCircle2, XCircle, Eye, Send, FileText, Download, Mail } from "lucide-react"
 import type { ProjectData } from "@/types/project"
 import { useProject } from "@/contexts/project-context"
@@ -47,8 +50,64 @@ export function EventTeamDashboard({
   })
   const [showSurveyResultModal, setShowSurveyResultModal] = useState(false)
   const [showCostExportModal, setShowCostExportModal] = useState(false)
+  // 旧「仮押さえ不可」モーダル（キャスト別に置き換えたため、実質未使用だが破壊的変更を避けるため残す）
   const [showTemporaryHoldFailureModal, setShowTemporaryHoldFailureModal] = useState(false)
   const [temporaryHoldFailureComment, setTemporaryHoldFailureComment] = useState("")
+
+  // 仮押さえ進捗（キャストごと）
+  const [draftCompanionBookingStatus, setDraftCompanionBookingStatus] = useState<Record<string, "tentative" | "confirmed">>({})
+  const [draftDirectorBookingStatus, setDraftDirectorBookingStatus] = useState<Record<string, "tentative" | "confirmed">>({})
+  const [draftMcBookingStatus, setDraftMcBookingStatus] = useState<Record<string, "tentative" | "confirmed">>({})
+  const [draftCompanionFailureComment, setDraftCompanionFailureComment] = useState<Record<string, string>>({})
+  const [draftDirectorFailureComment, setDraftDirectorFailureComment] = useState<Record<string, string>>({})
+  const [draftMcFailureComment, setDraftMcFailureComment] = useState<Record<string, string>>({})
+
+  const normalizeSelectedNames = (raw?: unknown) => {
+    if (!Array.isArray(raw)) return [] as string[]
+    return raw
+      .map((x) => (typeof x === "string" ? x.trim() : ""))
+      .filter((x) => x && x !== "未定")
+  }
+
+  const computeTentativeProgress = (
+    names: string[],
+    status: Record<string, "tentative" | "confirmed">,
+    failure: Record<string, string>,
+  ) => {
+    const done = names.filter((n) => status[n] === "tentative" || status[n] === "confirmed" || !!failure[n]).length
+    return { done, total: names.length }
+  }
+
+  const computeNextProjectStatusFromDraft = (project: Project) => {
+    const selectedCompanions = normalizeSelectedNames((project as any).selectedCompanions)
+    const selectedDirectors = normalizeSelectedNames((project as any).selectedDirectors)
+    const selectedMcs = normalizeSelectedNames((project as any).selectedMcs)
+
+    const allDone =
+      computeTentativeProgress(selectedCompanions, draftCompanionBookingStatus, draftCompanionFailureComment).done === selectedCompanions.length &&
+      computeTentativeProgress(selectedDirectors, draftDirectorBookingStatus, draftDirectorFailureComment).done === selectedDirectors.length &&
+      computeTentativeProgress(selectedMcs, draftMcBookingStatus, draftMcFailureComment).done === selectedMcs.length
+
+    const hasAnyFailure =
+      Object.keys(draftCompanionFailureComment).length > 0 ||
+      Object.keys(draftDirectorFailureComment).length > 0 ||
+      Object.keys(draftMcFailureComment).length > 0
+
+    if (allDone && !hasAnyFailure) return "仮押さえ済み"
+    if (allDone && hasAnyFailure) return "営業確認中"
+    return "仮押さえ依頼"
+  }
+
+  useEffect(() => {
+    if (!selectedProject || !showCastingInfoModal) return
+    const proj: any = selectedProject
+    setDraftCompanionBookingStatus((proj.companionBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">)
+    setDraftDirectorBookingStatus((proj.directorBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">)
+    setDraftMcBookingStatus((proj.mcBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">)
+    setDraftCompanionFailureComment((proj.companionTentativeHoldFailureComment ?? {}) as Record<string, string>)
+    setDraftDirectorFailureComment((proj.directorTentativeHoldFailureComment ?? {}) as Record<string, string>)
+    setDraftMcFailureComment((proj.mcTentativeHoldFailureComment ?? {}) as Record<string, string>)
+  }, [selectedProject, showCastingInfoModal])
 
   // モーダルを開く際に、初期チェック状態を設定
   const handleOpenAutoArrangementModal = (project: Project) => {
@@ -210,42 +269,97 @@ export function EventTeamDashboard({
   }
 
   const handleTemporaryHold = (project: Project) => {
-    setSelectedProject(project)
-    setShowTemporaryHoldModal(true)
+    // 旧: 直接「仮押さえ完了」モーダルへ
+    // 新: キャストごとの進捗（部分完了）を操作できるキャスティング情報へ誘導
+    handleViewCastingInfo(project)
   }
 
   const handleConfirmTemporaryHoldFromCasting = () => {
-    setShowCastingInfoModal(false)
-    if (selectedProject) {
-      setShowTemporaryHoldModal(true)
+    // 「キャスティング情報」内でチェックした内容を保存して閉じる
+    if (!selectedProject) return
+    const nextProjectStatus = computeNextProjectStatusFromDraft(selectedProject)
+
+    const failureSummaryParts: string[] = []
+    const pushFailureSummary = (label: string, map: Record<string, string>) => {
+      Object.entries(map).forEach(([name, comment]) => {
+        const c = String(comment ?? "").trim()
+        failureSummaryParts.push(`${label}:${name}${c ? `（${c}）` : ""}`)
+      })
     }
+    pushFailureSummary("Co", draftCompanionFailureComment)
+    pushFailureSummary("Dir", draftDirectorFailureComment)
+    pushFailureSummary("MC", draftMcFailureComment)
+    const temporaryHoldFailureComment = failureSummaryParts.length > 0 ? failureSummaryParts.join(" / ") : undefined
+
+    updateProduct(selectedProject.id, {
+      companionBookingStatus: draftCompanionBookingStatus,
+      directorBookingStatus: draftDirectorBookingStatus,
+      mcBookingStatus: draftMcBookingStatus,
+      companionTentativeHoldFailureComment: draftCompanionFailureComment,
+      directorTentativeHoldFailureComment: draftDirectorFailureComment,
+      mcTentativeHoldFailureComment: draftMcFailureComment,
+      projectStatus: nextProjectStatus,
+      temporaryHoldFailureComment,
+    })
+    addNotification("仮押さえ状況を保存しました")
+    setShowCastingInfoModal(false)
   }
 
   const handleConfirmTemporaryHold = () => {
     if (!selectedProject) return
-    updateProduct(selectedProject.id, { projectStatus: "仮押さえ済み" })
+
+    const selectedCompanions = (selectedProject.selectedCompanions ?? []).filter((n: string) => n && n !== "未定")
+    const selectedDirectors = (selectedProject.selectedDirectors ?? []).filter((n: string) => n && n !== "未定")
+    const selectedMcs = (selectedProject.selectedMcs ?? []).filter((n: string) => n && n !== "未定")
+
+    const prevComp = ((selectedProject as any).companionBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">
+    const prevDir = ((selectedProject as any).directorBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">
+    const prevMc = ((selectedProject as any).mcBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">
+
+    const companionBookingStatus: Record<string, "tentative" | "confirmed"> = { ...prevComp }
+    const directorBookingStatus: Record<string, "tentative" | "confirmed"> = { ...prevDir }
+    const mcBookingStatus: Record<string, "tentative" | "confirmed"> = { ...prevMc }
+
+    selectedCompanions.forEach((name: string) => {
+      if (!companionBookingStatus[name]) companionBookingStatus[name] = "tentative"
+    })
+    selectedDirectors.forEach((name: string) => {
+      if (!directorBookingStatus[name]) directorBookingStatus[name] = "tentative"
+    })
+    selectedMcs.forEach((name: string) => {
+      if (!mcBookingStatus[name]) mcBookingStatus[name] = "tentative"
+    })
+
+    const isAllTentativeDone = (names: string[], status: Record<string, "tentative" | "confirmed">) =>
+      names.every((n) => status[n] === "tentative" || status[n] === "confirmed")
+
+    const nextProjectStatus =
+      isAllTentativeDone(selectedCompanions, companionBookingStatus) &&
+      isAllTentativeDone(selectedDirectors, directorBookingStatus) &&
+      isAllTentativeDone(selectedMcs, mcBookingStatus)
+        ? "仮押さえ済み"
+        : "仮押さえ依頼"
+
+    updateProduct(selectedProject.id, {
+      companionBookingStatus,
+      directorBookingStatus,
+      mcBookingStatus,
+      projectStatus: nextProjectStatus,
+    })
     addNotification("仮押さえを完了しました")
     setShowTemporaryHoldModal(false)
     setSelectedProject(null)
   }
 
   const handleTemporaryHoldFailure = (project: Project) => {
-    setSelectedProject(project)
-    setTemporaryHoldFailureComment("")
-    setShowTemporaryHoldFailureModal(true)
+    // 旧モーダルではなく、キャスト別の「仮押さえ不可」を設定する画面へ誘導
+    handleViewCastingInfo(project)
   }
 
   const handleConfirmTemporaryHoldFailure = () => {
-    if (!selectedProject) return
-    if (!temporaryHoldFailureComment.trim()) {
-      addNotification("コメントを入力してください")
-      return
-    }
-    updateProduct(selectedProject.id, {
-      projectStatus: "営業確認中",
-      temporaryHoldFailureComment: temporaryHoldFailureComment,
-    })
-    addNotification("仮押さえ不可の旨を営業に通知しました")
+    // 旧: 一括「仮押さえ不可」送信
+    // 新: キャスト別で「仮押さえ不可」を設定し、キャスティング情報モーダルの保存で反映する
+    addNotification("キャスティング情報でキャストごとに仮押さえ不可を設定してください")
     setShowTemporaryHoldFailureModal(false)
     setTemporaryHoldFailureComment("")
     setSelectedProject(null)
@@ -306,10 +420,6 @@ export function EventTeamDashboard({
         return <Badge className="bg-blue-600 text-white">手配進行中</Badge>
       case "イベント終了処理中":
         return <Badge className="bg-blue-600 text-white">イベント終了処理中</Badge>
-      case "手配完了":
-        return <Badge className="bg-green-600 text-white">手配完了</Badge>
-      case "キャンセル":
-        return <Badge className="bg-red-600 text-white">キャンセル</Badge>
       default:
         return <Badge variant="secondary" className="bg-slate-100 text-slate-700">{status}</Badge>
     }
@@ -581,17 +691,41 @@ export function EventTeamDashboard({
                       <TableHead>案件No</TableHead>
                       <TableHead>クライアント</TableHead>
                       <TableHead>実施日</TableHead>
+                      <TableHead>仮押さえ進捗</TableHead>
                       <TableHead>ステータス</TableHead>
                       <TableHead>操作</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {temporaryHoldRequests.map((project) => (
+                    {temporaryHoldRequests.map((project) => {
+                      const selectedCompanions = normalizeSelectedNames((project as any).selectedCompanions)
+                      const selectedDirectors = normalizeSelectedNames((project as any).selectedDirectors)
+                      const selectedMcs = normalizeSelectedNames((project as any).selectedMcs)
+                      const compStatus = ((project as any).companionBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">
+                      const dirStatus = ((project as any).directorBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">
+                      const mcStatus = ((project as any).mcBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">
+                      const compFail = ((project as any).companionTentativeHoldFailureComment ?? {}) as Record<string, string>
+                      const dirFail = ((project as any).directorTentativeHoldFailureComment ?? {}) as Record<string, string>
+                      const mcFail = ((project as any).mcTentativeHoldFailureComment ?? {}) as Record<string, string>
+                      const compProg = computeTentativeProgress(selectedCompanions, compStatus, compFail)
+                      const dirProg = computeTentativeProgress(selectedDirectors, dirStatus, dirFail)
+                      const mcProg = computeTentativeProgress(selectedMcs, mcStatus, mcFail)
+                      const done = compProg.done + dirProg.done + mcProg.done
+                      const total = compProg.total + dirProg.total + mcProg.total
+                      return (
                       <TableRow key={project.id}>
                         <TableCell className="font-medium">{project.projectName}</TableCell>
                         <TableCell>{project.projectNumber}</TableCell>
                         <TableCell>{project.clientName}</TableCell>
                         <TableCell>{project.date}</TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <span className="font-medium">{done}</span>/<span>{total}</span>
+                            <div className="text-xs text-slate-500 mt-1">
+                              Co {compProg.done}/{compProg.total} ・ Dir {dirProg.done}/{dirProg.total} ・ MC {mcProg.done}/{mcProg.total}
+                            </div>
+                          </div>
+                        </TableCell>
                         <TableCell>{getStatusBadge(project.projectStatus || "")}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
@@ -606,12 +740,6 @@ export function EventTeamDashboard({
                             </Button>
                             <Button
                               size="sm"
-                              onClick={() => handleTemporaryHold(project)}
-                            >
-                              仮押さえを完了
-                            </Button>
-                            <Button
-                              size="sm"
                               variant="destructive"
                               onClick={() => handleTemporaryHoldFailure(project)}
                             >
@@ -620,7 +748,8 @@ export function EventTeamDashboard({
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                      )
+                    })}
                   </TableBody>
                 </Table>
               )}
@@ -921,6 +1050,312 @@ export function EventTeamDashboard({
                   )}
                 </div>
               </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold text-lg">仮押さえ状況（キャストごと）</h4>
+                  <Badge className="bg-yellow-100 text-yellow-900 border border-yellow-200">
+                    進捗: {(() => {
+                      const selectedCompanions = normalizeSelectedNames((selectedProject as any).selectedCompanions)
+                      const selectedDirectors = normalizeSelectedNames((selectedProject as any).selectedDirectors)
+                      const selectedMcs = normalizeSelectedNames((selectedProject as any).selectedMcs)
+                      const compProg = computeTentativeProgress(selectedCompanions, draftCompanionBookingStatus, draftCompanionFailureComment)
+                      const dirProg = computeTentativeProgress(selectedDirectors, draftDirectorBookingStatus, draftDirectorFailureComment)
+                      const mcProg = computeTentativeProgress(selectedMcs, draftMcBookingStatus, draftMcFailureComment)
+                      return `${compProg.done + dirProg.done + mcProg.done}/${compProg.total + dirProg.total + mcProg.total}`
+                    })()}
+                  </Badge>
+                </div>
+
+                {/* コンパニオン */}
+                <div className="space-y-2">
+                  <div className="text-sm font-semibold text-slate-800">コンパニオン</div>
+                  {normalizeSelectedNames((selectedProject as any).selectedCompanions).length === 0 ? (
+                    <div className="text-sm text-slate-500">対象なし</div>
+                  ) : (
+                    <div className="space-y-1">
+                      {normalizeSelectedNames((selectedProject as any).selectedCompanions).map((name) => {
+                        const current = draftCompanionBookingStatus[name]
+                        const failureComment = draftCompanionFailureComment[name]
+                        const value =
+                          current === "confirmed" ? "confirmed" : failureComment !== undefined ? "failed" : current === "tentative" ? "tentative" : "pending"
+                        const disabled = current === "confirmed"
+                        return (
+                          <div key={name} className="space-y-2">
+                            <div className="flex items-center gap-3">
+                              <div className="text-sm font-medium text-slate-900 min-w-[140px]">{name}</div>
+                              <Select
+                                value={value}
+                                onValueChange={(v) => {
+                                  if (disabled) return
+                                  if (v === "pending") {
+                                    setDraftCompanionBookingStatus((prev) => {
+                                      const next = { ...prev }
+                                      delete next[name]
+                                      return next
+                                    })
+                                    setDraftCompanionFailureComment((prev) => {
+                                      const next = { ...prev }
+                                      delete next[name]
+                                      return next
+                                    })
+                                  }
+                                  if (v === "tentative") {
+                                    setDraftCompanionBookingStatus((prev) => ({ ...prev, [name]: "tentative" }))
+                                    setDraftCompanionFailureComment((prev) => {
+                                      const next = { ...prev }
+                                      delete next[name]
+                                      return next
+                                    })
+                                  }
+                                  if (v === "failed") {
+                                    setDraftCompanionBookingStatus((prev) => {
+                                      const next = { ...prev }
+                                      delete next[name]
+                                      return next
+                                    })
+                                    setDraftCompanionFailureComment((prev) => ({ ...prev, [name]: prev[name] ?? "" }))
+                                  }
+                                }}
+                              >
+                                <SelectTrigger className="w-[180px]">
+                                  <SelectValue placeholder="状態" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pending">未</SelectItem>
+                                  <SelectItem value="tentative">仮押さえ</SelectItem>
+                                  <SelectItem value="failed">仮押さえ不可</SelectItem>
+                                  <SelectItem value="confirmed" disabled>
+                                    本押さえ
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                              {current === "confirmed" && (
+                                <Badge variant="outline" className="text-xs border-slate-300 bg-white text-slate-700">
+                                  本押さえ
+                                </Badge>
+                              )}
+                              {value === "tentative" && (
+                                <Badge variant="outline" className="text-xs border-yellow-200 bg-yellow-100 text-yellow-900">
+                                  仮押さえ
+                                </Badge>
+                              )}
+                              {value === "failed" && (
+                                <Badge variant="outline" className="text-xs border-red-200 bg-red-50 text-red-700">
+                                  仮押さえ不可
+                                </Badge>
+                              )}
+                            </div>
+                            {value === "failed" && (
+                              <Input
+                                value={draftCompanionFailureComment[name] ?? ""}
+                                onChange={(e) =>
+                                  setDraftCompanionFailureComment((prev) => ({ ...prev, [name]: e.target.value }))
+                                }
+                                placeholder="不可理由（例：スケジュール都合/体調/移動不可 など）"
+                              />
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* ディレクター */}
+                <div className="space-y-2">
+                  <div className="text-sm font-semibold text-slate-800">ディレクター</div>
+                  {normalizeSelectedNames((selectedProject as any).selectedDirectors).length === 0 ? (
+                    <div className="text-sm text-slate-500">対象なし</div>
+                  ) : (
+                    <div className="space-y-1">
+                      {normalizeSelectedNames((selectedProject as any).selectedDirectors).map((name) => {
+                        const current = draftDirectorBookingStatus[name]
+                        const failureComment = draftDirectorFailureComment[name]
+                        const value =
+                          current === "confirmed" ? "confirmed" : failureComment !== undefined ? "failed" : current === "tentative" ? "tentative" : "pending"
+                        const disabled = current === "confirmed"
+                        return (
+                          <div key={name} className="space-y-2">
+                            <div className="flex items-center gap-3">
+                              <div className="text-sm font-medium text-slate-900 min-w-[140px]">{name}</div>
+                              <Select
+                                value={value}
+                                onValueChange={(v) => {
+                                  if (disabled) return
+                                  if (v === "pending") {
+                                    setDraftDirectorBookingStatus((prev) => {
+                                      const next = { ...prev }
+                                      delete next[name]
+                                      return next
+                                    })
+                                    setDraftDirectorFailureComment((prev) => {
+                                      const next = { ...prev }
+                                      delete next[name]
+                                      return next
+                                    })
+                                  }
+                                  if (v === "tentative") {
+                                    setDraftDirectorBookingStatus((prev) => ({ ...prev, [name]: "tentative" }))
+                                    setDraftDirectorFailureComment((prev) => {
+                                      const next = { ...prev }
+                                      delete next[name]
+                                      return next
+                                    })
+                                  }
+                                  if (v === "failed") {
+                                    setDraftDirectorBookingStatus((prev) => {
+                                      const next = { ...prev }
+                                      delete next[name]
+                                      return next
+                                    })
+                                    setDraftDirectorFailureComment((prev) => ({ ...prev, [name]: prev[name] ?? "" }))
+                                  }
+                                }}
+                              >
+                                <SelectTrigger className="w-[180px]">
+                                  <SelectValue placeholder="状態" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pending">未</SelectItem>
+                                  <SelectItem value="tentative">仮押さえ</SelectItem>
+                                  <SelectItem value="failed">仮押さえ不可</SelectItem>
+                                  <SelectItem value="confirmed" disabled>
+                                    本押さえ
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                              {current === "confirmed" && (
+                                <Badge variant="outline" className="text-xs border-slate-300 bg-white text-slate-700">
+                                  本押さえ
+                                </Badge>
+                              )}
+                              {value === "tentative" && (
+                                <Badge variant="outline" className="text-xs border-yellow-200 bg-yellow-100 text-yellow-900">
+                                  仮押さえ
+                                </Badge>
+                              )}
+                              {value === "failed" && (
+                                <Badge variant="outline" className="text-xs border-red-200 bg-red-50 text-red-700">
+                                  仮押さえ不可
+                                </Badge>
+                              )}
+                            </div>
+                            {value === "failed" && (
+                              <Input
+                                value={draftDirectorFailureComment[name] ?? ""}
+                                onChange={(e) =>
+                                  setDraftDirectorFailureComment((prev) => ({ ...prev, [name]: e.target.value }))
+                                }
+                                placeholder="不可理由（例：スケジュール都合/体調/移動不可 など）"
+                              />
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* MC */}
+                <div className="space-y-2">
+                  <div className="text-sm font-semibold text-slate-800">MC</div>
+                  {normalizeSelectedNames((selectedProject as any).selectedMcs).length === 0 ? (
+                    <div className="text-sm text-slate-500">対象なし</div>
+                  ) : (
+                    <div className="space-y-1">
+                      {normalizeSelectedNames((selectedProject as any).selectedMcs).map((name) => {
+                        const current = draftMcBookingStatus[name]
+                        const failureComment = draftMcFailureComment[name]
+                        const value =
+                          current === "confirmed" ? "confirmed" : failureComment !== undefined ? "failed" : current === "tentative" ? "tentative" : "pending"
+                        const disabled = current === "confirmed"
+                        return (
+                          <div key={name} className="space-y-2">
+                            <div className="flex items-center gap-3">
+                              <div className="text-sm font-medium text-slate-900 min-w-[140px]">{name}</div>
+                              <Select
+                                value={value}
+                                onValueChange={(v) => {
+                                  if (disabled) return
+                                  if (v === "pending") {
+                                    setDraftMcBookingStatus((prev) => {
+                                      const next = { ...prev }
+                                      delete next[name]
+                                      return next
+                                    })
+                                    setDraftMcFailureComment((prev) => {
+                                      const next = { ...prev }
+                                      delete next[name]
+                                      return next
+                                    })
+                                  }
+                                  if (v === "tentative") {
+                                    setDraftMcBookingStatus((prev) => ({ ...prev, [name]: "tentative" }))
+                                    setDraftMcFailureComment((prev) => {
+                                      const next = { ...prev }
+                                      delete next[name]
+                                      return next
+                                    })
+                                  }
+                                  if (v === "failed") {
+                                    setDraftMcBookingStatus((prev) => {
+                                      const next = { ...prev }
+                                      delete next[name]
+                                      return next
+                                    })
+                                    setDraftMcFailureComment((prev) => ({ ...prev, [name]: prev[name] ?? "" }))
+                                  }
+                                }}
+                              >
+                                <SelectTrigger className="w-[180px]">
+                                  <SelectValue placeholder="状態" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pending">未</SelectItem>
+                                  <SelectItem value="tentative">仮押さえ</SelectItem>
+                                  <SelectItem value="failed">仮押さえ不可</SelectItem>
+                                  <SelectItem value="confirmed" disabled>
+                                    本押さえ
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                              {current === "confirmed" && (
+                                <Badge variant="outline" className="text-xs border-slate-300 bg-white text-slate-700">
+                                  本押さえ
+                                </Badge>
+                              )}
+                              {value === "tentative" && (
+                                <Badge variant="outline" className="text-xs border-yellow-200 bg-yellow-100 text-yellow-900">
+                                  仮押さえ
+                                </Badge>
+                              )}
+                              {value === "failed" && (
+                                <Badge variant="outline" className="text-xs border-red-200 bg-red-50 text-red-700">
+                                  仮押さえ不可
+                                </Badge>
+                              )}
+                            </div>
+                            {value === "failed" && (
+                              <Input
+                                value={draftMcFailureComment[name] ?? ""}
+                                onChange={(e) => setDraftMcFailureComment((prev) => ({ ...prev, [name]: e.target.value }))}
+                                placeholder="不可理由（例：スケジュール都合/体調/移動不可 など）"
+                              />
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <Alert className="bg-yellow-50 border-yellow-200">
+                  <AlertDescription className="text-sm text-yellow-900">
+                    「仮押さえ」はカレンダーに反映されます。「仮押さえ不可」は営業への共有（サマリコメント）に反映されます。本押さえ（確定）は手配詳細で確定した場合に自動で反映されます。
+                  </AlertDescription>
+                </Alert>
+              </div>
             </div>
           )}
           <DialogFooter>
@@ -928,68 +1363,13 @@ export function EventTeamDashboard({
               閉じる
             </Button>
             <Button onClick={handleConfirmTemporaryHoldFromCasting}>
-              仮押さえを完了
+              仮押さえ状況を保存
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* 仮押さえ確認モーダル */}
-      <Dialog open={showTemporaryHoldModal} onOpenChange={setShowTemporaryHoldModal}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>仮押さえの完了</DialogTitle>
-            <DialogDescription>
-              キャスティング情報を確認して仮押さえを完了してください
-            </DialogDescription>
-          </DialogHeader>
-          {selectedProject && (
-            <div className="space-y-4">
-              <div className="bg-slate-50 p-4 rounded-lg space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm text-slate-600">案件名</Label>
-                    <p className="font-medium">{selectedProject.projectName}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm text-slate-600">案件No</Label>
-                    <p className="font-medium">{selectedProject.projectNumber}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm text-slate-600">クライアント</Label>
-                    <p className="font-medium">{selectedProject.clientName}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm text-slate-600">実施日</Label>
-                    <p className="font-medium">{selectedProject.date}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm text-slate-600">会場</Label>
-                    <p className="font-medium">{selectedProject.venue}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm text-slate-600">イベント種別</Label>
-                    <p className="font-medium">{selectedProject.eventType}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-sm text-blue-900">
-                  ※ キャスティング情報は営業側で管理されています。仮押さえを完了すると、ステータスが「仮押さえ済み」に更新されます。
-                </p>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowTemporaryHoldModal(false)}>
-              キャンセル
-            </Button>
-            <Button onClick={handleConfirmTemporaryHold}>
-              仮押さえを完了
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* 仮押さえ確認モーダル（旧フロー。キャストごとの進捗管理へ移行したため非表示） */}
 
       {/* 仮押さえ不可モーダル */}
       <Dialog open={showTemporaryHoldFailureModal} onOpenChange={(open) => {

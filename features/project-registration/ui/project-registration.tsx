@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Sparkles, CheckCircle2, XCircle, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react"
+import { Calendar, Sparkles, CheckCircle2, XCircle, ChevronLeft, ChevronRight, Plus, Trash2, AlertTriangle } from "lucide-react"
 import type { ProjectData } from "@/types/project"
 import { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -1450,17 +1450,18 @@ export function ProjectRegistration({
     weekDays?: typeof weekData.weekDays,
     status?: "available" | "busy",
     personType?: "companion" | "director" | "mc",
-  ): { busy: boolean; nominated: boolean } => {
+  ): { busy: boolean; tentative: boolean; nominated: boolean } => {
     if (!personName) {
       const talentStatus = status || projectData.talentStatus
       if (talentStatus === "available") {
-        return { busy: dayIndex === 2 && timeIndex >= 5 && timeIndex <= 7, nominated: false } // Wednesday 14:00-17:00
+        return { busy: dayIndex === 2 && timeIndex >= 5 && timeIndex <= 7, tentative: false, nominated: false } // Wednesday 14:00-17:00
       } else {
         return {
           busy:
             (dayIndex === 1 && timeIndex >= 1 && timeIndex <= 3) || // Tuesday 10:00-13:00
             (dayIndex === 3 && timeIndex >= 4 && timeIndex <= 8) || // Thursday 13:00-18:00
             (dayIndex === 4 && timeIndex >= 0 && timeIndex <= 2), // Friday 9:00-12:00
+          tentative: false,
           nominated: false,
         }
       }
@@ -1480,22 +1481,68 @@ export function ProjectRegistration({
     }
     const days = weekDays || modalWeekData.weekDays
     const day = days[dayIndex]
-    if (!day) return { busy: false, nominated: false }
+    if (!day) return { busy: false, tentative: false, nominated: false }
 
     const dayOfWeek = day.date.getDay() // 0=日曜日, 1=月曜日, ...
     const targetHour = 9 + timeIndex
 
+    // まずは「保存されたブッキング（本押さえ/仮押さえ）」を判定
+    const dayDateKey = normalizeDateKey(day.date.toISOString().split("T")[0])
+    let tentative = false
+    let busy = false
+    let nominated = false
+    for (const p of getProducts()) {
+      const dateKey = normalizeDateKey((p as any).eventDate || (p as any).date)
+      if (!dateKey || dateKey !== dayDateKey) continue
+      const sMin = timeToMinutes((p as any).startTime) ?? 9 * 60
+      const eMin = timeToMinutes((p as any).endTime) ?? 18 * 60
+      const slotStart = targetHour * 60
+      const slotEnd = slotStart + 60
+      if (!overlaps(slotStart, slotEnd, sMin, eMin)) continue
+
+      const type = personType || "companion"
+      const statusMap =
+        type === "companion"
+          ? ((p as any).companionBookingStatus as Record<string, "tentative" | "confirmed"> | undefined)
+          : type === "director"
+            ? ((p as any).directorBookingStatus as Record<string, "tentative" | "confirmed"> | undefined)
+            : ((p as any).mcBookingStatus as Record<string, "tentative" | "confirmed"> | undefined)
+      const st = statusMap?.[personName]
+      if (!st) continue
+
+      if (st === "confirmed") busy = true
+      if (st === "tentative") tentative = true
+
+      // 指名フラグも合わせて拾う（任意）
+      const nominatedMap =
+        type === "companion"
+          ? ((p as any).nominatedCompanions as Record<string, boolean> | undefined)
+          : type === "director"
+            ? ((p as any).nominatedDirectors as Record<string, boolean> | undefined)
+            : ((p as any).nominatedMcs as Record<string, boolean> | undefined)
+      if (nominatedMap?.[personName]) nominated = true
+
+      if (busy) break
+    }
+
+    if (busy) {
+      return { busy: true, tentative, nominated }
+    }
+
+    // デモ用スケジュール（曜日ベース）から判定
     for (const schedule of schedules) {
       if (schedule.dayOfWeek === dayOfWeek) {
         const [scheduleStartHour] = schedule.startTime.split(":").map(Number)
         const [scheduleEndHour] = schedule.endTime.split(":").map(Number)
         if (targetHour >= scheduleStartHour && targetHour < scheduleEndHour) {
-          return { busy: true, nominated: Boolean(schedule.nominated) }
+          const isTentative = schedule.holdType === "tentative"
+          // confirmed は busy、tentative は仮押さえ扱い
+          return { busy: !isTentative, tentative: isTentative, nominated: Boolean(schedule.nominated) }
         }
       }
     }
 
-    return { busy: false, nominated: false }
+    return { busy: false, tentative, nominated }
   }
 
   const modalWeekData = useMemo(() => {
@@ -1528,7 +1575,7 @@ export function ProjectRegistration({
     return `${modalCurrentWeekStart.getMonth() + 1}/${modalCurrentWeekStart.getDate()} - ${endDate.getMonth() + 1}/${endDate.getDate()}, ${modalCurrentWeekStart.getFullYear()}`
   }, [modalCurrentWeekStart])
 
-  const handleOpenCalendarModal = (personName: string, status: "available" | "busy", personType: "companion" | "director" | "mc", productIndex: number = 0) => {
+  const handleOpenCalendarModal = (personName: string, status: "available" | "tentative" | "busy", personType: "companion" | "director" | "mc", productIndex: number = 0) => {
     setModalPersonName(personName)
     setModalPersonStatus(status)
     setModalPersonType(personType)
@@ -1547,7 +1594,7 @@ export function ProjectRegistration({
     setModalCurrentWeekStart(newWeekStart)
   }
 
-  const handleTalentSelect = (talent: string, status: "available" | "busy") => {
+  const handleTalentSelect = (talent: string, status: "available" | "tentative" | "busy") => {
     setProjectData({ ...projectData, talent, talentStatus: status })
     setSelectedSlots(new Set())
   }
@@ -1614,75 +1661,144 @@ export function ProjectRegistration({
     return `${currentWeekStart.getMonth() + 1}/${currentWeekStart.getDate()} - ${endDate.getMonth() + 1}/${endDate.getDate()}, ${currentWeekStart.getFullYear()}`
   }, [currentWeekStart])
 
-  type ScheduleItem = { dayOfWeek: number; startTime: string; endTime: string; nominated?: boolean }
+  type ScheduleItem = {
+    dayOfWeek: number
+    startTime: string
+    endTime: string
+    /** 指名フラグ（デモ用） */
+    nominated?: boolean
+    /** 予定の種類（デモ用） */
+    holdType?: "confirmed" | "tentative"
+  }
 
   // 各コンパニオンの予定データ（曜日ベース）
   // 0=日曜日, 1=月曜日, 2=火曜日, 3=水曜日, 4=木曜日, 5=金曜日, 6=土曜日
   const companionSchedules: Record<string, ScheduleItem[]> = {
     "Rio": [
-      { dayOfWeek: 1, startTime: "10:00", endTime: "13:00", nominated: true }, // 指名予定
-      { dayOfWeek: 3, startTime: "14:00", endTime: "17:00" },
-      { dayOfWeek: 5, startTime: "15:00", endTime: "18:00" },
+      { dayOfWeek: 1, startTime: "10:00", endTime: "13:00", holdType: "tentative", nominated: true }, // 指名・仮押さえ予定
+      { dayOfWeek: 3, startTime: "14:00", endTime: "17:00", holdType: "confirmed", nominated: false },
+      { dayOfWeek: 5, startTime: "15:00", endTime: "18:00", holdType: "confirmed", nominated: true },
     ],
     "Ayaka": [
-      { dayOfWeek: 2, startTime: "11:00", endTime: "14:00" },
-      { dayOfWeek: 4, startTime: "13:00", endTime: "16:00", nominated: true }, // 指名予定
-      { dayOfWeek: 6, startTime: "10:00", endTime: "13:00" },
+      { dayOfWeek: 2, startTime: "11:00", endTime: "14:00", holdType: "tentative", nominated: false },
+      { dayOfWeek: 4, startTime: "13:00", endTime: "16:00", holdType: "confirmed", nominated: true }, // 指名予定
+      { dayOfWeek: 6, startTime: "10:00", endTime: "13:00", holdType: "confirmed", nominated: false },
     ],
     "Nanaka": [
-      { dayOfWeek: 1, startTime: "9:00", endTime: "12:00" },
-      { dayOfWeek: 3, startTime: "13:00", endTime: "17:00" },
-      { dayOfWeek: 5, startTime: "14:00", endTime: "18:00", nominated: true }, // 指名予定
+      { dayOfWeek: 1, startTime: "9:00", endTime: "12:00", holdType: "confirmed", nominated: false },
+      { dayOfWeek: 3, startTime: "13:00", endTime: "17:00", holdType: "tentative", nominated: true }, // 指名・仮押さえ予定
+      { dayOfWeek: 5, startTime: "14:00", endTime: "18:00", holdType: "confirmed", nominated: true }, // 指名予定
     ],
   }
 
   // 各ディレクターの予定データ（曜日ベース）
   const directorSchedules: Record<string, ScheduleItem[]> = {
     "Takeshi": [
-      { dayOfWeek: 1, startTime: "9:00", endTime: "12:00" },
-      { dayOfWeek: 2, startTime: "14:00", endTime: "17:00", nominated: true }, // 指名予定
-      { dayOfWeek: 3, startTime: "10:00", endTime: "13:00" },
+      { dayOfWeek: 1, startTime: "9:00", endTime: "12:00", holdType: "confirmed", nominated: false },
+      { dayOfWeek: 2, startTime: "14:00", endTime: "17:00", holdType: "confirmed", nominated: true }, // 指名予定
+      { dayOfWeek: 3, startTime: "10:00", endTime: "13:00", holdType: "tentative", nominated: false },
     ],
     "Kenji": [
-      { dayOfWeek: 4, startTime: "13:00", endTime: "16:00" },
-      { dayOfWeek: 6, startTime: "11:00", endTime: "14:00", nominated: true }, // 指名予定
+      { dayOfWeek: 4, startTime: "13:00", endTime: "16:00", holdType: "tentative", nominated: true }, // 指名・仮押さえ予定
+      { dayOfWeek: 6, startTime: "11:00", endTime: "14:00", holdType: "confirmed", nominated: true }, // 指名予定
     ],
     "Hiroshi": [
-      { dayOfWeek: 2, startTime: "13:00", endTime: "16:00" },
-      { dayOfWeek: 5, startTime: "14:00", endTime: "17:00" },
+      { dayOfWeek: 2, startTime: "13:00", endTime: "16:00", holdType: "confirmed", nominated: false },
+      { dayOfWeek: 5, startTime: "14:00", endTime: "17:00", holdType: "tentative", nominated: false },
     ],
   }
 
   // 各MCの予定データ（曜日ベース）
   const mcSchedules: Record<string, ScheduleItem[]> = {
     "Yuki": [
-      { dayOfWeek: 1, startTime: "11:00", endTime: "14:00" },
-      { dayOfWeek: 3, startTime: "15:00", endTime: "18:00", nominated: true }, // 指名予定
-      { dayOfWeek: 5, startTime: "9:00", endTime: "12:00" },
+      { dayOfWeek: 1, startTime: "11:00", endTime: "14:00", holdType: "tentative", nominated: true }, // 指名・仮押さえ予定
+      { dayOfWeek: 3, startTime: "15:00", endTime: "18:00", holdType: "confirmed", nominated: true }, // 指名予定
+      { dayOfWeek: 5, startTime: "9:00", endTime: "12:00", holdType: "confirmed", nominated: false },
     ],
     "Saki": [
-      { dayOfWeek: 2, startTime: "9:00", endTime: "12:00" },
-      { dayOfWeek: 4, startTime: "14:00", endTime: "17:00" },
-      { dayOfWeek: 6, startTime: "10:00", endTime: "13:00", nominated: true }, // 指名予定
+      { dayOfWeek: 2, startTime: "9:00", endTime: "12:00", holdType: "confirmed", nominated: false },
+      { dayOfWeek: 4, startTime: "14:00", endTime: "17:00", holdType: "tentative", nominated: false },
+      { dayOfWeek: 6, startTime: "10:00", endTime: "13:00", holdType: "confirmed", nominated: true }, // 指名予定
     ],
     "Mai": [
-      { dayOfWeek: 1, startTime: "14:00", endTime: "17:00" },
-      { dayOfWeek: 3, startTime: "10:00", endTime: "13:00" },
-      { dayOfWeek: 5, startTime: "13:00", endTime: "16:00" },
+      { dayOfWeek: 1, startTime: "14:00", endTime: "17:00", holdType: "confirmed", nominated: true },
+      { dayOfWeek: 3, startTime: "10:00", endTime: "13:00", holdType: "tentative", nominated: false },
+      { dayOfWeek: 5, startTime: "13:00", endTime: "16:00", holdType: "confirmed", nominated: false },
     ],
   }
 
-  // 実施日時と予定の重複チェック
-  const checkCompanionAvailability = (companionName: string): "available" | "busy" => {
+  type AvailabilityStatus = "available" | "tentative" | "busy"
+
+  const normalizeDateKey = (raw?: string | null) => {
+    if (!raw) return ""
+    const s = String(raw).trim()
+    if (!s) return ""
+    const normalized = s.replace(/-/g, "/")
+    const [y, m, d] = normalized.split("/").map(Number)
+    if (!y || !m || !d) return ""
+    return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`
+  }
+
+  const timeToMinutes = (t?: string | null) => {
+    if (!t) return null
+    const [h, m] = String(t).split(":").map(Number)
+    if (Number.isNaN(h) || Number.isNaN(m)) return null
+    return h * 60 + m
+  }
+
+  const overlaps = (aStart: number, aEnd: number, bStart: number, bEnd: number) => aStart < bEnd && bStart < aEnd
+
+  const getBookingConflict = (
+    personType: "companion" | "director" | "mc",
+    personName: string,
+    targetDateKey: string,
+    targetStartMin: number,
+    targetEndMin: number,
+  ): { hasConfirmed: boolean; hasTentative: boolean } => {
+    const all = getProducts()
+    let hasConfirmed = false
+    let hasTentative = false
+    for (const p of all) {
+      // 自分自身（編集時）は除外
+      if (isEditMode && typeof projectId === "number" && p.id === projectId) continue
+
+      const dateKey = normalizeDateKey((p as any).eventDate || (p as any).date)
+      if (!dateKey || dateKey !== targetDateKey) continue
+
+      const s = timeToMinutes((p as any).startTime) ?? 9 * 60
+      const e = timeToMinutes((p as any).endTime) ?? 18 * 60
+      if (!overlaps(targetStartMin, targetEndMin, s, e)) continue
+
+      const statusMap =
+        personType === "companion"
+          ? ((p as any).companionBookingStatus as Record<string, "tentative" | "confirmed"> | undefined)
+          : personType === "director"
+            ? ((p as any).directorBookingStatus as Record<string, "tentative" | "confirmed"> | undefined)
+            : ((p as any).mcBookingStatus as Record<string, "tentative" | "confirmed"> | undefined)
+      const st = statusMap?.[personName]
+      if (st === "confirmed") hasConfirmed = true
+      if (st === "tentative") hasTentative = true
+      if (hasConfirmed) break
+    }
+    return { hasConfirmed, hasTentative }
+  }
+
+  // 実施日時と予定の重複チェック（本押さえ/仮押さえも加味）
+  const checkCompanionAvailability = (companionName: string): AvailabilityStatus => {
     if (!eventDate || !startTime || !endTime) {
       // 実施日時が入力されていない場合は、デフォルトのステータスを返す
-      const defaultStatus: { [key: string]: "available" | "busy" } = {
+      const defaultStatus: { [key: string]: AvailabilityStatus } = {
         "田中 太郎": "available",
         "佐藤 花子": "available",
         "鈴木 一郎": "busy",
       }
       return defaultStatus[companionName] || "available"
     }
+
+    const targetDateKey = normalizeDateKey(eventDate)
+    const targetStartMin = timeToMinutes(startTime) ?? 9 * 60
+    const targetEndMin = timeToMinutes(endTime) ?? 18 * 60
+    const bookingConflict = getBookingConflict("companion", companionName, targetDateKey, targetStartMin, targetEndMin)
 
     const schedules = companionSchedules[companionName as keyof typeof companionSchedules] || []
     const eventDateObj = new Date(eventDate)
@@ -1692,7 +1808,8 @@ export function ProjectRegistration({
     const eventStartMinutes = eventStartHour * 60 + eventStartMinute
     const eventEndMinutes = eventEndHour * 60 + eventEndMinute
 
-    // 同じ曜日の予定をチェック
+    // 同じ曜日の予定をチェック（confirmed=NG, tentative=仮押さえ）
+    let hasTentative = false
     for (const schedule of schedules) {
       if (schedule.dayOfWeek === eventDayOfWeek) {
         const [scheduleStartHour, scheduleStartMinute] = schedule.startTime.split(":").map(Number)
@@ -1706,11 +1823,18 @@ export function ProjectRegistration({
           (eventEndMinutes > scheduleStartMinutes && eventEndMinutes <= scheduleEndMinutes) ||
           (eventStartMinutes <= scheduleStartMinutes && eventEndMinutes >= scheduleEndMinutes)
         ) {
-          return "busy"
+          if (schedule.holdType === "tentative") {
+            hasTentative = true
+          } else {
+            return "busy"
+          }
         }
       }
     }
 
+    if (bookingConflict.hasConfirmed) return "busy"
+    if (bookingConflict.hasTentative) return "tentative"
+    if (hasTentative) return "tentative"
     return "available"
   }
 
@@ -1729,10 +1853,15 @@ export function ProjectRegistration({
   ]
 
   // ディレクターの空き状況チェック関数
-  const checkDirectorAvailability = (directorName: string): "available" | "busy" => {
+  const checkDirectorAvailability = (directorName: string): AvailabilityStatus => {
     if (!eventDate || !startTime || !endTime) {
       return "available"
     }
+
+    const targetDateKey = normalizeDateKey(eventDate)
+    const targetStartMin = timeToMinutes(startTime) ?? 9 * 60
+    const targetEndMin = timeToMinutes(endTime) ?? 18 * 60
+    const bookingConflict = getBookingConflict("director", directorName, targetDateKey, targetStartMin, targetEndMin)
 
     const schedules = directorSchedules[directorName as keyof typeof directorSchedules] || []
     const eventDateObj = new Date(eventDate)
@@ -1742,6 +1871,7 @@ export function ProjectRegistration({
     const eventStartMinutes = eventStartHour * 60 + eventStartMinute
     const eventEndMinutes = eventEndHour * 60 + eventEndMinute
 
+    let hasTentative = false
     for (const schedule of schedules) {
       if (schedule.dayOfWeek === eventDayOfWeek) {
         const [scheduleStartHour, scheduleStartMinute] = schedule.startTime.split(":").map(Number)
@@ -1754,19 +1884,31 @@ export function ProjectRegistration({
           (eventEndMinutes > scheduleStartMinutes && eventEndMinutes <= scheduleEndMinutes) ||
           (eventStartMinutes <= scheduleStartMinutes && eventEndMinutes >= scheduleEndMinutes)
         ) {
-          return "busy"
+          if (schedule.holdType === "tentative") {
+            hasTentative = true
+          } else {
+            return "busy"
+          }
         }
       }
     }
 
+    if (bookingConflict.hasConfirmed) return "busy"
+    if (bookingConflict.hasTentative) return "tentative"
+    if (hasTentative) return "tentative"
     return "available"
   }
 
   // MCの空き状況チェック関数
-  const checkMcAvailability = (mcName: string): "available" | "busy" => {
+  const checkMcAvailability = (mcName: string): AvailabilityStatus => {
     if (!eventDate || !startTime || !endTime) {
       return "available"
     }
+
+    const targetDateKey = normalizeDateKey(eventDate)
+    const targetStartMin = timeToMinutes(startTime) ?? 9 * 60
+    const targetEndMin = timeToMinutes(endTime) ?? 18 * 60
+    const bookingConflict = getBookingConflict("mc", mcName, targetDateKey, targetStartMin, targetEndMin)
 
     const schedules = mcSchedules[mcName as keyof typeof mcSchedules] || []
     const eventDateObj = new Date(eventDate)
@@ -1776,6 +1918,7 @@ export function ProjectRegistration({
     const eventStartMinutes = eventStartHour * 60 + eventStartMinute
     const eventEndMinutes = eventEndHour * 60 + eventEndMinute
 
+    let hasTentative = false
     for (const schedule of schedules) {
       if (schedule.dayOfWeek === eventDayOfWeek) {
         const [scheduleStartHour, scheduleStartMinute] = schedule.startTime.split(":").map(Number)
@@ -1788,11 +1931,18 @@ export function ProjectRegistration({
           (eventEndMinutes > scheduleStartMinutes && eventEndMinutes <= scheduleEndMinutes) ||
           (eventStartMinutes <= scheduleStartMinutes && eventEndMinutes >= scheduleEndMinutes)
         ) {
-          return "busy"
+          if (schedule.holdType === "tentative") {
+            hasTentative = true
+          } else {
+            return "busy"
+          }
         }
       }
     }
 
+    if (bookingConflict.hasConfirmed) return "busy"
+    if (bookingConflict.hasTentative) return "tentative"
+    if (hasTentative) return "tentative"
     return "available"
   }
 
@@ -2440,7 +2590,7 @@ export function ProjectRegistration({
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">専属</Label>
                   <div className="grid grid-cols-3 gap-3">
-                    {talents.map((talent) => {
+                    {talents.filter((t) => t.status !== "busy").map((talent) => {
                       const isSelected = productInfo.selectedCompanions.has(talent.name)
                       const isNominated = Boolean(productInfo.nominatedCompanions?.[talent.name])
                       const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
@@ -2450,12 +2600,9 @@ export function ProjectRegistration({
                           className={`p-4 border-2 rounded-lg transition-all cursor-pointer ${
                             isSelected
                               ? "border-blue-500 bg-blue-50"
-                              : talent.status === "busy"
-                              ? "border-slate-200 opacity-60 cursor-not-allowed"
                               : "border-slate-200 hover:border-slate-300"
                           }`}
                           onClick={() => {
-                            if (talent.status === "busy") return // 埋まっている場合は選択不可
                             updateSelectedCompanions(index, talent.name)
                           }}
                         >
@@ -2471,7 +2618,10 @@ export function ProjectRegistration({
                                 </Badge>
                               )}
                             </div>
-                            <Badge variant={talent.status === "available" ? "default" : "destructive"} className="mt-2">
+                            <Badge
+                              variant={talent.status === "available" ? "default" : "secondary"}
+                              className={talent.status === "tentative" ? "mt-2 bg-yellow-100 text-yellow-900 border border-yellow-200" : "mt-2"}
+                            >
                               {talent.status === "available" ? (
                                 <>
                                   <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -2479,8 +2629,8 @@ export function ProjectRegistration({
                                 </>
                               ) : (
                                 <>
-                                  <XCircle className="h-3 w-3 mr-1" />
-                                  埋まり（NG）
+                                  <AlertTriangle className="h-3 w-3 mr-1" />
+                                  仮押さえあり
                                 </>
                               )}
                             </Badge>
@@ -2522,7 +2672,10 @@ export function ProjectRegistration({
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">外部</Label>
                   <div className="grid grid-cols-3 gap-3">
-                    {externalCompanions.map((companion) => {
+                    {externalCompanions
+                      .filter((companion) => checkCompanionAvailability(companion) !== "busy")
+                      .map((companion) => {
+                      const availability = checkCompanionAvailability(companion)
                       const isSelected = productInfo.selectedCompanions.has(companion)
                       const isNominated = Boolean(productInfo.nominatedCompanions?.[companion])
                       const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
@@ -2550,9 +2703,15 @@ export function ProjectRegistration({
                                 </Badge>
                               )}
                             </div>
-                            <Badge variant="outline" className="mt-2">
-                              外部
-                            </Badge>
+                            <div className="mt-2 flex items-center gap-2">
+                              <Badge variant="outline">外部</Badge>
+                              <Badge
+                                variant={availability === "available" ? "default" : "secondary"}
+                                className={availability === "tentative" ? "bg-yellow-100 text-yellow-900 border border-yellow-200" : ""}
+                              >
+                                {availability === "available" ? "空き" : "仮押さえあり"}
+                              </Badge>
+                            </div>
                             <div className="mt-2 text-sm text-slate-900">
                               <span className="text-slate-600">予想金額: </span>
                               <span className="font-semibold">¥{((companionHourlyRates[companion] || 0) * durationHours).toLocaleString()}</span>
@@ -2642,7 +2801,7 @@ export function ProjectRegistration({
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">専属</Label>
                   <div className="grid grid-cols-3 gap-3">
-                    {directors.map((director) => {
+                    {directors.filter((d) => d.status !== "busy").map((director) => {
                       const isSelected = productInfo.selectedDirectors.has(director.name)
                       const isNominated = Boolean(productInfo.nominatedDirectors?.[director.name])
                       const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
@@ -2652,12 +2811,9 @@ export function ProjectRegistration({
                           className={`p-4 border-2 rounded-lg transition-all cursor-pointer ${
                             isSelected
                               ? "border-blue-500 bg-blue-50"
-                              : director.status === "busy"
-                              ? "border-slate-200 opacity-60 cursor-not-allowed"
                               : "border-slate-200 hover:border-slate-300"
                           }`}
                           onClick={() => {
-                            if (director.status === "busy") return // 埋まっている場合は選択不可
                             updateSelectedDirectors(index, director.name)
                           }}
                         >
@@ -2673,7 +2829,10 @@ export function ProjectRegistration({
                                 </Badge>
                               )}
                             </div>
-                            <Badge variant={director.status === "available" ? "default" : "destructive"} className="mt-2">
+                            <Badge
+                              variant={director.status === "available" ? "default" : "secondary"}
+                              className={director.status === "tentative" ? "mt-2 bg-yellow-100 text-yellow-900 border border-yellow-200" : "mt-2"}
+                            >
                               {director.status === "available" ? (
                                 <>
                                   <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -2681,8 +2840,8 @@ export function ProjectRegistration({
                                 </>
                               ) : (
                                 <>
-                                  <XCircle className="h-3 w-3 mr-1" />
-                                  埋まり（NG）
+                                  <AlertTriangle className="h-3 w-3 mr-1" />
+                                  仮押さえあり
                                 </>
                               )}
                             </Badge>
@@ -2724,7 +2883,10 @@ export function ProjectRegistration({
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">外部</Label>
                   <div className="grid grid-cols-3 gap-3">
-                    {externalDirectors.map((director) => {
+                    {externalDirectors
+                      .filter((director) => checkDirectorAvailability(director) !== "busy")
+                      .map((director) => {
+                      const availability = checkDirectorAvailability(director)
                       const isSelected = productInfo.selectedDirectors.has(director)
                       const isNominated = Boolean(productInfo.nominatedDirectors?.[director])
                       const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
@@ -2752,9 +2914,15 @@ export function ProjectRegistration({
                                 </Badge>
                               )}
                             </div>
-                            <Badge variant="outline" className="mt-2">
-                              外部
-                            </Badge>
+                            <div className="mt-2 flex items-center gap-2">
+                              <Badge variant="outline">外部</Badge>
+                              <Badge
+                                variant={availability === "available" ? "default" : "secondary"}
+                                className={availability === "tentative" ? "bg-yellow-100 text-yellow-900 border border-yellow-200" : ""}
+                              >
+                                {availability === "available" ? "空き" : "仮押さえあり"}
+                              </Badge>
+                            </div>
                             <div className="mt-2 text-sm text-slate-900">
                               <span className="text-slate-600">予想金額: </span>
                               <span className="font-semibold">¥{((directorHourlyRates[director] || 0) * durationHours).toLocaleString()}</span>
@@ -2843,7 +3011,7 @@ export function ProjectRegistration({
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">専属</Label>
                   <div className="grid grid-cols-3 gap-3">
-                    {mcs.map((mc) => {
+                    {mcs.filter((m) => m.status !== "busy").map((mc) => {
                       const isSelected = productInfo.selectedMcs.has(mc.name)
                       const isNominated = Boolean(productInfo.nominatedMcs?.[mc.name])
                       const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
@@ -2853,12 +3021,9 @@ export function ProjectRegistration({
                           className={`p-4 border-2 rounded-lg transition-all cursor-pointer ${
                             isSelected
                               ? "border-blue-500 bg-blue-50"
-                              : mc.status === "busy"
-                              ? "border-slate-200 opacity-60 cursor-not-allowed"
                               : "border-slate-200 hover:border-slate-300"
                           }`}
                           onClick={() => {
-                            if (mc.status === "busy") return // 埋まっている場合は選択不可
                             updateSelectedMcs(index, mc.name)
                           }}
                         >
@@ -2874,7 +3039,10 @@ export function ProjectRegistration({
                                 </Badge>
                               )}
                             </div>
-                            <Badge variant={mc.status === "available" ? "default" : "destructive"} className="mt-2">
+                            <Badge
+                              variant={mc.status === "available" ? "default" : "secondary"}
+                              className={mc.status === "tentative" ? "mt-2 bg-yellow-100 text-yellow-900 border border-yellow-200" : "mt-2"}
+                            >
                               {mc.status === "available" ? (
                                 <>
                                   <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -2882,8 +3050,8 @@ export function ProjectRegistration({
                                 </>
                               ) : (
                                 <>
-                                  <XCircle className="h-3 w-3 mr-1" />
-                                  埋まり（NG）
+                                  <AlertTriangle className="h-3 w-3 mr-1" />
+                                  仮押さえあり
                                 </>
                               )}
                             </Badge>
@@ -2925,7 +3093,10 @@ export function ProjectRegistration({
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">外部</Label>
                   <div className="grid grid-cols-3 gap-3">
-                    {externalMcs.map((mc) => {
+                    {externalMcs
+                      .filter((mc) => checkMcAvailability(mc) !== "busy")
+                      .map((mc) => {
+                      const availability = checkMcAvailability(mc)
                       const isSelected = productInfo.selectedMcs.has(mc)
                       const isNominated = Boolean(productInfo.nominatedMcs?.[mc])
                       const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
@@ -2953,9 +3124,15 @@ export function ProjectRegistration({
                                 </Badge>
                               )}
                             </div>
-                            <Badge variant="outline" className="mt-2">
-                              外部
-                            </Badge>
+                            <div className="mt-2 flex items-center gap-2">
+                              <Badge variant="outline">外部</Badge>
+                              <Badge
+                                variant={availability === "available" ? "default" : "secondary"}
+                                className={availability === "tentative" ? "bg-yellow-100 text-yellow-900 border border-yellow-200" : ""}
+                              >
+                                {availability === "available" ? "空き" : "仮押さえあり"}
+                              </Badge>
+                            </div>
                             <div className="mt-2 text-sm text-slate-900">
                               <span className="text-slate-600">予想金額: </span>
                               <span className="font-semibold">¥{((mcHourlyRates[mc] || 0) * durationHours).toLocaleString()}</span>
@@ -3423,7 +3600,7 @@ export function ProjectRegistration({
           <div className="space-y-3">
             <Label>タレント選択</Label>
             <div className="grid grid-cols-3 gap-3">
-              {talents.map((talent) => (
+              {talents.filter((t) => t.status !== "busy").map((talent) => (
                 <button
                   key={talent.name}
                   onClick={() => handleTalentSelect(talent.name, talent.status)}
@@ -3434,11 +3611,19 @@ export function ProjectRegistration({
                   }`}
                 >
                   <div className="font-medium text-slate-900">{talent.name}</div>
-                  <Badge variant={talent.status === "available" ? "default" : "destructive"} className="mt-2">
+                  <Badge
+                    variant={talent.status === "available" ? "default" : talent.status === "tentative" ? "secondary" : "destructive"}
+                    className={`mt-2 ${talent.status === "tentative" ? "bg-yellow-100 text-yellow-900 border border-yellow-200" : ""}`}
+                  >
                     {talent.status === "available" ? (
                       <>
                         <CheckCircle2 className="h-3 w-3 mr-1" />
                         空き（手配可）
+                      </>
+                    ) : talent.status === "tentative" ? (
+                      <>
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        仮押さえあり
                       </>
                     ) : (
                       <>
@@ -3498,6 +3683,7 @@ export function ProjectRegistration({
                       {weekData.weekDays.map((day, dayIdx) => {
                         const busyInfo = getBusySlotInfo(dayIdx, timeIdx, projectData.talent, weekData.weekDays, undefined, "companion")
                         const isBusy = busyInfo.busy
+                        const isTentative = busyInfo.tentative && !isBusy
                         const isNominatedBusy = busyInfo.nominated
                         const isEventDay =
                           projectData.date && new Date(projectData.date).toDateString() === day.date.toDateString()
@@ -3524,13 +3710,15 @@ export function ProjectRegistration({
                         return (
                           <button
                             key={dayIdx}
-                            onClick={() => handleSlotClick(dayIdx, timeIdx, isBusy)}
-                            disabled={isBusy}
+                            onClick={() => handleSlotClick(dayIdx, timeIdx, isBusy || isTentative)}
+                            disabled={isBusy || isTentative}
                             className={`p-2 border-l border-slate-200 min-h-[40px] transition-colors ${
                               isBusy && isEventTime
                                 ? "bg-black cursor-not-allowed"
                                 : isBusy && isNominatedBusy
                                 ? "bg-purple-100 border-purple-200 cursor-not-allowed"
+                                : isTentative
+                                ? "bg-yellow-100 border-yellow-200 cursor-not-allowed"
                                 : isBusy
                                 ? "bg-red-100 border-red-200 cursor-not-allowed"
                                 : isSelected
@@ -3545,6 +3733,9 @@ export function ProjectRegistration({
                                 {isNominatedBusy ? "指名予定あり" : "予定あり"}
                               </div>
                             )}
+                            {isTentative && !isEventTime && (
+                              <div className="text-xs font-medium text-yellow-900">仮押さえあり</div>
+                            )}
                             {isEventTime && !isBusy && <div className="text-xs text-green-800 font-medium">開催時間</div>}
                             {isBusy && isEventTime && <div className="text-xs text-white font-medium">重複</div>}
                             {isSelected && <div className="text-xs text-white font-medium">選択中</div>}
@@ -3558,13 +3749,20 @@ export function ProjectRegistration({
 
               <div className="mt-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Badge variant={projectData.talentStatus === "available" ? "default" : "destructive"}>
-                    リアルタイムステータス: {projectData.talentStatus === "available" ? "空き" : "埋まり"}
+                  <Badge
+                    variant={projectData.talentStatus === "available" ? "default" : projectData.talentStatus === "tentative" ? "secondary" : "destructive"}
+                    className={projectData.talentStatus === "tentative" ? "bg-yellow-100 text-yellow-900 border border-yellow-200" : ""}
+                  >
+                    リアルタイムステータス: {projectData.talentStatus === "available" ? "空き" : projectData.talentStatus === "tentative" ? "仮押さえあり" : "埋まり"}
                   </Badge>
                   <div className="flex items-center gap-2 text-xs text-slate-600">
                     <div className="flex items-center gap-1">
                       <div className="w-3 h-3 bg-red-100 border border-red-200 rounded"></div>
                       <span>予定あり</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-yellow-100 border border-yellow-200 rounded"></div>
+                      <span>仮押さえあり</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <div className="w-3 h-3 bg-purple-100 border border-purple-200 rounded"></div>
@@ -3658,6 +3856,7 @@ export function ProjectRegistration({
                     {modalWeekData.weekDays.map((day, dayIdx) => {
                       const busyInfo = getBusySlotInfo(dayIdx, timeIdx, modalPersonName, modalWeekData.weekDays, undefined, modalPersonType)
                       const isBusy = busyInfo.busy
+                      const isTentative = busyInfo.tentative && !isBusy
                       const isNominatedBusy = busyInfo.nominated
                       
                       // 実施日時をチェック
@@ -3685,6 +3884,8 @@ export function ProjectRegistration({
                               ? "bg-black"
                               : isBusy && isNominatedBusy
                               ? "bg-purple-100 border-purple-200"
+                              : isTentative
+                              ? "bg-yellow-100 border-yellow-200"
                               : isBusy
                               ? "bg-red-100 border-red-200"
                               : isEventTime
@@ -3697,6 +3898,9 @@ export function ProjectRegistration({
                               {isNominatedBusy ? "指名予定あり" : "予定あり"}
                             </div>
                           )}
+                          {isTentative && !isEventTime && (
+                            <div className="text-xs font-medium text-yellow-900">仮押さえあり</div>
+                          )}
                           {isEventTime && !isBusy && <div className="text-xs text-green-800 font-medium">開催時間</div>}
                           {isBusy && isEventTime && <div className="text-xs text-white font-medium">重複</div>}
                         </div>
@@ -3708,13 +3912,20 @@ export function ProjectRegistration({
             </div>
 
             <div className="mt-4 flex items-center gap-3">
-              <Badge variant={modalPersonStatus === "available" ? "default" : "destructive"}>
-                リアルタイムステータス: {modalPersonStatus === "available" ? "空き" : "埋まり"}
+              <Badge
+                variant={modalPersonStatus === "available" ? "default" : modalPersonStatus === "tentative" ? "secondary" : "destructive"}
+                className={modalPersonStatus === "tentative" ? "bg-yellow-100 text-yellow-900 border border-yellow-200" : ""}
+              >
+                リアルタイムステータス: {modalPersonStatus === "available" ? "空き" : modalPersonStatus === "tentative" ? "仮押さえあり" : "埋まり"}
               </Badge>
               <div className="flex items-center gap-2 text-xs text-slate-600">
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-red-100 border border-red-200 rounded"></div>
                   <span>予定あり</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-yellow-100 border border-yellow-200 rounded"></div>
+                  <span>仮押さえあり</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-purple-100 border border-purple-200 rounded"></div>

@@ -16,6 +16,148 @@ type ParseMeta = {
   shouldResave: boolean
 }
 
+type CastBookingStatus = "tentative" | "confirmed"
+
+function ensureBookingStatusFromConfirmed(
+  names: unknown,
+  existing?: Record<string, CastBookingStatus>,
+): Record<string, CastBookingStatus> {
+  const out: Record<string, CastBookingStatus> = { ...(existing ?? {}) }
+  if (!Array.isArray(names)) return out
+  for (const n of names) {
+    const name = typeof n === "string" ? n.trim() : ""
+    if (!name || name === "未定") continue
+    out[name] = "confirmed"
+  }
+  return out
+}
+
+function ensureBookingStatusFromSelectedTentativeWhenNeeded(
+  projectStatus: unknown,
+  selected: unknown,
+  existing?: Record<string, CastBookingStatus>,
+): Record<string, CastBookingStatus> {
+  const out: Record<string, CastBookingStatus> = { ...(existing ?? {}) }
+  const ps = typeof projectStatus === "string" ? projectStatus : ""
+  // 互換: 以前は商材単位で「仮押さえ済み」を持っていたため、その場合は選択キャストを仮押さえとして埋める
+  if (ps !== "仮押さえ済み") return out
+  if (!Array.isArray(selected)) return out
+  for (const n of selected) {
+    const name = typeof n === "string" ? n.trim() : ""
+    if (!name || name === "未定") continue
+    if (!out[name]) out[name] = "tentative"
+  }
+  return out
+}
+
+function ensureFailureCommentFromLegacyWhenNeeded(
+  projectStatus: unknown,
+  selected: unknown,
+  legacyComment: unknown,
+  existing?: Record<string, string>,
+): Record<string, string> {
+  const out: Record<string, string> = { ...(existing ?? {}) }
+  const ps = typeof projectStatus === "string" ? projectStatus : ""
+  const comment = typeof legacyComment === "string" ? legacyComment.trim() : ""
+  // 互換: 以前は商材単位で「営業確認中 + temporaryHoldFailureComment」があったため、その場合は選択キャスト全員へ展開
+  if (ps !== "営業確認中" || !comment) return out
+  if (!Array.isArray(selected)) return out
+  for (const n of selected) {
+    const name = typeof n === "string" ? n.trim() : ""
+    if (!name || name === "未定") continue
+    if (!out[name]) out[name] = comment
+  }
+  return out
+}
+
+function backfillCastBookingStatus(products: any[]): { products: any[]; changed: boolean } {
+  let changed = false
+  const next = products.map((p) => {
+    if (!p || typeof p !== "object") return p
+
+    const prevComp = (p as any).companionBookingStatus as Record<string, CastBookingStatus> | undefined
+    const prevDir = (p as any).directorBookingStatus as Record<string, CastBookingStatus> | undefined
+    const prevMc = (p as any).mcBookingStatus as Record<string, CastBookingStatus> | undefined
+    const prevCompFail = (p as any).companionTentativeHoldFailureComment as Record<string, string> | undefined
+    const prevDirFail = (p as any).directorTentativeHoldFailureComment as Record<string, string> | undefined
+    const prevMcFail = (p as any).mcTentativeHoldFailureComment as Record<string, string> | undefined
+
+    const compFromConfirmed = ensureBookingStatusFromConfirmed((p as any).confirmedCompanions, prevComp)
+    const dirFromConfirmed = ensureBookingStatusFromConfirmed((p as any).confirmedDirectors, prevDir)
+    const mcFromConfirmed = ensureBookingStatusFromConfirmed((p as any).confirmedMcs, prevMc)
+
+    const compFinal = ensureBookingStatusFromSelectedTentativeWhenNeeded(
+      (p as any).projectStatus,
+      (p as any).selectedCompanions,
+      compFromConfirmed,
+    )
+    const dirFinal = ensureBookingStatusFromSelectedTentativeWhenNeeded(
+      (p as any).projectStatus,
+      (p as any).selectedDirectors,
+      dirFromConfirmed,
+    )
+    const mcFinal = ensureBookingStatusFromSelectedTentativeWhenNeeded(
+      (p as any).projectStatus,
+      (p as any).selectedMcs,
+      mcFromConfirmed,
+    )
+
+    const compFailFinal = ensureFailureCommentFromLegacyWhenNeeded(
+      (p as any).projectStatus,
+      (p as any).selectedCompanions,
+      (p as any).temporaryHoldFailureComment,
+      prevCompFail,
+    )
+    const dirFailFinal = ensureFailureCommentFromLegacyWhenNeeded(
+      (p as any).projectStatus,
+      (p as any).selectedDirectors,
+      (p as any).temporaryHoldFailureComment,
+      prevDirFail,
+    )
+    const mcFailFinal = ensureFailureCommentFromLegacyWhenNeeded(
+      (p as any).projectStatus,
+      (p as any).selectedMcs,
+      (p as any).temporaryHoldFailureComment,
+      prevMcFail,
+    )
+
+    const nextObj: any = { ...(p as any) }
+    const prevCompKeyCount = prevComp ? Object.keys(prevComp).length : 0
+    const prevDirKeyCount = prevDir ? Object.keys(prevDir).length : 0
+    const prevMcKeyCount = prevMc ? Object.keys(prevMc).length : 0
+    const prevCompFailKeyCount = prevCompFail ? Object.keys(prevCompFail).length : 0
+    const prevDirFailKeyCount = prevDirFail ? Object.keys(prevDirFail).length : 0
+    const prevMcFailKeyCount = prevMcFail ? Object.keys(prevMcFail).length : 0
+
+    if (Object.keys(compFinal).length > 0 && (prevCompKeyCount === 0 || JSON.stringify(prevComp) !== JSON.stringify(compFinal))) {
+      nextObj.companionBookingStatus = compFinal
+      changed = true
+    }
+    if (Object.keys(dirFinal).length > 0 && (prevDirKeyCount === 0 || JSON.stringify(prevDir) !== JSON.stringify(dirFinal))) {
+      nextObj.directorBookingStatus = dirFinal
+      changed = true
+    }
+    if (Object.keys(mcFinal).length > 0 && (prevMcKeyCount === 0 || JSON.stringify(prevMc) !== JSON.stringify(mcFinal))) {
+      nextObj.mcBookingStatus = mcFinal
+      changed = true
+    }
+    if (Object.keys(compFailFinal).length > 0 && (prevCompFailKeyCount === 0 || JSON.stringify(prevCompFail) !== JSON.stringify(compFailFinal))) {
+      nextObj.companionTentativeHoldFailureComment = compFailFinal
+      changed = true
+    }
+    if (Object.keys(dirFailFinal).length > 0 && (prevDirFailKeyCount === 0 || JSON.stringify(prevDirFail) !== JSON.stringify(dirFailFinal))) {
+      nextObj.directorTentativeHoldFailureComment = dirFailFinal
+      changed = true
+    }
+    if (Object.keys(mcFailFinal).length > 0 && (prevMcFailKeyCount === 0 || JSON.stringify(prevMcFail) !== JSON.stringify(mcFailFinal))) {
+      nextObj.mcTentativeHoldFailureComment = mcFailFinal
+      changed = true
+    }
+    return nextObj
+  })
+  return { products: next, changed }
+}
+
 function pickValidArrayItems<T>(raw: unknown, schema: { safeParse: (x: unknown) => { success: true; data: T } | { success: false } }): T[] {
   if (!Array.isArray(raw)) return []
   const out: T[] = []
@@ -208,10 +350,17 @@ function safeParseWithMigration(raw: string | null): ParseMeta | null {
     if (parsed.success) {
       if (parsed.data.version > DEMO_DB_STORAGE_VERSION) return null
       const shouldResave = parsed.data.version !== DEMO_DB_STORAGE_VERSION
-      const snapshot: DemoDbSnapshot = shouldResave
-        ? { version: DEMO_DB_STORAGE_VERSION, data: parsed.data.data }
-        : parsed.data
-      return { snapshot, shouldResave }
+
+      const backfilled = backfillCastBookingStatus((parsed.data.data.products as any[]) ?? [])
+      const snapshot: DemoDbSnapshot = {
+        version: DEMO_DB_STORAGE_VERSION,
+        data: {
+          ...parsed.data.data,
+          products: backfilled.products as any,
+        },
+      }
+
+      return { snapshot, shouldResave: shouldResave || backfilled.changed }
     }
 
     const rawVersion = typeof json?.version === "number" ? json.version : 0
@@ -226,16 +375,17 @@ function safeParseWithMigration(raw: string | null): ParseMeta | null {
 
     // After migrations we should have v3 logical shape.
     const projects = pickValidArrayItems(migrated.data.projects, ProjectEntitySchema)
-    const products = pickValidArrayItems(migrated.data.products, ProductEntitySchema)
+    const productsParsed = pickValidArrayItems(migrated.data.products, ProductEntitySchema)
+    const backfilled = backfillCastBookingStatus(productsParsed as any[])
     const halls = pickValidArrayItems(migrated.data.halls, HallDataSchema)
     const companies = pickValidArrayItems(migrated.data.companies, CompanyDataSchema)
 
     return {
       snapshot: {
         version: DEMO_DB_STORAGE_VERSION,
-        data: { projects, products, halls, companies },
+        data: { projects, products: backfilled.products as any, halls, companies },
       },
-      shouldResave: true,
+      shouldResave: true || backfilled.changed,
     }
   } catch {
     return null

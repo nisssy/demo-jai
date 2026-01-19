@@ -268,11 +268,40 @@ function ProjectArrangementPageContent() {
 
   const handleSave = () => {
     if (projectId === null || typeof projectId !== 'number') return
+    const current = getProductById(projectId)
+    const confirmedComp = confirmedCompanions.filter((c) => c.trim() !== "")
+    const confirmedDir = confirmedDirectors.filter((d) => d.trim() !== "")
+    const confirmedMc = confirmedMcs.filter((m) => m.trim() !== "")
+
+    const prevComp = ((current as any)?.companionBookingStatus ?? (project as any).companionBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">
+    const prevDir = ((current as any)?.directorBookingStatus ?? (project as any).directorBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">
+    const prevMc = ((current as any)?.mcBookingStatus ?? (project as any).mcBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">
+
+    const companionBookingStatus: Record<string, "tentative" | "confirmed"> = { ...prevComp }
+    const directorBookingStatus: Record<string, "tentative" | "confirmed"> = { ...prevDir }
+    const mcBookingStatus: Record<string, "tentative" | "confirmed"> = { ...prevMc }
+
+    confirmedComp.forEach((name) => {
+      if (!name || name === "未定") return
+      companionBookingStatus[name] = "confirmed"
+    })
+    confirmedDir.forEach((name) => {
+      if (!name || name === "未定") return
+      directorBookingStatus[name] = "confirmed"
+    })
+    confirmedMc.forEach((name) => {
+      if (!name || name === "未定") return
+      mcBookingStatus[name] = "confirmed"
+    })
+
     updateProduct(projectId, {
-      confirmedCompanions: confirmedCompanions.filter(c => c.trim() !== ""),
-      confirmedDirectors: confirmedDirectors.filter(d => d.trim() !== ""),
-      confirmedMcs: confirmedMcs.filter(m => m.trim() !== ""),
+      confirmedCompanions: confirmedComp,
+      confirmedDirectors: confirmedDir,
+      confirmedMcs: confirmedMc,
       companionCostumes: companionCostumes,
+      companionBookingStatus,
+      directorBookingStatus,
+      mcBookingStatus,
     })
     addNotification("手配情報を保存しました")
     // 各種自動手配実行画面に遷移
@@ -281,11 +310,40 @@ function ProjectArrangementPageContent() {
 
   const handleSaveAndBack = () => {
     if (projectId === null || typeof projectId !== 'number') return
+    const current = getProductById(projectId)
+    const confirmedComp = confirmedCompanions.filter((c) => c.trim() !== "")
+    const confirmedDir = confirmedDirectors.filter((d) => d.trim() !== "")
+    const confirmedMc = confirmedMcs.filter((m) => m.trim() !== "")
+
+    const prevComp = ((current as any)?.companionBookingStatus ?? (project as any).companionBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">
+    const prevDir = ((current as any)?.directorBookingStatus ?? (project as any).directorBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">
+    const prevMc = ((current as any)?.mcBookingStatus ?? (project as any).mcBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">
+
+    const companionBookingStatus: Record<string, "tentative" | "confirmed"> = { ...prevComp }
+    const directorBookingStatus: Record<string, "tentative" | "confirmed"> = { ...prevDir }
+    const mcBookingStatus: Record<string, "tentative" | "confirmed"> = { ...prevMc }
+
+    confirmedComp.forEach((name) => {
+      if (!name || name === "未定") return
+      companionBookingStatus[name] = "confirmed"
+    })
+    confirmedDir.forEach((name) => {
+      if (!name || name === "未定") return
+      directorBookingStatus[name] = "confirmed"
+    })
+    confirmedMc.forEach((name) => {
+      if (!name || name === "未定") return
+      mcBookingStatus[name] = "confirmed"
+    })
+
     updateProduct(projectId, {
-      confirmedCompanions: confirmedCompanions.filter(c => c.trim() !== ""),
-      confirmedDirectors: confirmedDirectors.filter(d => d.trim() !== ""),
-      confirmedMcs: confirmedMcs.filter(m => m.trim() !== ""),
+      confirmedCompanions: confirmedComp,
+      confirmedDirectors: confirmedDir,
+      confirmedMcs: confirmedMc,
       companionCostumes: companionCostumes,
+      companionBookingStatus,
+      directorBookingStatus,
+      mcBookingStatus,
     })
     addNotification("手配情報を保存しました")
     router.push("/")
