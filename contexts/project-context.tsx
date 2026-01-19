@@ -9,6 +9,7 @@ import type {
   HallData,
   ProductionData,
   CompanionData,
+  EmployeeData,
   DemoProductEntity,
   DemoProject,
   DemoProjectEntity,
@@ -25,7 +26,7 @@ import {
 
 type Product = DemoProject
 
-export type { CompanyData, HallData }
+export type { CompanyData, HallData, EmployeeData }
 
 type ProjectContextType = {
   projectData: ProjectData
@@ -60,22 +61,27 @@ type ProjectContextType = {
   // プロダクション/コンパニオン（マスタ）
   getProductions: () => ProductionData[]
   getCompanions: () => CompanionData[]
+  // 従業員（マスタ）
+  getEmployees: () => EmployeeData[]
+  getEmployeeById: (id: number) => EmployeeData | null
+  getEmployeeByName: (name: string) => EmployeeData | null
+  searchEmployees: (query: string) => EmployeeData[]
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined)
 
 // 初期法人データ（10個の法人）
 const initialCompanies: CompanyData[] = [
-  { id: 1, companyId: "CORP-001", name: "株式会社マルハン" },
-  { id: 2, companyId: "CORP-002", name: "株式会社ダイナム" },
-  { id: 3, companyId: "CORP-003", name: "株式会社ガイア" },
-  { id: 4, companyId: "CORP-004", name: "株式会社エース" },
-  { id: 5, companyId: "CORP-005", name: "株式会社サンライズ" },
-  { id: 6, companyId: "CORP-006", name: "株式会社ビッグエース" },
-  { id: 7, companyId: "CORP-007", name: "株式会社パチンコランド" },
-  { id: 8, companyId: "CORP-008", name: "株式会社エースパチンコ" },
-  { id: 9, companyId: "CORP-009", name: "株式会社パチンコワールド" },
-  { id: 10, companyId: "CORP-010", name: "株式会社ビッグパチンコ" },
+  { id: 1, companyId: "CORP-001", name: "株式会社マルハン", email: "maruhan@example.com" },
+  { id: 2, companyId: "CORP-002", name: "株式会社ダイナム", email: "dynam@example.com" },
+  { id: 3, companyId: "CORP-003", name: "株式会社ガイア", email: "gaia@example.com" },
+  { id: 4, companyId: "CORP-004", name: "株式会社エース", email: "ace@example.com" },
+  { id: 5, companyId: "CORP-005", name: "株式会社サンライズ", email: "sunrise@example.com" },
+  { id: 6, companyId: "CORP-006", name: "株式会社ビッグエース", email: "bigace@example.com" },
+  { id: 7, companyId: "CORP-007", name: "株式会社パチンコランド", email: "pachinkoland@example.com" },
+  { id: 8, companyId: "CORP-008", name: "株式会社エースパチンコ", email: "acepachinko@example.com" },
+  { id: 9, companyId: "CORP-009", name: "株式会社パチンコワールド", email: "pachinkoworld@example.com" },
+  { id: 10, companyId: "CORP-010", name: "株式会社ビッグパチンコ", email: "bigpachinko@example.com" },
 ]
 
 // 営業担当者のリスト（20人）
@@ -94,50 +100,116 @@ const generateRandomDiscount = (): number => {
   return (Math.floor(Math.random() * (max - min + 1)) + min) * 5000
 }
 
-// 初期ホールデータ（10法人 × 20ホール = 200ホール）
-const initialHalls: HallData[] = []
-let hallCounter = 1
-initialCompanies.forEach((company, companyIndex) => {
-  for (let i = 1; i <= 20; i++) {
-    const salesPersonIndex = (companyIndex * 20 + i - 1) % salesPersonNames.length
-    const hallNumber = String(i).padStart(2, "0")
-    const location = ["本店", "渋谷店", "新宿店", "池袋店", "上野店", "錦糸町店", "新橋店", "横浜店", "川崎店", "大宮店", "千葉店", "船橋店", "柏店", "立川店", "八王子店", "町田店", "相模原店", "厚木店", "藤沢店", "鎌倉店"][i - 1]
-    const wardMap: Record<string, string> = {
-      "本店": "千代田区",
-      "渋谷店": "渋谷区",
-      "新宿店": "新宿区",
-      "池袋店": "豊島区",
-      "上野店": "台東区",
-      "錦糸町店": "墨田区",
-      "新橋店": "港区",
-      "横浜店": "神奈川県横浜市西区",
-      "川崎店": "神奈川県川崎市川崎区",
-      "大宮店": "埼玉県さいたま市大宮区",
-      "千葉店": "千葉県千葉市中央区",
-      "船橋店": "千葉県船橋市",
-      "柏店": "千葉県柏市",
-      "立川店": "東京都立川市",
-      "八王子店": "東京都八王子市",
-      "町田店": "東京都町田市",
-      "相模原店": "神奈川県相模原市中央区",
-      "厚木店": "神奈川県厚木市",
-      "藤沢店": "神奈川県藤沢市",
-      "鎌倉店": "神奈川県鎌倉市",
-    }
-    const addressBase = wardMap[location] || "東京都"
+// 初期従業員データ（営業担当者・管理部門など50人）
+// ホールマスタ生成時に使用するため、先に定義
+const initialEmployees: EmployeeData[] = [
+  // 営業部（20人）
+  { id: 1, name: "山田 太郎", email: "yamada@example.com", department: "営業部" },
+  { id: 2, name: "佐藤 次郎", email: "sato@example.com", department: "営業部" },
+  { id: 3, name: "鈴木 三郎", email: "suzuki@example.com", department: "営業部" },
+  { id: 4, name: "高橋 四郎", email: "takahashi@example.com", department: "営業部" },
+  { id: 5, name: "伊藤 五郎", email: "ito@example.com", department: "営業部" },
+  { id: 6, name: "渡辺 六郎", email: "watanabe@example.com", department: "営業部" },
+  { id: 7, name: "中村 七郎", email: "nakamura@example.com", department: "営業部" },
+  { id: 8, name: "小林 八郎", email: "kobayashi@example.com", department: "営業部" },
+  { id: 9, name: "加藤 九郎", email: "kato@example.com", department: "営業部" },
+  { id: 10, name: "松本 十郎", email: "matsumoto@example.com", department: "営業部" },
+  { id: 11, name: "井上 十一", email: "inoue@example.com", department: "営業部" },
+  { id: 12, name: "木村 十二", email: "kimura@example.com", department: "営業部" },
+  { id: 13, name: "林 十三", email: "hayashi@example.com", department: "営業部" },
+  { id: 14, name: "斎藤 十四", email: "saito@example.com", department: "営業部" },
+  { id: 15, name: "清水 十五", email: "shimizu@example.com", department: "営業部" },
+  { id: 16, name: "山本 十六", email: "yamamoto@example.com", department: "営業部" },
+  { id: 17, name: "森 十七", email: "mori@example.com", department: "営業部" },
+  { id: 18, name: "池田 十八", email: "ikeda@example.com", department: "営業部" },
+  { id: 19, name: "橋本 十九", email: "hashimoto@example.com", department: "営業部" },
+  { id: 20, name: "石川 二十", email: "ishikawa@example.com", department: "営業部" },
+  // 営業部（追加10人）
+  { id: 21, name: "田中 一郎", email: "tanaka@example.com", department: "営業部" },
+  { id: 22, name: "佐々木 二郎", email: "sasaki@example.com", department: "営業部" },
+  { id: 23, name: "山口 三郎", email: "yamaguchi@example.com", department: "営業部" },
+  { id: 24, name: "松井 四郎", email: "matsui@example.com", department: "営業部" },
+  { id: 25, name: "村上 五郎", email: "murakami@example.com", department: "営業部" },
+  { id: 26, name: "前田 六郎", email: "maeda@example.com", department: "営業部" },
+  { id: 27, name: "長谷川 七郎", email: "hasegawa@example.com", department: "営業部" },
+  { id: 28, name: "藤田 八郎", email: "fujita@example.com", department: "営業部" },
+  { id: 29, name: "近藤 九郎", email: "kondo@example.com", department: "営業部" },
+  { id: 30, name: "遠藤 十郎", email: "endo@example.com", department: "営業部" },
+  // 管理部（10人）
+  { id: 31, name: "青木 花子", email: "aoki@example.com", department: "管理部" },
+  { id: 32, name: "新井 美咲", email: "arai@example.com", department: "管理部" },
+  { id: 33, name: "荒井 さくら", email: "arai2@example.com", department: "管理部" },
+  { id: 34, name: "石井 みゆき", email: "ishii@example.com", department: "管理部" },
+  { id: 35, name: "上田 あかり", email: "ueda@example.com", department: "管理部" },
+  { id: 36, name: "内田 ゆい", email: "uchida@example.com", department: "管理部" },
+  { id: 37, name: "江藤 まい", email: "eto@example.com", department: "管理部" },
+  { id: 38, name: "大野 りん", email: "ono@example.com", department: "管理部" },
+  { id: 39, name: "小野 なな", email: "ono2@example.com", department: "管理部" },
+  { id: 40, name: "尾崎 はるか", email: "ozaki@example.com", department: "管理部" },
+  // 経理部（10人）
+  { id: 41, name: "岡田 健", email: "okada@example.com", department: "経理部" },
+  { id: 42, name: "奥田 誠", email: "okuda@example.com", department: "経理部" },
+  { id: 43, name: "片山 智", email: "katayama@example.com", department: "経理部" },
+  { id: 44, name: "金田 勇", email: "kaneda@example.com", department: "経理部" },
+  { id: 45, name: "川上 剛", email: "kawakami@example.com", department: "経理部" },
+  { id: 46, name: "河野 進", email: "kono@example.com", department: "経理部" },
+  { id: 47, name: "菊地 優", email: "kikuchi@example.com", department: "経理部" },
+  { id: 48, name: "工藤 大", email: "kudo@example.com", department: "経理部" },
+  { id: 49, name: "久保 翔", email: "kubo@example.com", department: "経理部" },
+  { id: 50, name: "黒田 亮", email: "kuroda@example.com", department: "経理部" },
+]
 
-    initialHalls.push({
-      id: hallCounter,
-      hallId: `${company.companyId}-HALL-${hallNumber}`, // ホールIDを生成
-      name: `${company.name.replace("株式会社", "")}${location}`,
-      address: `${addressBase}${String(i).padStart(2, "0")}-1-1`,
-      salesPersonName: salesPersonNames[salesPersonIndex],
-      companyId: company.id,
-      discountAmount: generateRandomDiscount(), // 5000円〜50000円のランダムな割引金額
-    })
-    hallCounter++
-  }
-})
+// 初期ホールデータ（10法人 × 20ホール = 200ホール）
+// 従業員マスタの名前を使用
+const generateInitialHalls = (): HallData[] => {
+  const halls: HallData[] = []
+  let hallCounter = 1
+  const employeeNames = initialEmployees.map((e) => e.name)
+  initialCompanies.forEach((company, companyIndex) => {
+    for (let i = 1; i <= 20; i++) {
+      const salesPersonIndex = (companyIndex * 20 + i - 1) % employeeNames.length
+      const hallNumber = String(i).padStart(2, "0")
+      const location = ["本店", "渋谷店", "新宿店", "池袋店", "上野店", "錦糸町店", "新橋店", "横浜店", "川崎店", "大宮店", "千葉店", "船橋店", "柏店", "立川店", "八王子店", "町田店", "相模原店", "厚木店", "藤沢店", "鎌倉店"][i - 1]
+      const wardMap: Record<string, string> = {
+        "本店": "千代田区",
+        "渋谷店": "渋谷区",
+        "新宿店": "新宿区",
+        "池袋店": "豊島区",
+        "上野店": "台東区",
+        "錦糸町店": "墨田区",
+        "新橋店": "港区",
+        "横浜店": "神奈川県横浜市西区",
+        "川崎店": "神奈川県川崎市川崎区",
+        "大宮店": "埼玉県さいたま市大宮区",
+        "千葉店": "千葉県千葉市中央区",
+        "船橋店": "千葉県船橋市",
+        "柏店": "千葉県柏市",
+        "立川店": "東京都立川市",
+        "八王子店": "東京都八王子市",
+        "町田店": "東京都町田市",
+        "相模原店": "神奈川県相模原市中央区",
+        "厚木店": "神奈川県厚木市",
+        "藤沢店": "神奈川県藤沢市",
+        "鎌倉店": "神奈川県鎌倉市",
+      }
+      const addressBase = wardMap[location] || "東京都"
+
+      halls.push({
+        id: hallCounter,
+        hallId: `${company.companyId}-HALL-${hallNumber}`, // ホールIDを生成
+        name: `${company.name.replace("株式会社", "")}${location}`,
+        address: `${addressBase}${String(i).padStart(2, "0")}-1-1`,
+        email: `${company.companyId.toLowerCase()}-hall-${hallNumber}@example.com`, // デモ用メールアドレス
+        salesPersonName: employeeNames[salesPersonIndex],
+        companyId: company.id,
+        discountAmount: generateRandomDiscount(), // 5000円〜50000円のランダムな割引金額
+      })
+      hallCounter++
+    }
+  })
+  return halls
+}
+const initialHalls = generateInitialHalls()
 
 // プロダクション（企業）マスタ（デモ）
 const initialProductions: ProductionData[] = [
@@ -1780,6 +1852,7 @@ function getDemoDbSeed() {
     companies: initialCompanies,
     productions: initialProductions,
     companions: initialCompanions,
+    employees: initialEmployees,
   }
 }
 
@@ -1799,6 +1872,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     const halls = (initialDb.halls as HallData[] | undefined) ?? initialSeed.halls
     const productions = ((initialDb as any).productions as ProductionData[] | undefined) ?? initialSeed.productions
     const companions = ((initialDb as any).companions as CompanionData[] | undefined) ?? initialSeed.companions
+    const employees = ((initialDb as any).employees as EmployeeData[] | undefined) ?? initialSeed.employees
 
     const maybeProducts = (initialDb as any).products
     const isV3 = Array.isArray(maybeProducts)
@@ -1817,6 +1891,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         companies,
         productions,
         companions,
+        employees,
       }
     }
 
@@ -1914,8 +1989,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    return { projects, products, halls, companies, productions, companions }
-  }, [initialDb, initialSeed.companies, initialSeed.halls, initialSeed.projects, initialSeed.productions, initialSeed.companions])
+    return { projects, products, halls, companies, productions, companions, employees }
+  }, [initialDb, initialSeed.companies, initialSeed.halls, initialSeed.projects, initialSeed.productions, initialSeed.companions, initialSeed.employees])
 
   // v3: 正規化DB（projects=案件, products=商材）
   const [projectEntities, setProjectEntities] = useState<DemoProjectEntity[]>(() => {
@@ -1942,6 +2017,11 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [companions, setCompanions] = useState<CompanionData[]>(() => {
     return (initialV3 as any).companions ?? initialSeed.companions
   })
+  
+  // 従業員（マスタ）
+  const [employees, setEmployees] = useState<EmployeeData[]>(() => {
+    return (initialV3 as any).employees ?? initialSeed.employees
+  })
 
   const denormalizedProducts = useMemo(() => {
     const data: DemoDbV3Data = {
@@ -1951,9 +2031,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       companies,
       productions,
       companions,
+      employees,
     }
     return denormalizeProjects(data)
-  }, [companies, halls, productEntities, projectEntities, productions, companions])
+  }, [companies, halls, productEntities, projectEntities, productions, companions, employees])
 
   const [projectData, setProjectData] = useState<ProjectData>({
     projectName: "",
@@ -1982,8 +2063,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   // デモ用擬似DBをlocalStorageに永続化（projects/halls/companies 全保存）
   useEffect(() => {
-    saveDemoDbToStorage({ projects: projectEntities, products: productEntities, halls, companies, productions, companions } as any)
-  }, [projectEntities, productEntities, halls, companies, productions, companions])
+    saveDemoDbToStorage({ projects: projectEntities, products: productEntities, halls, companies, productions, companions, employees } as any)
+  }, [projectEntities, productEntities, halls, companies, productions, companions, employees])
 
   const addNotification = useCallback((message: string) => {
     setNotifications((prev) => [message, ...prev])
@@ -1995,6 +2076,30 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   const getProductions = useCallback(() => productions, [productions])
   const getCompanions = useCallback(() => companions, [companions])
+  
+  // 従業員マスタ操作関数
+  const getEmployees = useCallback(() => employees, [employees])
+  const getEmployeeById = useCallback(
+    (id: number) => employees.find((e) => e.id === id) ?? null,
+    [employees]
+  )
+  const getEmployeeByName = useCallback(
+    (name: string) => employees.find((e) => e.name === name) ?? null,
+    [employees]
+  )
+  const searchEmployees = useCallback(
+    (query: string) => {
+      const q = query.toLowerCase().trim()
+      if (!q) return employees
+      return employees.filter(
+        (e) =>
+          e.name.toLowerCase().includes(q) ||
+          e.email.toLowerCase().includes(q) ||
+          (e.department && e.department.toLowerCase().includes(q))
+      )
+    },
+    [employees]
+  )
 
   // localStorage のデモデータを自動マイグレーション/補正した場合は、最初の一回だけ通知する
   useEffect(() => {
@@ -2011,6 +2116,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setHalls(seed.halls)
     setProductions(seed.productions)
     setCompanions(seed.companions)
+    setEmployees(seed.employees)
     // seed(旧形式)をv3へ変換してセット
     const legacyRows = seed.projects
     const grouped = new Map<string, DemoProject[]>()
@@ -2227,7 +2333,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setProjectEntities(nextProjectEntities)
     setProductEntities([...productEntities, product])
 
-    const created = denormalizeProjects({ projects: nextProjectEntities, products: [...productEntities, product], halls, companies }).find(
+    const created = denormalizeProjects({ projects: nextProjectEntities, products: [...productEntities, product], halls, companies, productions, companions, employees }).find(
       (p) => p.id === nextProductId,
     )
     if (!created) throw new Error("Failed to create project(product)")
@@ -2289,7 +2395,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setProjectEntities(nextProjects)
     setProductEntities(nextProducts)
 
-    const updated = denormalizeProjects({ projects: nextProjects, products: nextProducts, halls, companies }).find((p) => p.id === id) ?? null
+    const updated = denormalizeProjects({ projects: nextProjects, products: nextProducts, halls, companies, productions, companions, employees }).find((p) => p.id === id) ?? null
     return updated
   }, [companies, halls, productEntities, projectEntities])
 
@@ -2371,6 +2477,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         getHallsByCompanyId,
         getProductions,
         getCompanions,
+        getEmployees,
+        getEmployeeById,
+        getEmployeeByName,
+        searchEmployees,
       }}
     >
       {children}

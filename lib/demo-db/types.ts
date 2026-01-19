@@ -4,6 +4,7 @@ export type CompanyData = {
   id: number
   companyId: string
   name: string
+  email?: string
 }
 
 export type HallData = {
@@ -14,6 +15,7 @@ export type HallData = {
   companyId: number
   discountAmount: number
   address?: string
+  email?: string
 }
 
 export type ProductionData = {
@@ -27,6 +29,13 @@ export type CompanionData = {
   id: number
   name: string
   productionId: number
+}
+
+export type EmployeeData = {
+  id: number
+  name: string
+  email: string
+  department?: string
 }
 
 // v2までの「1行=商材(案件情報も含む)」形式（UI互換のため残す）

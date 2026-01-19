@@ -12,9 +12,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { Check, Download, Mail, Plus, Send } from "lucide-react"
+import { Check, Download, Mail, Plus, Send, X } from "lucide-react"
+import { useProject } from "@/contexts/project-context"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 
-type QuoteStep = "select" | "recipient" | "template" | "quote" | "email"
+type QuoteStep = "select" | "recipient" | "email-settings" | "template" | "quote" | "email"
 
 type QuoteRecipient = "company" | "hall"
 
@@ -55,6 +58,7 @@ type QuoteDialogProps = {
 }
 
 export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updateProduct, addNotification }: QuoteDialogProps) {
+  const { getEmployees, searchEmployees, getCompanies, getHalls } = useProject()
   const [quoteStep, setQuoteStep] = useState<QuoteStep>("select")
   const [quoteGenerated, setQuoteGenerated] = useState(false)
   const [emailGenerated, setEmailGenerated] = useState(false)
@@ -67,6 +71,18 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
   const editableQuoteItemsBackupRef = useRef<EditableQuoteItem[] | null>(null)
   const quoteItemsScrollRef = useRef<HTMLDivElement>(null)
   const itemRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
+  
+  // 送信先設定
+  const [emailTo, setEmailTo] = useState<string>("")
+  const [emailFrom, setEmailFrom] = useState<number | null>(null)
+  const [emailCc, setEmailCc] = useState<number[]>([])
+  const [emailBcc, setEmailBcc] = useState<number[]>([])
+  const [fromSearchOpen, setFromSearchOpen] = useState(false)
+  const [fromSearchQuery, setFromSearchQuery] = useState("")
+  const [ccSearchOpen, setCcSearchOpen] = useState(false)
+  const [ccSearchQuery, setCcSearchQuery] = useState("")
+  const [bccSearchOpen, setBccSearchOpen] = useState(false)
+  const [bccSearchQuery, setBccSearchQuery] = useState("")
 
   const [quoteProjectData, setQuoteProjectData] = useState<ProjectData>({
     projectName: "",
@@ -156,6 +172,13 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
     setIsEditingAllItems(false)
     editableQuoteItemsBackupRef.current = null
     itemRefs.current = {}
+    setEmailTo("")
+    setEmailFrom(null)
+    setEmailCc([])
+    setEmailBcc([])
+    setFromSearchQuery("")
+    setCcSearchQuery("")
+    setBccSearchQuery("")
     setQuoteProjectData({
       projectName: "",
       clientName: "",
@@ -243,7 +266,7 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
             className="flex transition-transform duration-500 ease-in-out h-full items-stretch"
             style={{
               transform: `translateX(-${
-                quoteStep === "recipient" ? 100 : quoteStep === "template" ? 200 : quoteStep === "quote" ? 300 : quoteStep === "email" ? 400 : 0
+                quoteStep === "recipient" ? 100 : quoteStep === "template" ? 200 : quoteStep === "quote" ? 300 : quoteStep === "email-settings" ? 400 : quoteStep === "email" ? 500 : 0
               }%)`,
             }}
           >
@@ -456,11 +479,21 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
                       const companyName = firstProduct.companyName || ""
                       const recipientName = quoteRecipient === "company" ? companyName : hallName
 
+                      // toメールアドレスを自動設定
+                      let toEmail = ""
+                      if (quoteRecipient === "company") {
+                        const company = getCompanies().find((c) => c.name === companyName)
+                        toEmail = company?.email || ""
+                      } else {
+                        const hall = getHalls().find((h) => h.name === hallName)
+                        toEmail = hall?.email || ""
+                      }
+                      setEmailTo(toEmail)
+
                       setQuoteProjectData({
                         ...quoteProjectData,
                         clientName: recipientName || quoteProjectData.clientName,
                       })
-                      setQuoteGenerated(true)
                       setQuoteStep("template")
                     }
                   }}
@@ -784,7 +817,7 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
               </div>
             </div>
 
-            {/* 見積書プレビュー画面（4枚目） */}
+            {/* 見積書プレビュー画面（5枚目） */}
             <div className="min-w-full flex-shrink-0 px-1 w-full flex flex-col h-full overflow-hidden">
               <DialogHeader className="pb-4 pt-2 flex-shrink-0">
                 <DialogTitle>見積書プレビュー</DialogTitle>
@@ -896,7 +929,8 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
                 <Button
                   onClick={() => {
                     // メール文面を自動生成
-                    const email = `${quoteProjectData.clientName} 御中
+                    if (!quoteProjectData.emailDraft) {
+                      const email = `${quoteProjectData.clientName} 御中
 
 平素より大変お世話になっております。
 DMM の営業担当でございます。
@@ -906,27 +940,371 @@ DMM の営業担当でございます。
 
 ご検討のほど、何卒よろしくお願い申し上げます。
 `
-                    setQuoteProjectData({ ...quoteProjectData, emailDraft: email })
-                    setEmailGenerated(true)
-                    setQuoteStep("email")
+                      setQuoteProjectData({ ...quoteProjectData, emailDraft: email })
+                      setEmailGenerated(true)
+                    }
+                    setQuoteStep("email-settings")
                   }}
                   className="gap-2"
                   disabled={!quoteGenerated}
                 >
-                  <Mail className="h-4 w-4" />
-                  メール文面へ
+                  次へ
                 </Button>
               </div>
             </div>
 
-            {/* メール送付画面（5枚目） */}
+            {/* 送信先設定画面（5枚目） */}
+            <div className="min-w-full flex-shrink-0 px-1 w-full flex flex-col h-full overflow-hidden">
+              <DialogHeader className="pb-4 pt-2 flex-shrink-0">
+                <DialogTitle>送信先設定</DialogTitle>
+                <DialogDescription>メール送信先を設定してください</DialogDescription>
+              </DialogHeader>
+
+              <div className="flex-1 overflow-y-auto py-4 space-y-6 min-h-0" style={{ maxHeight: "calc(85vh - 200px)" }}>
+                {/* To */}
+                {(() => {
+                  // emailToが空の場合、自動で設定
+                  let displayToEmail = emailTo
+                  if (!displayToEmail && selectedProjectForQuote) {
+                    const firstProduct = selectedProducts[0]
+                    if (firstProduct) {
+                      const hallName = firstProduct.hallName || firstProduct.clientName
+                      const companyName = firstProduct.companyName || ""
+                      if (quoteRecipient === "company") {
+                        const company = getCompanies().find((c) => c.name === companyName)
+                        displayToEmail = company?.email || ""
+                      } else {
+                        const hall = getHalls().find((h) => h.name === hallName)
+                        displayToEmail = hall?.email || ""
+                      }
+                      // 自動設定された場合はstateも更新
+                      if (displayToEmail && !emailTo) {
+                        setEmailTo(displayToEmail)
+                      }
+                    }
+                  }
+                  return (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-slate-700">To（宛先）</Label>
+                      <Input
+                        value={displayToEmail || ""}
+                        readOnly
+                        className="bg-slate-50"
+                        placeholder="宛先メールアドレス（自動設定）"
+                      />
+                      <p className="text-xs text-slate-500">
+                        {quoteRecipient === "company" ? "法人" : "ホール"}のメールアドレスが自動設定されます
+                      </p>
+                    </div>
+                  )
+                })()}
+
+                {/* From */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">From（送信元）</Label>
+                  <Popover open={fromSearchOpen} onOpenChange={setFromSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-between" role="combobox">
+                        {emailFrom
+                          ? getEmployees().find((e) => e.id === emailFrom)?.name || "選択してください"
+                          : "従業員を検索・選択"}
+                        <Check className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0" align="start">
+                      <Command>
+                        <CommandInput
+                          placeholder="従業員を検索..."
+                          value={fromSearchQuery}
+                          onValueChange={setFromSearchQuery}
+                        />
+                        <CommandList>
+                          <CommandEmpty>従業員が見つかりませんでした</CommandEmpty>
+                          <CommandGroup>
+                            {searchEmployees(fromSearchQuery).map((employee) => (
+                              <CommandItem
+                                key={employee.id}
+                                value={employee.name}
+                                onSelect={() => {
+                                  setEmailFrom(employee.id)
+                                  setFromSearchOpen(false)
+                                  setFromSearchQuery("")
+                                }}
+                              >
+                                <Check
+                                  className={`mr-2 h-4 w-4 ${emailFrom === employee.id ? "opacity-100" : "opacity-0"}`}
+                                />
+                                <div className="flex flex-col">
+                                  <span>{employee.name}</span>
+                                  <span className="text-xs text-slate-500">{employee.email}</span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  {emailFrom && (
+                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                      <span>{getEmployees().find((e) => e.id === emailFrom)?.email}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2"
+                        onClick={() => setEmailFrom(null)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* CC */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">CC（複写）</Label>
+                  <Popover open={ccSearchOpen} onOpenChange={setCcSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-between" role="combobox">
+                        従業員を検索・追加
+                        <Plus className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0" align="start">
+                      <Command>
+                        <CommandInput
+                          placeholder="従業員を検索..."
+                          value={ccSearchQuery}
+                          onValueChange={setCcSearchQuery}
+                        />
+                        <CommandList>
+                          <CommandEmpty>従業員が見つかりませんでした</CommandEmpty>
+                          <CommandGroup>
+                            {searchEmployees(ccSearchQuery)
+                              .filter((e) => !emailCc.includes(e.id))
+                              .map((employee) => (
+                                <CommandItem
+                                  key={employee.id}
+                                  value={employee.name}
+                                  onSelect={() => {
+                                    setEmailCc([...emailCc, employee.id])
+                                    setCcSearchOpen(false)
+                                    setCcSearchQuery("")
+                                  }}
+                                >
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  <div className="flex flex-col">
+                                    <span>{employee.name}</span>
+                                    <span className="text-xs text-slate-500">{employee.email}</span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  {emailCc.length > 0 && (
+                    <div className="space-y-1">
+                      {emailCc.map((id) => {
+                        const employee = getEmployees().find((e) => e.id === id)
+                        if (!employee) return null
+                        return (
+                          <div key={id} className="flex items-center justify-between bg-slate-50 p-2 rounded">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium">{employee.name}</span>
+                              <span className="text-xs text-slate-500">{employee.email}</span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2"
+                              onClick={() => setEmailCc(emailCc.filter((eid) => eid !== id))}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* BCC */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">BCC（秘匿複写）</Label>
+                  <Popover open={bccSearchOpen} onOpenChange={setBccSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-between" role="combobox">
+                        従業員を検索・追加
+                        <Plus className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0" align="start">
+                      <Command>
+                        <CommandInput
+                          placeholder="従業員を検索..."
+                          value={bccSearchQuery}
+                          onValueChange={setBccSearchQuery}
+                        />
+                        <CommandList>
+                          <CommandEmpty>従業員が見つかりませんでした</CommandEmpty>
+                          <CommandGroup>
+                            {searchEmployees(bccSearchQuery)
+                              .filter((e) => !emailBcc.includes(e.id))
+                              .map((employee) => (
+                                <CommandItem
+                                  key={employee.id}
+                                  value={employee.name}
+                                  onSelect={() => {
+                                    setEmailBcc([...emailBcc, employee.id])
+                                    setBccSearchOpen(false)
+                                    setBccSearchQuery("")
+                                  }}
+                                >
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  <div className="flex flex-col">
+                                    <span>{employee.name}</span>
+                                    <span className="text-xs text-slate-500">{employee.email}</span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  {emailBcc.length > 0 && (
+                    <div className="space-y-1">
+                      {emailBcc.map((id) => {
+                        const employee = getEmployees().find((e) => e.id === id)
+                        if (!employee) return null
+                        return (
+                          <div key={id} className="flex items-center justify-between bg-slate-50 p-2 rounded">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium">{employee.name}</span>
+                              <span className="text-xs text-slate-500">{employee.email}</span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2"
+                              onClick={() => setEmailBcc(emailBcc.filter((eid) => eid !== id))}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-4 flex justify-end gap-2 border-t pt-4 flex-shrink-0">
+                <Button variant="outline" onClick={() => setQuoteStep("quote")}>
+                  戻る
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (!emailFrom) {
+                      addNotification("送信元（From）を選択してください")
+                      return
+                    }
+                    // メール文面を自動生成（まだ生成されていない場合）
+                    if (!quoteProjectData.emailDraft) {
+                      const email = `${quoteProjectData.clientName} 御中
+
+平素より大変お世話になっております。
+DMM の営業担当でございます。
+
+このたびは「${quoteProjectData.projectName}」の件につきまして、
+お見積書をお送りいたします。
+
+ご検討のほど、何卒よろしくお願い申し上げます。
+`
+                      setQuoteProjectData({ ...quoteProjectData, emailDraft: email })
+                      setEmailGenerated(true)
+                    }
+                    setQuoteStep("email")
+                  }}
+                >
+                  次へ
+                </Button>
+              </div>
+            </div>
+
+            {/* メール送付画面（6枚目） */}
             <div className="min-w-full flex-shrink-0 px-1 w-full flex flex-col h-full overflow-hidden">
               <DialogHeader className="pb-4 pt-2 flex-shrink-0">
                 <DialogTitle>メール送付</DialogTitle>
                 <DialogDescription>見積書をメールで送付します</DialogDescription>
               </DialogHeader>
 
-              <div className="flex-1 overflow-y-auto py-4 space-y-4 min-h-0">
+              <div className="flex-1 overflow-y-auto py-4 space-y-4 min-h-0" style={{ maxHeight: "calc(85vh - 200px)" }}>
+                {/* 送信先情報 */}
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-3">
+                  <h3 className="text-sm font-semibold text-slate-700">送信先情報</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-start gap-2">
+                      <span className="font-medium text-slate-600 w-16">To:</span>
+                      <span className="text-slate-900">
+                        {(() => {
+                          let displayToEmail = emailTo
+                          if (!displayToEmail && selectedProjectForQuote) {
+                            const firstProduct = selectedProducts[0]
+                            if (firstProduct) {
+                              const hallName = firstProduct.hallName || firstProduct.clientName
+                              const companyName = firstProduct.companyName || ""
+                              if (quoteRecipient === "company") {
+                                const company = getCompanies().find((c) => c.name === companyName)
+                                displayToEmail = company?.email || ""
+                              } else {
+                                const hall = getHalls().find((h) => h.name === hallName)
+                                displayToEmail = hall?.email || ""
+                              }
+                            }
+                          }
+                          return displayToEmail || "（未設定）"
+                        })()}
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="font-medium text-slate-600 w-16">From:</span>
+                      <span className="text-slate-900">
+                        {emailFrom ? getEmployees().find((e) => e.id === emailFrom)?.email || "（未設定）" : "（未設定）"}
+                      </span>
+                    </div>
+                    {emailCc.length > 0 && (
+                      <div className="flex items-start gap-2">
+                        <span className="font-medium text-slate-600 w-16">CC:</span>
+                        <div className="flex flex-col gap-1">
+                          {emailCc.map((id) => {
+                            const employee = getEmployees().find((e) => e.id === id)
+                            return employee ? (
+                              <span key={id} className="text-slate-900">{employee.email}</span>
+                            ) : null
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    {emailBcc.length > 0 && (
+                      <div className="flex items-start gap-2">
+                        <span className="font-medium text-slate-600 w-16">BCC:</span>
+                        <div className="flex flex-col gap-1">
+                          {emailBcc.map((id) => {
+                            const employee = getEmployees().find((e) => e.id === id)
+                            return employee ? (
+                              <span key={id} className="text-slate-900">{employee.email}</span>
+                            ) : null
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* メール文面 */}
                 <div className="bg-white border-2 border-slate-300 rounded-lg shadow-lg p-4">
                   <Label className="text-sm font-medium text-slate-700 mb-2 block">送付メール文面</Label>
                   <Textarea
@@ -939,7 +1317,7 @@ DMM の営業担当でございます。
               </div>
 
               <div className="mt-4 flex justify-end gap-2 border-t pt-4">
-                <Button variant="outline" onClick={() => setQuoteStep("quote")}>
+                <Button variant="outline" onClick={() => setQuoteStep("email-settings")}>
                   戻る
                 </Button>
                 <Button
@@ -963,7 +1341,7 @@ DMM の営業担当でございます。
                     }, 500)
                   }}
                   className="gap-2"
-                  disabled={!emailGenerated || isLoadingSend}
+                  disabled={isLoadingSend}
                 >
                   <Send className="h-4 w-4" />
                   {isLoadingSend ? "送付中..." : "見積書送付"}

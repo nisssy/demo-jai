@@ -3,6 +3,7 @@ import type {
   DemoProductEntity,
   DemoProject,
   DemoProjectEntity,
+  EmployeeData,
   HallData,
   ProductionData,
   CompanionData,
@@ -15,6 +16,7 @@ export type DemoDbV3Data = {
   companies: CompanyData[]
   productions: ProductionData[]
   companions: CompanionData[]
+  employees: EmployeeData[]
 }
 
 const PROJECT_KEYS: Array<keyof DemoProject> = [

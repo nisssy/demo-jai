@@ -4,6 +4,8 @@ export const CompanyDataSchema = z.object({
   id: z.number(),
   companyId: z.string(),
   name: z.string(),
+  /** メールアドレス（見積書送付用） */
+  email: z.string().optional(),
 })
 
 export const HallDataSchema = z.object({
@@ -15,6 +17,8 @@ export const HallDataSchema = z.object({
   discountAmount: z.number(),
   /** デモ用：ホール住所（未設定でも動くよう optional） */
   address: z.string().optional(),
+  /** メールアドレス（見積書送付用） */
+  email: z.string().optional(),
 })
 
 /**
@@ -36,6 +40,18 @@ export const CompanionDataSchema = z.object({
   name: z.string(),
   /** ProductionData.id */
   productionId: z.number(),
+})
+
+/**
+ * 従業員マスタ
+ * - 営業担当者など、社内従業員の情報を管理
+ */
+export const EmployeeDataSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  email: z.string(),
+  /** 部署・役職など（任意） */
+  department: z.string().optional(),
 })
 
 /**
@@ -237,6 +253,7 @@ export const DemoDbSnapshotSchema = z.object({
     companies: z.array(CompanyDataSchema),
     productions: z.array(ProductionDataSchema),
     companions: z.array(CompanionDataSchema),
+    employees: z.array(EmployeeDataSchema),
   }),
 })
 

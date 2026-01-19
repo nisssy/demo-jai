@@ -1,7 +1,10 @@
 import {
   CompanyDataSchema,
+  CompanionDataSchema,
   DemoDbSnapshotSchema,
+  EmployeeDataSchema,
   HallDataSchema,
+  ProductionDataSchema,
   ProductEntitySchema,
   ProjectEntitySchema,
   ProjectSchema,
@@ -9,7 +12,7 @@ import {
 } from "@/lib/demo-db/schema"
 
 export const DEMO_DB_STORAGE_KEY = "demo-jai:demo-db"
-export const DEMO_DB_STORAGE_VERSION = 4
+export const DEMO_DB_STORAGE_VERSION = 5
 
 type ParseMeta = {
   snapshot: DemoDbSnapshot
@@ -335,6 +338,88 @@ function migrateV3ToV4(data: any): any {
   return { ...base, productions, companions }
 }
 
+function migrateV4ToV5(data: any): any {
+  // v5: add employees master, add email to companies/halls
+  const base = typeof data === "object" && data ? data : {}
+  
+  // 従業員マスタを追加（デフォルトデータ：50名）
+  const employees = Array.isArray((base as any).employees)
+    ? (base as any).employees
+    : [
+        // 営業部（20人）
+        { id: 1, name: "山田 太郎", email: "yamada@example.com", department: "営業部" },
+        { id: 2, name: "佐藤 次郎", email: "sato@example.com", department: "営業部" },
+        { id: 3, name: "鈴木 三郎", email: "suzuki@example.com", department: "営業部" },
+        { id: 4, name: "高橋 四郎", email: "takahashi@example.com", department: "営業部" },
+        { id: 5, name: "伊藤 五郎", email: "ito@example.com", department: "営業部" },
+        { id: 6, name: "渡辺 六郎", email: "watanabe@example.com", department: "営業部" },
+        { id: 7, name: "中村 七郎", email: "nakamura@example.com", department: "営業部" },
+        { id: 8, name: "小林 八郎", email: "kobayashi@example.com", department: "営業部" },
+        { id: 9, name: "加藤 九郎", email: "kato@example.com", department: "営業部" },
+        { id: 10, name: "松本 十郎", email: "matsumoto@example.com", department: "営業部" },
+        { id: 11, name: "井上 十一", email: "inoue@example.com", department: "営業部" },
+        { id: 12, name: "木村 十二", email: "kimura@example.com", department: "営業部" },
+        { id: 13, name: "林 十三", email: "hayashi@example.com", department: "営業部" },
+        { id: 14, name: "斎藤 十四", email: "saito@example.com", department: "営業部" },
+        { id: 15, name: "清水 十五", email: "shimizu@example.com", department: "営業部" },
+        { id: 16, name: "山本 十六", email: "yamamoto@example.com", department: "営業部" },
+        { id: 17, name: "森 十七", email: "mori@example.com", department: "営業部" },
+        { id: 18, name: "池田 十八", email: "ikeda@example.com", department: "営業部" },
+        { id: 19, name: "橋本 十九", email: "hashimoto@example.com", department: "営業部" },
+        { id: 20, name: "石川 二十", email: "ishikawa@example.com", department: "営業部" },
+        // 営業部（追加10人）
+        { id: 21, name: "田中 一郎", email: "tanaka@example.com", department: "営業部" },
+        { id: 22, name: "佐々木 二郎", email: "sasaki@example.com", department: "営業部" },
+        { id: 23, name: "山口 三郎", email: "yamaguchi@example.com", department: "営業部" },
+        { id: 24, name: "松井 四郎", email: "matsui@example.com", department: "営業部" },
+        { id: 25, name: "村上 五郎", email: "murakami@example.com", department: "営業部" },
+        { id: 26, name: "前田 六郎", email: "maeda@example.com", department: "営業部" },
+        { id: 27, name: "長谷川 七郎", email: "hasegawa@example.com", department: "営業部" },
+        { id: 28, name: "藤田 八郎", email: "fujita@example.com", department: "営業部" },
+        { id: 29, name: "近藤 九郎", email: "kondo@example.com", department: "営業部" },
+        { id: 30, name: "遠藤 十郎", email: "endo@example.com", department: "営業部" },
+        // 管理部（10人）
+        { id: 31, name: "青木 花子", email: "aoki@example.com", department: "管理部" },
+        { id: 32, name: "新井 美咲", email: "arai@example.com", department: "管理部" },
+        { id: 33, name: "荒井 さくら", email: "arai2@example.com", department: "管理部" },
+        { id: 34, name: "石井 みゆき", email: "ishii@example.com", department: "管理部" },
+        { id: 35, name: "上田 あかり", email: "ueda@example.com", department: "管理部" },
+        { id: 36, name: "内田 ゆい", email: "uchida@example.com", department: "管理部" },
+        { id: 37, name: "江藤 まい", email: "eto@example.com", department: "管理部" },
+        { id: 38, name: "大野 りん", email: "ono@example.com", department: "管理部" },
+        { id: 39, name: "小野 なな", email: "ono2@example.com", department: "管理部" },
+        { id: 40, name: "尾崎 はるか", email: "ozaki@example.com", department: "管理部" },
+        // 経理部（10人）
+        { id: 41, name: "岡田 健", email: "okada@example.com", department: "経理部" },
+        { id: 42, name: "奥田 誠", email: "okuda@example.com", department: "経理部" },
+        { id: 43, name: "片山 智", email: "katayama@example.com", department: "経理部" },
+        { id: 44, name: "金田 勇", email: "kaneda@example.com", department: "経理部" },
+        { id: 45, name: "川上 剛", email: "kawakami@example.com", department: "経理部" },
+        { id: 46, name: "河野 進", email: "kono@example.com", department: "経理部" },
+        { id: 47, name: "菊地 優", email: "kikuchi@example.com", department: "経理部" },
+        { id: 48, name: "工藤 大", email: "kudo@example.com", department: "経理部" },
+        { id: 49, name: "久保 翔", email: "kubo@example.com", department: "経理部" },
+        { id: 50, name: "黒田 亮", email: "kuroda@example.com", department: "経理部" },
+      ]
+
+  // 法人・ホールにメールアドレスを追加（既存データには追加しない、新規データのみ）
+  const companies = Array.isArray((base as any).companies)
+    ? (base as any).companies.map((c: any) => ({
+        ...c,
+        email: c.email || undefined,
+      }))
+    : []
+
+  const halls = Array.isArray((base as any).halls)
+    ? (base as any).halls.map((h: any) => ({
+        ...h,
+        email: h.email || undefined,
+      }))
+    : []
+
+  return { ...base, employees, companies, halls }
+}
+
 function applyMigrations(version: number, data: any): { version: number; data: any; migrated: boolean } | null {
   if (version > DEMO_DB_STORAGE_VERSION) return null
   let v = version
@@ -363,6 +448,12 @@ function applyMigrations(version: number, data: any): { version: number; data: a
     if (v === 3) {
       d = migrateV3ToV4(d)
       v = 4
+      migrated = true
+      continue
+    }
+    if (v === 4) {
+      d = migrateV4ToV5(d)
+      v = 5
       migrated = true
       continue
     }
@@ -406,17 +497,20 @@ function safeParseWithMigration(raw: string | null): ParseMeta | null {
     const migrated = applyMigrations(rawVersion, rawData)
     if (!migrated) return null
 
-    // After migrations we should have v3 logical shape.
+    // After migrations we should have v5 logical shape.
     const projects = pickValidArrayItems(migrated.data.projects, ProjectEntitySchema)
     const productsParsed = pickValidArrayItems(migrated.data.products, ProductEntitySchema)
     const backfilled = backfillCastBookingStatus(productsParsed as any[])
     const halls = pickValidArrayItems(migrated.data.halls, HallDataSchema)
     const companies = pickValidArrayItems(migrated.data.companies, CompanyDataSchema)
+    const productions = pickValidArrayItems(migrated.data.productions, ProductionDataSchema)
+    const companions = pickValidArrayItems(migrated.data.companions, CompanionDataSchema)
+    const employees = pickValidArrayItems(migrated.data.employees, EmployeeDataSchema)
 
     return {
       snapshot: {
         version: DEMO_DB_STORAGE_VERSION,
-        data: { projects, products: backfilled.products as any, halls, companies },
+        data: { projects, products: backfilled.products as any, halls, companies, productions, companions, employees },
       },
       shouldResave: true || backfilled.changed,
     }
