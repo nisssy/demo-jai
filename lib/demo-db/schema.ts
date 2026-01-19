@@ -196,13 +196,14 @@ export const ProductEntitySchema = z
     nominatedDirectors: z.record(z.boolean()).optional(),
     nominatedMcs: z.record(z.boolean()).optional(),
     /**
-     * キャストごとのブッキング状態（商材の実施期間に対する 本押さえ/仮押さえ）
+     * キャストごとのブッキング状態（商材の実施期間に対する 仮押さえ依頼/仮押さえ/本押さえ）
+     * - pending: 仮押さえ依頼（案件作成時の初期状態）
      * - tentative: 仮押さえ
      * - confirmed: 本押さえ
      */
-    companionBookingStatus: z.record(z.enum(["tentative", "confirmed"])).optional(),
-    directorBookingStatus: z.record(z.enum(["tentative", "confirmed"])).optional(),
-    mcBookingStatus: z.record(z.enum(["tentative", "confirmed"])).optional(),
+    companionBookingStatus: z.record(z.enum(["pending", "tentative", "confirmed"])).optional(),
+    directorBookingStatus: z.record(z.enum(["pending", "tentative", "confirmed"])).optional(),
+    mcBookingStatus: z.record(z.enum(["pending", "tentative", "confirmed"])).optional(),
     /** キャストごとの「仮押さえ不可」理由（入っているキャストは仮押さえ不可扱い） */
     companionTentativeHoldFailureComment: z.record(z.string()).optional(),
     directorTentativeHoldFailureComment: z.record(z.string()).optional(),

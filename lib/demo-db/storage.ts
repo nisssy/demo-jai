@@ -19,7 +19,7 @@ type ParseMeta = {
   shouldResave: boolean
 }
 
-type CastBookingStatus = "tentative" | "confirmed"
+type CastBookingStatus = "pending" | "tentative" | "confirmed"
 
 function ensureBookingStatusFromConfirmed(
   names: unknown,
@@ -30,7 +30,10 @@ function ensureBookingStatusFromConfirmed(
   for (const n of names) {
     const name = typeof n === "string" ? n.trim() : ""
     if (!name || name === "未定") continue
-    out[name] = "confirmed"
+    // pending状態は上書きしない（confirmedのみ設定）
+    if (out[name] !== "pending") {
+      out[name] = "confirmed"
+    }
   }
   return out
 }
@@ -43,12 +46,25 @@ function ensureBookingStatusFromSelectedTentativeWhenNeeded(
   const out: Record<string, CastBookingStatus> = { ...(existing ?? {}) }
   const ps = typeof projectStatus === "string" ? projectStatus : ""
   // 互換: 以前は商材単位で「仮押さえ済み」を持っていたため、その場合は選択キャストを仮押さえとして埋める
-  if (ps !== "仮押さえ済み") return out
-  if (!Array.isArray(selected)) return out
-  for (const n of selected) {
-    const name = typeof n === "string" ? n.trim() : ""
-    if (!name || name === "未定") continue
-    if (!out[name]) out[name] = "tentative"
+  if (ps === "仮押さえ済み") {
+    if (!Array.isArray(selected)) return out
+    for (const n of selected) {
+      const name = typeof n === "string" ? n.trim() : ""
+      if (!name || name === "未定") continue
+      if (!out[name]) out[name] = "tentative"
+    }
+    return out
+  }
+  // projectStatus === "仮押さえ依頼"の場合、選択されたキャストをpending状態で初期化
+  if (ps === "仮押さえ依頼") {
+    if (!Array.isArray(selected)) return out
+    for (const n of selected) {
+      const name = typeof n === "string" ? n.trim() : ""
+      if (!name || name === "未定") continue
+      // 既存の状態がなければpendingを設定（confirmedやtentativeは上書きしない）
+      if (!out[name]) out[name] = "pending"
+    }
+    return out
   }
   return out
 }
@@ -85,24 +101,51 @@ function backfillCastBookingStatus(products: any[]): { products: any[]; changed:
     const prevDirFail = (p as any).directorTentativeHoldFailureComment as Record<string, string> | undefined
     const prevMcFail = (p as any).mcTentativeHoldFailureComment as Record<string, string> | undefined
 
+    // 既存のpending状態を保持（backfillで上書きしない）
     const compFromConfirmed = ensureBookingStatusFromConfirmed((p as any).confirmedCompanions, prevComp)
     const dirFromConfirmed = ensureBookingStatusFromConfirmed((p as any).confirmedDirectors, prevDir)
     const mcFromConfirmed = ensureBookingStatusFromConfirmed((p as any).confirmedMcs, prevMc)
 
+    // pending状態を保持するため、既存のpendingを優先
+    const compWithPending = { ...compFromConfirmed }
+    if (prevComp) {
+      Object.entries(prevComp).forEach(([name, status]) => {
+        if (status === "pending" && !compWithPending[name]) {
+          compWithPending[name] = "pending"
+        }
+      })
+    }
+    const dirWithPending = { ...dirFromConfirmed }
+    if (prevDir) {
+      Object.entries(prevDir).forEach(([name, status]) => {
+        if (status === "pending" && !dirWithPending[name]) {
+          dirWithPending[name] = "pending"
+        }
+      })
+    }
+    const mcWithPending = { ...mcFromConfirmed }
+    if (prevMc) {
+      Object.entries(prevMc).forEach(([name, status]) => {
+        if (status === "pending" && !mcWithPending[name]) {
+          mcWithPending[name] = "pending"
+        }
+      })
+    }
+
     const compFinal = ensureBookingStatusFromSelectedTentativeWhenNeeded(
       (p as any).projectStatus,
       (p as any).selectedCompanions,
-      compFromConfirmed,
+      compWithPending,
     )
     const dirFinal = ensureBookingStatusFromSelectedTentativeWhenNeeded(
       (p as any).projectStatus,
       (p as any).selectedDirectors,
-      dirFromConfirmed,
+      dirWithPending,
     )
     const mcFinal = ensureBookingStatusFromSelectedTentativeWhenNeeded(
       (p as any).projectStatus,
       (p as any).selectedMcs,
-      mcFromConfirmed,
+      mcWithPending,
     )
 
     const compFailFinal = ensureFailureCommentFromLegacyWhenNeeded(

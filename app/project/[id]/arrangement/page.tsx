@@ -273,13 +273,13 @@ function ProjectArrangementPageContent() {
     const confirmedDir = confirmedDirectors.filter((d) => d.trim() !== "")
     const confirmedMc = confirmedMcs.filter((m) => m.trim() !== "")
 
-    const prevComp = ((current as any)?.companionBookingStatus ?? (project as any).companionBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">
-    const prevDir = ((current as any)?.directorBookingStatus ?? (project as any).directorBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">
-    const prevMc = ((current as any)?.mcBookingStatus ?? (project as any).mcBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">
+    const prevComp = ((current as any)?.companionBookingStatus ?? (project as any).companionBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">
+    const prevDir = ((current as any)?.directorBookingStatus ?? (project as any).directorBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">
+    const prevMc = ((current as any)?.mcBookingStatus ?? (project as any).mcBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">
 
-    const companionBookingStatus: Record<string, "tentative" | "confirmed"> = { ...prevComp }
-    const directorBookingStatus: Record<string, "tentative" | "confirmed"> = { ...prevDir }
-    const mcBookingStatus: Record<string, "tentative" | "confirmed"> = { ...prevMc }
+    const companionBookingStatus: Record<string, "pending" | "tentative" | "confirmed"> = { ...prevComp }
+    const directorBookingStatus: Record<string, "pending" | "tentative" | "confirmed"> = { ...prevDir }
+    const mcBookingStatus: Record<string, "pending" | "tentative" | "confirmed"> = { ...prevMc }
 
     confirmedComp.forEach((name) => {
       if (!name || name === "未定") return
@@ -315,13 +315,13 @@ function ProjectArrangementPageContent() {
     const confirmedDir = confirmedDirectors.filter((d) => d.trim() !== "")
     const confirmedMc = confirmedMcs.filter((m) => m.trim() !== "")
 
-    const prevComp = ((current as any)?.companionBookingStatus ?? (project as any).companionBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">
-    const prevDir = ((current as any)?.directorBookingStatus ?? (project as any).directorBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">
-    const prevMc = ((current as any)?.mcBookingStatus ?? (project as any).mcBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">
+    const prevComp = ((current as any)?.companionBookingStatus ?? (project as any).companionBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">
+    const prevDir = ((current as any)?.directorBookingStatus ?? (project as any).directorBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">
+    const prevMc = ((current as any)?.mcBookingStatus ?? (project as any).mcBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">
 
-    const companionBookingStatus: Record<string, "tentative" | "confirmed"> = { ...prevComp }
-    const directorBookingStatus: Record<string, "tentative" | "confirmed"> = { ...prevDir }
-    const mcBookingStatus: Record<string, "tentative" | "confirmed"> = { ...prevMc }
+    const companionBookingStatus: Record<string, "pending" | "tentative" | "confirmed"> = { ...prevComp }
+    const directorBookingStatus: Record<string, "pending" | "tentative" | "confirmed"> = { ...prevDir }
+    const mcBookingStatus: Record<string, "pending" | "tentative" | "confirmed"> = { ...prevMc }
 
     confirmedComp.forEach((name) => {
       if (!name || name === "未定") return

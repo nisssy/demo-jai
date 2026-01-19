@@ -1570,6 +1570,10 @@ const initialProjects: Product[] = [
     selectedCompanions: ["Rio", "Ayaka"], // 3人必要だが2人しか選択していない
     selectedDirectors: ["Takeshi"],
     selectedMcs: ["Yuki"],
+    // 仮押さえ依頼状態（pending）のキャスト
+    companionBookingStatus: { "Rio": "pending", "Ayaka": "pending" },
+    directorBookingStatus: { "Takeshi": "pending" },
+    mcBookingStatus: { "Yuki": "pending" },
     startTime: "10:00",
     endTime: "18:00",
     ...getCompanyAndHallInfo("マルハン渋谷店"),
@@ -1599,6 +1603,10 @@ const initialProjects: Product[] = [
     selectedCompanions: ["Rio", "未定"], // 「未定」が選択されている
     selectedDirectors: ["Takeshi"],
     selectedMcs: ["Yuki"],
+    // 仮押さえ依頼状態（pending）のキャスト（「未定」は除外）
+    companionBookingStatus: { "Rio": "pending" },
+    directorBookingStatus: { "Takeshi": "pending" },
+    mcBookingStatus: { "Yuki": "pending" },
     startTime: "11:00",
     endTime: "19:00",
     ...getCompanyAndHallInfo("ダイナム新宿店"),
@@ -1628,6 +1636,10 @@ const initialProjects: Product[] = [
     selectedCompanions: ["Rio", "山田 花子"], // 外部コンパニオンが選択されている
     selectedDirectors: ["Takeshi"],
     selectedMcs: ["Yuki"],
+    // 仮押さえ依頼状態（pending）のキャスト
+    companionBookingStatus: { "Rio": "pending", "山田 花子": "pending" },
+    directorBookingStatus: { "Takeshi": "pending" },
+    mcBookingStatus: { "Yuki": "pending" },
     startTime: "12:00",
     endTime: "20:00",
     ...getCompanyAndHallInfo("ガイア池袋店"),
@@ -1959,6 +1971,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           nominatedCompanions: (row as any).nominatedCompanions,
           nominatedDirectors: (row as any).nominatedDirectors,
           nominatedMcs: (row as any).nominatedMcs,
+          companionBookingStatus: (row as any).companionBookingStatus,
+          directorBookingStatus: (row as any).directorBookingStatus,
+          mcBookingStatus: (row as any).mcBookingStatus,
+          companionTentativeHoldFailureComment: (row as any).companionTentativeHoldFailureComment,
+          directorTentativeHoldFailureComment: (row as any).directorTentativeHoldFailureComment,
+          mcTentativeHoldFailureComment: (row as any).mcTentativeHoldFailureComment,
           correctionRequest: row.correctionRequest,
           correctionComment: row.correctionComment,
           temporaryHoldFailureComment: row.temporaryHoldFailureComment,

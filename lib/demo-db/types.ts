@@ -86,10 +86,10 @@ export type DemoProductEntity = {
   nominatedCompanions?: Record<string, boolean>
   nominatedDirectors?: Record<string, boolean>
   nominatedMcs?: Record<string, boolean>
-  /** キャストごとのブッキング状態（商材の実施期間に対する 本押さえ/仮押さえ） */
-  companionBookingStatus?: Record<string, "tentative" | "confirmed">
-  directorBookingStatus?: Record<string, "tentative" | "confirmed">
-  mcBookingStatus?: Record<string, "tentative" | "confirmed">
+  /** キャストごとのブッキング状態（商材の実施期間に対する 仮押さえ依頼/仮押さえ/本押さえ） */
+  companionBookingStatus?: Record<string, "pending" | "tentative" | "confirmed">
+  directorBookingStatus?: Record<string, "pending" | "tentative" | "confirmed">
+  mcBookingStatus?: Record<string, "pending" | "tentative" | "confirmed">
   /** キャストごとの「仮押さえ不可」理由（入っているキャストは仮押さえ不可扱い） */
   companionTentativeHoldFailureComment?: Record<string, string>
   directorTentativeHoldFailureComment?: Record<string, string>

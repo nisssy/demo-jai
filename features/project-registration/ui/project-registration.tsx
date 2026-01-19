@@ -864,6 +864,16 @@ export function ProjectRegistration({
         nominatedCompanions: productInfo.nominatedCompanions,
         nominatedDirectors: productInfo.nominatedDirectors,
         nominatedMcs: productInfo.nominatedMcs,
+        // 案件作成時は選択されたキャストをpending状態で初期化
+        companionBookingStatus: Array.from(productInfo.selectedCompanions)
+          .filter(name => name !== "未定")
+          .reduce((acc, name) => ({ ...acc, [name]: "pending" as const }), {}),
+        directorBookingStatus: Array.from(productInfo.selectedDirectors)
+          .filter(name => name !== "未定")
+          .reduce((acc, name) => ({ ...acc, [name]: "pending" as const }), {}),
+        mcBookingStatus: Array.from(productInfo.selectedMcs)
+          .filter(name => name !== "未定")
+          .reduce((acc, name) => ({ ...acc, [name]: "pending" as const }), {}),
         transportationFee: totalTransportationFee,
         isTransportationAutoFilled: true,
       }
@@ -1319,6 +1329,16 @@ export function ProjectRegistration({
           nominatedCompanions: productInfo.nominatedCompanions,
           nominatedDirectors: productInfo.nominatedDirectors,
           nominatedMcs: productInfo.nominatedMcs,
+          // 案件作成時は選択されたキャストをpending状態で初期化
+          companionBookingStatus: Array.from(productInfo.selectedCompanions)
+            .filter(name => name !== "未定")
+            .reduce((acc, name) => ({ ...acc, [name]: "pending" as const }), {}),
+          directorBookingStatus: Array.from(productInfo.selectedDirectors)
+            .filter(name => name !== "未定")
+            .reduce((acc, name) => ({ ...acc, [name]: "pending" as const }), {}),
+          mcBookingStatus: Array.from(productInfo.selectedMcs)
+            .filter(name => name !== "未定")
+            .reduce((acc, name) => ({ ...acc, [name]: "pending" as const }), {}),
           transportationFee: totalTransportationFee,
           isTransportationAutoFilled: true,
         }

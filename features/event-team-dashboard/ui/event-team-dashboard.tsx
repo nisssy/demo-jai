@@ -40,7 +40,8 @@ export function EventTeamDashboard({
   const [showConfirmationModal, setShowConfirmationModal] = useState(false)
   const [showCorrectionModal, setShowCorrectionModal] = useState(false)
   const [correctionRequest, setCorrectionRequest] = useState("")
-  const [activeTab, setActiveTab] = useState<"arrangements" | "temporaryHold" | "confirmation" | "postEvent">("arrangements")
+  const [activeTab, setActiveTab] = useState<"arrangements" | "confirmation" | "postEvent">("arrangements")
+  const [arrangementsSubTab, setArrangementsSubTab] = useState<"holdRequest" | "inProgress">("holdRequest")
   const [showAutoArrangementModal, setShowAutoArrangementModal] = useState(false)
   const [autoArrangementChecks, setAutoArrangementChecks] = useState({
     pachitown: false,
@@ -55,9 +56,9 @@ export function EventTeamDashboard({
   const [temporaryHoldFailureComment, setTemporaryHoldFailureComment] = useState("")
 
   // 仮押さえ進捗（キャストごと）
-  const [draftCompanionBookingStatus, setDraftCompanionBookingStatus] = useState<Record<string, "tentative" | "confirmed">>({})
-  const [draftDirectorBookingStatus, setDraftDirectorBookingStatus] = useState<Record<string, "tentative" | "confirmed">>({})
-  const [draftMcBookingStatus, setDraftMcBookingStatus] = useState<Record<string, "tentative" | "confirmed">>({})
+  const [draftCompanionBookingStatus, setDraftCompanionBookingStatus] = useState<Record<string, "pending" | "tentative" | "confirmed">>({})
+  const [draftDirectorBookingStatus, setDraftDirectorBookingStatus] = useState<Record<string, "pending" | "tentative" | "confirmed">>({})
+  const [draftMcBookingStatus, setDraftMcBookingStatus] = useState<Record<string, "pending" | "tentative" | "confirmed">>({})
   const [draftCompanionFailureComment, setDraftCompanionFailureComment] = useState<Record<string, string>>({})
   const [draftDirectorFailureComment, setDraftDirectorFailureComment] = useState<Record<string, string>>({})
   const [draftMcFailureComment, setDraftMcFailureComment] = useState<Record<string, string>>({})
@@ -71,7 +72,7 @@ export function EventTeamDashboard({
 
   const computeTentativeProgress = (
     names: string[],
-    status: Record<string, "tentative" | "confirmed">,
+    status: Record<string, "pending" | "tentative" | "confirmed">,
     failure: Record<string, string>,
   ) => {
     const done = names.filter((n) => status[n] === "tentative" || status[n] === "confirmed" || !!failure[n]).length
@@ -101,9 +102,9 @@ export function EventTeamDashboard({
   useEffect(() => {
     if (!selectedProject || !showCastingInfoModal) return
     const proj: any = selectedProject
-    setDraftCompanionBookingStatus((proj.companionBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">)
-    setDraftDirectorBookingStatus((proj.directorBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">)
-    setDraftMcBookingStatus((proj.mcBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">)
+    setDraftCompanionBookingStatus((proj.companionBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">)
+    setDraftDirectorBookingStatus((proj.directorBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">)
+    setDraftMcBookingStatus((proj.mcBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">)
     setDraftCompanionFailureComment((proj.companionTentativeHoldFailureComment ?? {}) as Record<string, string>)
     setDraftDirectorFailureComment((proj.directorTentativeHoldFailureComment ?? {}) as Record<string, string>)
     setDraftMcFailureComment((proj.mcTentativeHoldFailureComment ?? {}) as Record<string, string>)
@@ -435,12 +436,12 @@ export function EventTeamDashboard({
         <div className="border-b border-slate-100 mb-8">
           <TabsList className="bg-transparent h-auto p-0 gap-0">
             <TabsTrigger 
-              value="temporaryHold"
+              value="arrangements"
               className="relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
             >
-              仮押さえ依頼
-              {temporaryHoldRequests.length > 0 && (
-                <Badge className="ml-1.5 bg-red-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">{temporaryHoldRequests.length}</Badge>
+              手配中
+              {(temporaryHoldRequests.length > 0 || arrangementProjects.length > 0) && (
+                <Badge className="ml-1.5 bg-slate-400 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">{temporaryHoldRequests.length + arrangementProjects.length}</Badge>
               )}
             </TabsTrigger>
             <TabsTrigger 
@@ -450,15 +451,6 @@ export function EventTeamDashboard({
               内容確認依頼
               {confirmationRequests.length > 0 && (
                 <Badge className="ml-1.5 bg-red-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">{confirmationRequests.length}</Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger 
-              value="arrangements"
-              className="relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
-            >
-              手配進行中
-              {arrangementProjects.length > 0 && (
-                <Badge className="ml-1.5 bg-slate-400 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">{arrangementProjects.length}</Badge>
               )}
             </TabsTrigger>
             <TabsTrigger 
@@ -473,21 +465,260 @@ export function EventTeamDashboard({
           </TabsList>
         </div>
 
-        {/* 手配進行中タブ */}
+        {/* 手配中タブ */}
         <TabsContent value="arrangements" className="mt-0">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-900">手配進行中</CardTitle>
-              <CardDescription className="text-slate-600">
-                手配中の案件一覧
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {arrangementProjects.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">
-                  手配中の案件はありません
-                </div>
-              ) : (
+          <Tabs value={arrangementsSubTab} onValueChange={(value) => setArrangementsSubTab(value as typeof arrangementsSubTab)} className="w-full">
+            <div className="border-b border-slate-200 mb-6">
+              <TabsList className="bg-transparent h-auto p-0 gap-0">
+                <TabsTrigger 
+                  value="holdRequest"
+                  className="relative px-4 py-2 text-sm font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
+                >
+                  押さえ依頼
+                  {temporaryHoldRequests.length > 0 && (
+                    <Badge className="ml-1.5 bg-red-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">{temporaryHoldRequests.length}</Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="inProgress"
+                  className="relative px-4 py-2 text-sm font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
+                >
+                  進行中
+                  {arrangementProjects.length > 0 && (
+                    <Badge className="ml-1.5 bg-slate-400 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">{arrangementProjects.length}</Badge>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            {/* 押さえ依頼タブ */}
+            <TabsContent value="holdRequest" className="mt-0">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold text-slate-900">押さえ依頼</CardTitle>
+                  <CardDescription className="text-slate-600">
+                    キャスティング情報を確認して仮押さえを行ってください
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {(() => {
+                    // pending状態のキャストごとに案件をグループ化
+                    const projectsByCast = new Map<string, { castName: string; castType: "companion" | "director" | "mc"; projects: Project[] }>()
+                    
+                    temporaryHoldRequests.forEach((project) => {
+                      const compStatus = ((project as any).companionBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">
+                      const dirStatus = ((project as any).directorBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">
+                      const mcStatus = ((project as any).mcBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">
+                      
+                      // companionでpendingのキャストを追加
+                      Object.entries(compStatus).forEach(([name, status]) => {
+                        if (status === "pending") {
+                          const key = `companion-${name}`
+                          if (!projectsByCast.has(key)) {
+                            projectsByCast.set(key, { castName: name, castType: "companion", projects: [] })
+                          }
+                          // 重複チェック（同じ案件が複数のキャストで表示される可能性があるため）
+                          if (!projectsByCast.get(key)!.projects.find(p => p.id === project.id)) {
+                            projectsByCast.get(key)!.projects.push(project)
+                          }
+                        }
+                      })
+                      
+                      // directorでpendingのキャストを追加
+                      Object.entries(dirStatus).forEach(([name, status]) => {
+                        if (status === "pending") {
+                          const key = `director-${name}`
+                          if (!projectsByCast.has(key)) {
+                            projectsByCast.set(key, { castName: name, castType: "director", projects: [] })
+                          }
+                          // 重複チェック
+                          if (!projectsByCast.get(key)!.projects.find(p => p.id === project.id)) {
+                            projectsByCast.get(key)!.projects.push(project)
+                          }
+                        }
+                      })
+                      
+                      // mcでpendingのキャストを追加
+                      Object.entries(mcStatus).forEach(([name, status]) => {
+                        if (status === "pending") {
+                          const key = `mc-${name}`
+                          if (!projectsByCast.has(key)) {
+                            projectsByCast.set(key, { castName: name, castType: "mc", projects: [] })
+                          }
+                          // 重複チェック
+                          if (!projectsByCast.get(key)!.projects.find(p => p.id === project.id)) {
+                            projectsByCast.get(key)!.projects.push(project)
+                          }
+                        }
+                      })
+                    })
+                    
+                    // temporaryHoldRequestsが空の場合
+                    if (temporaryHoldRequests.length === 0) {
+                      return (
+                        <div className="text-center py-8 text-slate-500">
+                          押さえ依頼はありません
+                        </div>
+                      )
+                    }
+                    
+                    // pending状態のキャストが検出されない場合、すべての案件を表示
+                    if (projectsByCast.size === 0) {
+                      return (
+                        <div className="space-y-4">
+                          <div className="text-sm text-slate-600 bg-yellow-50 border border-yellow-200 rounded p-3">
+                            注意: pending状態のキャストが見つかりませんでした。すべての仮押さえ依頼案件を表示します。
+                          </div>
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>案件名</TableHead>
+                                <TableHead>案件No</TableHead>
+                                <TableHead>クライアント</TableHead>
+                                <TableHead>実施日</TableHead>
+                                <TableHead>ステータス</TableHead>
+                                <TableHead>操作</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {temporaryHoldRequests.map((project) => (
+                                <TableRow key={project.id}>
+                                  <TableCell className="font-medium">{project.projectName}</TableCell>
+                                  <TableCell>{project.projectNumber}</TableCell>
+                                  <TableCell>{project.clientName}</TableCell>
+                                  <TableCell>{project.date}</TableCell>
+                                  <TableCell>{getStatusBadge(project.projectStatus || "")}</TableCell>
+                                  <TableCell>
+                                    <div className="flex gap-2">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => handleViewCastingInfo(project)}
+                                        className="gap-2"
+                                      >
+                                        <Eye className="h-4 w-4" />
+                                        キャスティング情報
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      )
+                    }
+                    
+                    return (
+                      <div className="space-y-6">
+                        {Array.from(projectsByCast.entries()).map(([key, { castName, castType, projects }]) => {
+                          const castTypeLabel = castType === "companion" ? "コンパニオン" : castType === "director" ? "ディレクター" : "MC"
+                          // 重複を除去（同じ案件が複数のキャストで表示される可能性があるため）
+                          const uniqueProjects = Array.from(new Map(projects.map(p => [p.id, p])).values())
+                          
+                          return (
+                            <div key={key} className="border border-slate-200 rounded-lg p-4">
+                              <div className="mb-4">
+                                <h3 className="text-base font-semibold text-slate-900">
+                                  {castTypeLabel}: {castName}
+                                </h3>
+                                <p className="text-sm text-slate-600 mt-1">
+                                  {uniqueProjects.length}件の案件
+                                </p>
+                              </div>
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>案件名</TableHead>
+                                    <TableHead>案件No</TableHead>
+                                    <TableHead>クライアント</TableHead>
+                                    <TableHead>実施日</TableHead>
+                                    <TableHead>仮押さえ進捗</TableHead>
+                                    <TableHead>ステータス</TableHead>
+                                    <TableHead>操作</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {uniqueProjects.map((project) => {
+                                    const selectedCompanions = normalizeSelectedNames((project as any).selectedCompanions)
+                                    const selectedDirectors = normalizeSelectedNames((project as any).selectedDirectors)
+                                    const selectedMcs = normalizeSelectedNames((project as any).selectedMcs)
+                                    const compStatus = ((project as any).companionBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">
+                                    const dirStatus = ((project as any).directorBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">
+                                    const mcStatus = ((project as any).mcBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">
+                                    const compFail = ((project as any).companionTentativeHoldFailureComment ?? {}) as Record<string, string>
+                                    const dirFail = ((project as any).directorTentativeHoldFailureComment ?? {}) as Record<string, string>
+                                    const mcFail = ((project as any).mcTentativeHoldFailureComment ?? {}) as Record<string, string>
+                                    const compProg = computeTentativeProgress(selectedCompanions, compStatus, compFail)
+                                    const dirProg = computeTentativeProgress(selectedDirectors, dirStatus, dirFail)
+                                    const mcProg = computeTentativeProgress(selectedMcs, mcStatus, mcFail)
+                                    const done = compProg.done + dirProg.done + mcProg.done
+                                    const total = compProg.total + dirProg.total + mcProg.total
+                                    return (
+                                    <TableRow key={project.id}>
+                                      <TableCell className="font-medium">{project.projectName}</TableCell>
+                                      <TableCell>{project.projectNumber}</TableCell>
+                                      <TableCell>{project.clientName}</TableCell>
+                                      <TableCell>{project.date}</TableCell>
+                                      <TableCell>
+                                        <div className="text-sm">
+                                          <span className="font-medium">{done}</span>/<span>{total}</span>
+                                          <div className="text-xs text-slate-500 mt-1">
+                                            Co {compProg.done}/{compProg.total} ・ Dir {dirProg.done}/{dirProg.total} ・ MC {mcProg.done}/{mcProg.total}
+                                          </div>
+                                        </div>
+                                      </TableCell>
+                                      <TableCell>{getStatusBadge(project.projectStatus || "")}</TableCell>
+                                      <TableCell>
+                                        <div className="flex gap-2">
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => handleViewCastingInfo(project)}
+                                            className="gap-2"
+                                          >
+                                            <Eye className="h-4 w-4" />
+                                            キャスティング情報
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="destructive"
+                                            onClick={() => handleTemporaryHoldFailure(project)}
+                                          >
+                                            仮押さえ不可
+                                          </Button>
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>
+                                    )
+                                  })}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* 進行中タブ */}
+            <TabsContent value="inProgress" className="mt-0">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold text-slate-900">進行中</CardTitle>
+                  <CardDescription className="text-slate-600">
+                    手配中の案件一覧
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {arrangementProjects.length === 0 ? (
+                    <div className="text-center py-8 text-slate-500">
+                      手配中の案件はありません
+                    </div>
+                  ) : (
                 <div className="overflow-x-auto">
                   <div className="relative">
                     <Table>
@@ -664,97 +895,11 @@ export function EventTeamDashboard({
                     </Table>
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* 仮押さえ依頼タブ */}
-        <TabsContent value="temporaryHold" className="mt-0">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-900">仮押さえ依頼</CardTitle>
-              <CardDescription className="text-slate-600">
-                キャスティング情報を確認して仮押さえを行ってください
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {temporaryHoldRequests.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">
-                  仮押さえ依頼はありません
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>案件名</TableHead>
-                      <TableHead>案件No</TableHead>
-                      <TableHead>クライアント</TableHead>
-                      <TableHead>実施日</TableHead>
-                      <TableHead>仮押さえ進捗</TableHead>
-                      <TableHead>ステータス</TableHead>
-                      <TableHead>操作</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {temporaryHoldRequests.map((project) => {
-                      const selectedCompanions = normalizeSelectedNames((project as any).selectedCompanions)
-                      const selectedDirectors = normalizeSelectedNames((project as any).selectedDirectors)
-                      const selectedMcs = normalizeSelectedNames((project as any).selectedMcs)
-                      const compStatus = ((project as any).companionBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">
-                      const dirStatus = ((project as any).directorBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">
-                      const mcStatus = ((project as any).mcBookingStatus ?? {}) as Record<string, "tentative" | "confirmed">
-                      const compFail = ((project as any).companionTentativeHoldFailureComment ?? {}) as Record<string, string>
-                      const dirFail = ((project as any).directorTentativeHoldFailureComment ?? {}) as Record<string, string>
-                      const mcFail = ((project as any).mcTentativeHoldFailureComment ?? {}) as Record<string, string>
-                      const compProg = computeTentativeProgress(selectedCompanions, compStatus, compFail)
-                      const dirProg = computeTentativeProgress(selectedDirectors, dirStatus, dirFail)
-                      const mcProg = computeTentativeProgress(selectedMcs, mcStatus, mcFail)
-                      const done = compProg.done + dirProg.done + mcProg.done
-                      const total = compProg.total + dirProg.total + mcProg.total
-                      return (
-                      <TableRow key={project.id}>
-                        <TableCell className="font-medium">{project.projectName}</TableCell>
-                        <TableCell>{project.projectNumber}</TableCell>
-                        <TableCell>{project.clientName}</TableCell>
-                        <TableCell>{project.date}</TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <span className="font-medium">{done}</span>/<span>{total}</span>
-                            <div className="text-xs text-slate-500 mt-1">
-                              Co {compProg.done}/{compProg.total} ・ Dir {dirProg.done}/{dirProg.total} ・ MC {mcProg.done}/{mcProg.total}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>{getStatusBadge(project.projectStatus || "")}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleViewCastingInfo(project)}
-                              className="gap-2"
-                            >
-                              <Eye className="h-4 w-4" />
-                              キャスティング情報
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleTemporaryHoldFailure(project)}
-                            >
-                              仮押さえ不可
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         {/* イベント終了処理中タブ */}
@@ -1089,11 +1234,7 @@ export function EventTeamDashboard({
                                 onValueChange={(v) => {
                                   if (disabled) return
                                   if (v === "pending") {
-                                    setDraftCompanionBookingStatus((prev) => {
-                                      const next = { ...prev }
-                                      delete next[name]
-                                      return next
-                                    })
+                                    setDraftCompanionBookingStatus((prev) => ({ ...prev, [name]: "pending" }))
                                     setDraftCompanionFailureComment((prev) => {
                                       const next = { ...prev }
                                       delete next[name]
@@ -1122,7 +1263,7 @@ export function EventTeamDashboard({
                                   <SelectValue placeholder="状態" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="pending">未</SelectItem>
+                                  <SelectItem value="pending">仮押さえ依頼</SelectItem>
                                   <SelectItem value="tentative">仮押さえ</SelectItem>
                                   <SelectItem value="failed">仮押さえ不可</SelectItem>
                                   <SelectItem value="confirmed" disabled>
@@ -1217,7 +1358,7 @@ export function EventTeamDashboard({
                                   <SelectValue placeholder="状態" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="pending">未</SelectItem>
+                                  <SelectItem value="pending">仮押さえ依頼</SelectItem>
                                   <SelectItem value="tentative">仮押さえ</SelectItem>
                                   <SelectItem value="failed">仮押さえ不可</SelectItem>
                                   <SelectItem value="confirmed" disabled>
@@ -1312,7 +1453,7 @@ export function EventTeamDashboard({
                                   <SelectValue placeholder="状態" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="pending">未</SelectItem>
+                                  <SelectItem value="pending">仮押さえ依頼</SelectItem>
                                   <SelectItem value="tentative">仮押さえ</SelectItem>
                                   <SelectItem value="failed">仮押さえ不可</SelectItem>
                                   <SelectItem value="confirmed" disabled>
