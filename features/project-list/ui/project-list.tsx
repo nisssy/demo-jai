@@ -144,7 +144,7 @@ export function ProjectList({
   initialTab = "projects",
 }: ProjectListProps) {
   const router = useAppRouter()
-  const { getProjects, getProducts, updateProduct, getHalls, searchHalls, searchCompanies, getCompanyByCompanyId } = useProject()
+  const { getProjects, getProducts, updateProduct, getHalls, searchHalls, searchCompanies, getCompanyByCompanyId, searchEmployees, getEmployeeById } = useProject()
   const allProjects = getProjects()
   const allProducts = getProducts()
   const [activeTab, setActiveTab] = useState<"projects" | "corrections" | "temporaryHoldFailure">(initialTab as "projects" | "corrections" | "temporaryHoldFailure")
@@ -172,12 +172,16 @@ export function ProjectList({
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null)
   const [searchProjectNumber, setSearchProjectNumber] = useState("")
   const [searchProjectName, setSearchProjectName] = useState("")
-  const [searchSalesPersonName, setSearchSalesPersonName] = useState("")
+  const [selectedSalesPersonId, setSelectedSalesPersonId] = useState<number | null>(1) // デフォルトでid=1を選択
+  const [salesPersonSearchOpen, setSalesPersonSearchOpen] = useState(false)
+  const [salesPersonSearchQuery, setSalesPersonSearchQuery] = useState("")
   const [searchDateMode, setSearchDateMode] = useState<"execution" | "created">("execution")
   const [searchDateFrom, setSearchDateFrom] = useState("")
   const [searchDateTo, setSearchDateTo] = useState("")
   const [searchCategory, setSearchCategory] = useState<string | null>(null)
   const [searchEventType, setSearchEventType] = useState<string | null>(null)
+  const [eventTypeSearchOpen, setEventTypeSearchOpen] = useState(false)
+  const [eventTypeSearchQuery, setEventTypeSearchQuery] = useState("")
   
   const parseDate = useCallback((raw?: string | null): Date | null => {
     if (!raw) return null
@@ -256,9 +260,12 @@ export function ProjectList({
         const name = String(p.projectName || "")
         if (!name.toLowerCase().includes(searchProjectName.toLowerCase())) return false
       }
-      if (searchSalesPersonName) {
-        const sp = String(p.salesPersonName || "")
-        if (!sp.toLowerCase().includes(searchSalesPersonName.toLowerCase())) return false
+      if (selectedSalesPersonId) {
+        const selectedEmployee = getEmployeeById(selectedSalesPersonId)
+        if (selectedEmployee) {
+          const sp = String(p.salesPersonName || "")
+          if (sp !== selectedEmployee.name) return false
+        }
       }
       if (searchDateFrom || searchDateTo) {
         if (searchDateMode === "created") {
@@ -284,8 +291,9 @@ export function ProjectList({
     searchDateTo,
     searchProjectName,
     searchProjectNumber,
-    searchSalesPersonName,
+    selectedSalesPersonId,
     selectedCompanyId,
+    getEmployeeById,
     selectedHallName,
     sortedProjects,
   ])
@@ -623,8 +631,14 @@ Co・Dir担当`
             onSearchProjectNumberChange={setSearchProjectNumber}
             searchProjectName={searchProjectName}
             onSearchProjectNameChange={setSearchProjectName}
-            searchSalesPersonName={searchSalesPersonName}
-            onSearchSalesPersonNameChange={setSearchSalesPersonName}
+            selectedSalesPersonId={selectedSalesPersonId}
+            onSelectedSalesPersonIdChange={setSelectedSalesPersonId}
+            salesPersonSearchOpen={salesPersonSearchOpen}
+            onSalesPersonSearchOpenChange={setSalesPersonSearchOpen}
+            salesPersonSearchQuery={salesPersonSearchQuery}
+            onSalesPersonSearchQueryChange={setSalesPersonSearchQuery}
+            searchEmployees={searchEmployees}
+            getEmployeeById={getEmployeeById}
             searchDateMode={searchDateMode}
             onSearchDateModeChange={setSearchDateMode}
             searchDateFrom={searchDateFrom}
@@ -635,6 +649,10 @@ Co・Dir担当`
             onSearchCategoryChange={setSearchCategory}
             searchEventType={searchEventType}
             onSearchEventTypeChange={setSearchEventType}
+            eventTypeSearchOpen={eventTypeSearchOpen}
+            onEventTypeSearchOpenChange={setEventTypeSearchOpen}
+            eventTypeSearchQuery={eventTypeSearchQuery}
+            onEventTypeSearchQueryChange={setEventTypeSearchQuery}
             searchOpen={searchOpen}
             onSearchOpenChange={setSearchOpen}
             searchType={searchType}
