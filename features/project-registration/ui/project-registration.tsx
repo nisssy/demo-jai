@@ -245,6 +245,9 @@ export function ProjectRegistration({
   }
 
   const [productInfos, setProductInfos] = useState<ProductInfo[]>([getInitialProductInfo(1)])
+  // 各商材情報ごとのイベント区分検索状態
+  const [eventTypeSearchOpen, setEventTypeSearchOpen] = useState<Record<number, boolean>>({})
+  const [eventTypeSearchQuery, setEventTypeSearchQuery] = useState<Record<number, string>>({})
   
   // 既存のstateを商材情報①と互換性を保つために残す（後方互換性のため）
   const category = productInfos[0]?.category || "イベント"
@@ -2443,15 +2446,14 @@ export function ProjectRegistration({
                               })
                             }
                           }}
-                          disabled
                         >
                           <SelectTrigger id={`category-${productInfo.id}`} className={errors.category && index === 0 ? "border-red-500" : ""}>
                             <SelectValue placeholder="カテゴリを選択してください" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="基本契約">基本契約</SelectItem>
                             <SelectItem value="イベント">イベント</SelectItem>
                             <SelectItem value="オプション">オプション</SelectItem>
+                            <SelectItem value="ポイント">ポイント</SelectItem>
                           </SelectContent>
                         </Select>
                         {errors.category && index === 0 && (
@@ -2460,29 +2462,67 @@ export function ProjectRegistration({
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor={`eventType-${productInfo.id}`}>イベント区分</Label>
-                        <Select
-                          value={productInfo.eventType || undefined}
-                          onValueChange={(value) => {
-                            updateProductInfo(index, { eventType: value })
-                            const errorKey = `eventType-${index}`
-                            setErrors((prev) => {
-                              if (prev[errorKey]) {
-                                const newErrors = { ...prev }
-                                delete newErrors[errorKey]
-                                return newErrors
-                              }
-                              return prev
-                            })
+                        <Popover
+                          open={eventTypeSearchOpen[productInfo.id] || false}
+                          onOpenChange={(open) => {
+                            setEventTypeSearchOpen((prev) => ({ ...prev, [productInfo.id]: open }))
                           }}
                         >
-                          <SelectTrigger id={`eventType-${productInfo.id}`} className={errors[`eventType-${index}`] ? "border-red-500" : ""}>
-                            <SelectValue placeholder="イベント種別を選択してください" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="トリニティガール">トリニティガール</SelectItem>
-                            <SelectItem value="スロセレ">スロセレ</SelectItem>
-                          </SelectContent>
-                        </Select>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={eventTypeSearchOpen[productInfo.id] || false}
+                              className={`w-full justify-between ${errors[`eventType-${index}`] ? "border-red-500" : ""}`}
+                            >
+                              {productInfo.eventType || "イベント区分を検索..."}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[300px] p-0" align="start">
+                            <Command>
+                              <CommandInput
+                                placeholder="イベント区分を検索..."
+                                value={eventTypeSearchQuery[productInfo.id] || ""}
+                                onValueChange={(value) => {
+                                  setEventTypeSearchQuery((prev) => ({ ...prev, [productInfo.id]: value }))
+                                }}
+                              />
+                              <CommandList>
+                                <CommandEmpty>イベント区分が見つかりませんでした</CommandEmpty>
+                                <CommandGroup>
+                                  {["トリニティガール", "スロセレ"]
+                                    .filter((eventType) =>
+                                      eventType.toLowerCase().includes((eventTypeSearchQuery[productInfo.id] || "").toLowerCase())
+                                    )
+                                    .map((eventType) => (
+                                      <CommandItem
+                                        key={eventType}
+                                        value={eventType}
+                                        onSelect={() => {
+                                          updateProductInfo(index, { eventType })
+                                          const errorKey = `eventType-${index}`
+                                          setErrors((prev) => {
+                                            if (prev[errorKey]) {
+                                              const newErrors = { ...prev }
+                                              delete newErrors[errorKey]
+                                              return newErrors
+                                            }
+                                            return prev
+                                          })
+                                          setEventTypeSearchOpen((prev) => ({ ...prev, [productInfo.id]: false }))
+                                          setEventTypeSearchQuery((prev) => ({ ...prev, [productInfo.id]: "" }))
+                                        }}
+                                      >
+                                        <Check className={`mr-2 h-4 w-4 ${productInfo.eventType === eventType ? "opacity-100" : "opacity-0"}`} />
+                                        {eventType}
+                                      </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                         {errors[`eventType-${index}`] && (
                           <p ref={(el) => { errorRefs.current[`eventType-${index}`] = el }} className="text-sm text-red-600">{errors[`eventType-${index}`]}</p>
                         )}
@@ -3665,10 +3705,10 @@ export function ProjectRegistration({
                       </div>
                     </div>
 
-                    {/* 請求予定金額の合計 */}
+                    {/* 請求予定金額の小計 */}
                     <div className="bg-blue-50/50 border-2 border-blue-200 rounded-lg p-4">
                       <div className="flex items-center justify-between">
-                        <Label className="text-lg font-semibold text-slate-900">請求予定金額（合計）</Label>
+                        <Label className="text-lg font-semibold text-slate-900">小計</Label>
                         <div className="text-2xl font-bold text-slate-900">
                           ¥{totalBillingAmount.toLocaleString()}
                         </div>
@@ -3687,6 +3727,103 @@ export function ProjectRegistration({
         </Card>
         )
       })}
+
+      {/* 合計金額 */}
+      {productInfos.length > 0 && (() => {
+        // 全商材の合計金額を計算
+        const totalAmount = productInfos.reduce((sum, productInfo) => {
+          const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
+          
+          // コンパニオンのコスト計算
+          const companionCost = (() => {
+            const selectedWithoutUndecided = Array.from(productInfo.selectedCompanions).filter(n => n !== "未定")
+            const count = Number(productInfo.companionCount) || 0
+            let cost = selectedWithoutUndecided.reduce((total, name) => {
+              const hourlyRate = companionHourlyRates[name] || 0
+              return total + (hourlyRate * durationHours)
+            }, 0)
+            if (count > 0) {
+              const selectedCount = selectedWithoutUndecided.length
+              const undecidedCount = count - selectedCount
+              if (undecidedCount > 0) {
+                cost += averageCompanionRate * durationHours * undecidedCount
+              }
+            }
+            return Math.round(cost)
+          })()
+          
+          // ディレクターのコスト計算
+          const directorCost = (() => {
+            const selectedWithoutUndecided = Array.from(productInfo.selectedDirectors).filter(n => n !== "未定")
+            const count = Number(productInfo.directorCount) || 0
+            let cost = selectedWithoutUndecided.reduce((total, name) => {
+              const hourlyRate = directorHourlyRates[name] || 0
+              return total + (hourlyRate * durationHours)
+            }, 0)
+            if (count > 0) {
+              const selectedCount = selectedWithoutUndecided.length
+              const undecidedCount = count - selectedCount
+              if (undecidedCount > 0) {
+                cost += averageDirectorRate * durationHours * undecidedCount
+              }
+            }
+            return Math.round(cost)
+          })()
+          
+          // MCのコスト計算
+          const mcCost = (() => {
+            const selectedWithoutUndecided = Array.from(productInfo.selectedMcs).filter(n => n !== "未定")
+            const count = Number(productInfo.mcCount) || 0
+            let cost = selectedWithoutUndecided.reduce((total, name) => {
+              const hourlyRate = mcHourlyRates[name] || 0
+              return total + (hourlyRate * durationHours)
+            }, 0)
+            if (count > 0) {
+              const selectedCount = selectedWithoutUndecided.length
+              const undecidedCount = count - selectedCount
+              if (undecidedCount > 0) {
+                cost += averageMcRate * durationHours * undecidedCount
+              }
+            }
+            return Math.round(cost)
+          })()
+          
+          const totalCost = Math.round(companionCost + directorCost + mcCost)
+          const totalCastCount = 
+            (Number(productInfo.companionCount) || 0) +
+            (Number(productInfo.directorCount) || 0) +
+            (Number(productInfo.mcCount) || 0)
+          const performanceFeeDiscountValue = Number(productInfo.performanceFeeDiscount) || 0
+          const performanceFeeAfterDiscount = Math.round(Math.max(0, totalCost - performanceFeeDiscountValue))
+          const totalTransportationFee = Math.round(Number(productInfo.transportationFeeTotal) || 0)
+          const accommodationFeePerPersonValue = Number(productInfo.accommodationFeePerPerson) || 0
+          const totalAccommodationFee = Math.round(accommodationFeePerPersonValue * totalCastCount)
+          const eventBaseFeeValue = getEventBaseFee(productInfo.eventType)
+          const hall = hallName ? getHallByName(hallName) : null
+          const hallDiscountAmount = hall?.discountAmount || 0
+          const manualDiscountValue = Number(productInfo.eventBaseFeeDiscount) || 0
+          const eventBaseFeeDiscountValue = hallDiscountAmount + manualDiscountValue
+          const eventBaseFeeAfterDiscount = Math.round(Math.max(0, eventBaseFeeValue - eventBaseFeeDiscountValue))
+          const totalBillingAmount = Math.round(performanceFeeAfterDiscount + totalTransportationFee + totalAccommodationFee + eventBaseFeeAfterDiscount)
+          
+          return sum + totalBillingAmount
+        }, 0)
+        
+        return (
+          <div className="mt-6 mb-4">
+            <Card className="border-2 border-blue-300 bg-blue-50/50">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xl font-bold text-slate-900">合計金額</Label>
+                  <div className="text-3xl font-bold text-blue-600">
+                    ¥{totalAmount.toLocaleString()}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )
+      })()}
 
       {/* 商材を追加ボタンと案件を作成ボタン */}
       <div className="flex justify-center gap-4 mt-4">
