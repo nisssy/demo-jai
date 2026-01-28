@@ -2278,7 +2278,10 @@ export function EventTeamDashboard({
                               ]
                             }),
                           ]
-                          const csvContent = csvRows.map(row => row.join(",")).join("\n")
+                          // CSV形式に変換（カンマや改行を含む可能性があるため、ダブルクォートで囲む）
+                          const csvContent = "\uFEFF" + csvRows.map(row => 
+                            row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+                          ).join("\n")
                           const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
                           const link = document.createElement("a")
                           const url = URL.createObjectURL(blob)
@@ -2288,6 +2291,7 @@ export function EventTeamDashboard({
                           document.body.appendChild(link)
                           link.click()
                           document.body.removeChild(link)
+                          URL.revokeObjectURL(url)
                           addNotification(`請求データ(CSV)を出力しました（${targetProjects.length}件）`)
                         } else {
                           // Cowboy形式で出力
@@ -2312,7 +2316,10 @@ export function EventTeamDashboard({
                               ]
                             }),
                           ]
-                          const csvContent = csvRows.map(row => row.join(",")).join("\n")
+                          // CSV形式に変換（カンマや改行を含む可能性があるため、ダブルクォートで囲む）
+                          const csvContent = "\uFEFF" + csvRows.map(row => 
+                            row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+                          ).join("\n")
                           const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
                           const link = document.createElement("a")
                           const url = URL.createObjectURL(blob)
@@ -2322,6 +2329,7 @@ export function EventTeamDashboard({
                           document.body.appendChild(link)
                           link.click()
                           document.body.removeChild(link)
+                          URL.revokeObjectURL(url)
                           addNotification(`Cowboy形式で出力しました（${targetProjects.length}件）`)
                         }
                       }}
