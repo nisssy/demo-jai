@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar, MapPin, User, Building2, CheckCircle2, XCircle, Eye, Send, FileText, Download, Mail } from "lucide-react"
+import { Calendar, MapPin, User, Building2, CheckCircle2, XCircle, Eye, Send, FileText, Download, Mail, History } from "lucide-react"
 import type { ProjectData } from "@/types/project"
 import { useProject } from "@/contexts/project-context"
 import { useAppRouter } from "@/hooks/use-app-router"
@@ -149,11 +149,13 @@ export function EventTeamDashboard({
   // 旧「仮押さえ不可」モーダル（キャスト別に置き換えたため、実質未使用だが破壊的変更を避けるため残す）
   const [showTemporaryHoldFailureModal, setShowTemporaryHoldFailureModal] = useState(false)
   const [temporaryHoldFailureComment, setTemporaryHoldFailureComment] = useState("")
+  const [showStatusHistoryModal, setShowStatusHistoryModal] = useState(false)
+  const [selectedProjectForHistory, setSelectedProjectForHistory] = useState<Project | null>(null)
 
   // 仮押さえ進捗（キャストごと）
-  const [draftCompanionBookingStatus, setDraftCompanionBookingStatus] = useState<Record<string, "pending" | "tentative" | "confirmed">>({})
-  const [draftDirectorBookingStatus, setDraftDirectorBookingStatus] = useState<Record<string, "pending" | "tentative" | "confirmed">>({})
-  const [draftMcBookingStatus, setDraftMcBookingStatus] = useState<Record<string, "pending" | "tentative" | "confirmed">>({})
+  const [draftCompanionBookingStatus, setDraftCompanionBookingStatus] = useState<Record<string, "pending" | "tentative" | "confirmed_request" | "confirmed">>({})
+  const [draftDirectorBookingStatus, setDraftDirectorBookingStatus] = useState<Record<string, "pending" | "tentative" | "confirmed_request" | "confirmed">>({})
+  const [draftMcBookingStatus, setDraftMcBookingStatus] = useState<Record<string, "pending" | "tentative" | "confirmed_request" | "confirmed">>({})
   const [draftCompanionFailureComment, setDraftCompanionFailureComment] = useState<Record<string, string>>({})
   const [draftDirectorFailureComment, setDraftDirectorFailureComment] = useState<Record<string, string>>({})
   const [draftMcFailureComment, setDraftMcFailureComment] = useState<Record<string, string>>({})
@@ -180,17 +182,50 @@ export function EventTeamDashboard({
 
   const computeTentativeProgress = (
     names: string[],
-    status: Record<string, "pending" | "tentative" | "confirmed">,
+    status: Record<string, "pending" | "tentative" | "confirmed_request" | "confirmed">,
     failure: Record<string, string>,
   ) => {
-    const done = names.filter((n) => status[n] === "tentative" || status[n] === "confirmed" || !!failure[n]).length
+    const done = names.filter((n) => status[n] === "tentative" || status[n] === "confirmed_request" || status[n] === "confirmed" || !!failure[n]).length
     return { done, total: names.length }
+  }
+
+  // ステータス履歴を追加するヘルパー関数
+  const addStatusHistory = (
+    currentHistory: Array<{ status: string; timestamp: string; changedBy?: string; note?: string }> | undefined,
+    newStatus: string,
+    changedBy?: string,
+    note?: string,
+  ): Array<{ status: string; timestamp: string; changedBy?: string; note?: string }> => {
+    const history = currentHistory || []
+    return [
+      ...history,
+      {
+        status: newStatus,
+        timestamp: new Date().toISOString(),
+        changedBy,
+        note,
+      },
+    ]
   }
 
   const computeNextProjectStatusFromDraft = (project: Project) => {
     const selectedCompanions = normalizeSelectedNames((project as any).selectedCompanions)
     const selectedDirectors = normalizeSelectedNames((project as any).selectedDirectors)
     const selectedMcs = normalizeSelectedNames((project as any).selectedMcs)
+
+    // 本押さえ依頼の案件の場合、全てのキャストがconfirmedになったら「手配進行中」に変更
+    if (project.projectStatus === "本押さえ依頼") {
+      const allConfirmed =
+        (selectedCompanions.length === 0 || selectedCompanions.every((name) => draftCompanionBookingStatus[name] === "confirmed" && !draftCompanionFailureComment[name])) &&
+        (selectedDirectors.length === 0 || selectedDirectors.every((name) => draftDirectorBookingStatus[name] === "confirmed" && !draftDirectorFailureComment[name])) &&
+        (selectedMcs.length === 0 || selectedMcs.every((name) => draftMcBookingStatus[name] === "confirmed" && !draftMcFailureComment[name]))
+
+      if (allConfirmed && (selectedCompanions.length > 0 || selectedDirectors.length > 0 || selectedMcs.length > 0)) {
+        return "手配進行中"
+      }
+      // 本押さえ依頼のまま
+      return "本押さえ依頼"
+    }
 
     const allDone =
       computeTentativeProgress(selectedCompanions, draftCompanionBookingStatus, draftCompanionFailureComment).done === selectedCompanions.length &&
@@ -210,9 +245,9 @@ export function EventTeamDashboard({
   useEffect(() => {
     if (!selectedProject || !showCastingInfoModal) return
     const proj: any = selectedProject
-    setDraftCompanionBookingStatus((proj.companionBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">)
-    setDraftDirectorBookingStatus((proj.directorBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">)
-    setDraftMcBookingStatus((proj.mcBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">)
+    setDraftCompanionBookingStatus((proj.companionBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed_request" | "confirmed">)
+    setDraftDirectorBookingStatus((proj.directorBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed_request" | "confirmed">)
+    setDraftMcBookingStatus((proj.mcBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed_request" | "confirmed">)
     setDraftCompanionFailureComment((proj.companionTentativeHoldFailureComment ?? {}) as Record<string, string>)
     setDraftDirectorFailureComment((proj.directorTentativeHoldFailureComment ?? {}) as Record<string, string>)
     setDraftMcFailureComment((proj.mcTentativeHoldFailureComment ?? {}) as Record<string, string>)
@@ -289,9 +324,9 @@ export function EventTeamDashboard({
     return allProjects.filter((p) => p.projectStatus === "手配進行中")
   }, [allProjects])
 
-  // 仮押さえ依頼がきている案件（projectStatus === "仮押さえ依頼"）
+  // 押さえ依頼がきている案件（projectStatus === "仮押さえ依頼" または "本押さえ依頼"）
   const temporaryHoldRequests = useMemo(() => {
-    return allProjects.filter((p) => p.projectStatus === "仮押さえ依頼")
+    return allProjects.filter((p) => p.projectStatus === "仮押さえ依頼" || p.projectStatus === "本押さえ依頼")
   }, [allProjects])
 
   // イベントチーム確認中の案件（projectStatus === "イベントチーム確認中"）
@@ -316,7 +351,7 @@ export function EventTeamDashboard({
       const projectDate = new Date(year, month - 1, day)
       projectDate.setHours(0, 0, 0, 0)
 
-      // 実施日の翌日以降（実施日より前の日）かつ手配進行中またはそれ以降のステータスの案件
+      // 実施日の翌日以降（実施日より前の日）かつ手配進行中またはそれ以降のステータスの案件（本押さえ依頼は除外）
       return projectDate < today && (
         p.projectStatus === "手配進行中" ||
         p.projectStatus === "イベント終了処理中"
@@ -349,7 +384,7 @@ export function EventTeamDashboard({
     today.setHours(0, 0, 0, 0)
     
     allProjects.forEach((p) => {
-      if (p.projectStatus === "手配進行中" && !updatedProjectsRef.current.has(p.id)) {
+      if ((p.projectStatus === "本押さえ依頼" || p.projectStatus === "手配進行中") && !updatedProjectsRef.current.has(p.id)) {
         const eventDate = p.eventDate || p.date
         if (eventDate) {
           const dateStr = eventDate.replace(/-/g, "/")
@@ -362,15 +397,18 @@ export function EventTeamDashboard({
             if (projectDate < today) {
               updatedProjectsRef.current.add(p.id)
               const todayStr = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, "0")}/${String(today.getDate()).padStart(2, "0")}`
+              const currentHistory = (p as any).statusHistory as Array<{ status: string; timestamp: string; changedBy?: string; note?: string }> | undefined
+              const updatedHistory = addStatusHistory(currentHistory, "イベント終了処理中", "システム", "実施日の翌日により自動更新")
               updateProjectRef.current(p.id, { 
                 projectStatus: "イベント終了処理中",
                 surveySent: (p as any).surveySent !== undefined ? (p as any).surveySent : true,
                 surveySentDate: (p as any).surveySentDate || todayStr,
+                statusHistory: updatedHistory,
               })
             }
           }
         }
-      } else if (p.projectStatus !== "手配進行中") {
+      } else if (p.projectStatus !== "本押さえ依頼" && p.projectStatus !== "手配進行中") {
         // ステータスが変わった場合は更新済みフラグをクリア
         updatedProjectsRef.current.delete(p.id)
       }
@@ -392,6 +430,7 @@ export function EventTeamDashboard({
     // 「キャスティング情報」内でチェックした内容を保存して閉じる
     if (!selectedProject) return
     const nextProjectStatus = computeNextProjectStatusFromDraft(selectedProject)
+    const currentStatus = selectedProject.projectStatus || ""
 
     const failureSummaryParts: string[] = []
     const pushFailureSummary = (label: string, map: Record<string, string>) => {
@@ -405,6 +444,11 @@ export function EventTeamDashboard({
     pushFailureSummary("MC", draftMcFailureComment)
     const temporaryHoldFailureComment = failureSummaryParts.length > 0 ? failureSummaryParts.join(" / ") : undefined
 
+    const currentHistory = (selectedProject as any).statusHistory as Array<{ status: string; timestamp: string; changedBy?: string; note?: string }> | undefined
+    const updatedHistory = currentStatus !== nextProjectStatus
+      ? addStatusHistory(currentHistory, nextProjectStatus, "イベントチーム", "押さえ状況を保存")
+      : currentHistory
+
     updateProduct(selectedProject.id, {
       companionBookingStatus: draftCompanionBookingStatus,
       directorBookingStatus: draftDirectorBookingStatus,
@@ -414,8 +458,9 @@ export function EventTeamDashboard({
       mcTentativeHoldFailureComment: draftMcFailureComment,
       projectStatus: nextProjectStatus,
       temporaryHoldFailureComment,
+      statusHistory: updatedHistory,
     })
-    addNotification("仮押さえ状況を保存しました")
+    addNotification("押さえ状況を保存しました")
     setShowCastingInfoModal(false)
   }
 
@@ -486,7 +531,47 @@ export function EventTeamDashboard({
 
   const handleConfirmContent = () => {
     if (!selectedProject) return
-    updateProduct(selectedProject.id, { projectStatus: "手配進行中" })
+    
+    const selectedCompanions = normalizeSelectedNames((selectedProject as any).selectedCompanions)
+    const selectedDirectors = normalizeSelectedNames((selectedProject as any).selectedDirectors)
+    const selectedMcs = normalizeSelectedNames((selectedProject as any).selectedMcs)
+    
+    // 既存のステータスを取得
+    const prevComp = ((selectedProject as any).companionBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed_request" | "confirmed">
+    const prevDir = ((selectedProject as any).directorBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed_request" | "confirmed">
+    const prevMc = ((selectedProject as any).mcBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed_request" | "confirmed">
+    
+    // 各キャストのステータスを「本押さえ依頼」に更新（confirmed状態は上書きしない）
+    const companionBookingStatus: Record<string, "pending" | "tentative" | "confirmed_request" | "confirmed"> = { ...prevComp }
+    const directorBookingStatus: Record<string, "pending" | "tentative" | "confirmed_request" | "confirmed"> = { ...prevDir }
+    const mcBookingStatus: Record<string, "pending" | "tentative" | "confirmed_request" | "confirmed"> = { ...prevMc }
+    
+    selectedCompanions.forEach((name) => {
+      if (companionBookingStatus[name] !== "confirmed") {
+        companionBookingStatus[name] = "confirmed_request"
+      }
+    })
+    selectedDirectors.forEach((name) => {
+      if (directorBookingStatus[name] !== "confirmed") {
+        directorBookingStatus[name] = "confirmed_request"
+      }
+    })
+    selectedMcs.forEach((name) => {
+      if (mcBookingStatus[name] !== "confirmed") {
+        mcBookingStatus[name] = "confirmed_request"
+      }
+    })
+
+    const currentHistory = (selectedProject as any).statusHistory as Array<{ status: string; timestamp: string; changedBy?: string; note?: string }> | undefined
+    const updatedHistory = addStatusHistory(currentHistory, "本押さえ依頼", "イベントチーム", "内容確認を完了")
+
+    updateProduct(selectedProject.id, {
+      projectStatus: "本押さえ依頼",
+      companionBookingStatus,
+      directorBookingStatus,
+      mcBookingStatus,
+      statusHistory: updatedHistory,
+    })
     addNotification("内容確認を完了しました")
     setShowConfirmationModal(false)
     setSelectedProject(null)
@@ -500,9 +585,13 @@ export function EventTeamDashboard({
   const handleSubmitCorrection = () => {
     if (!selectedProject || !correctionRequest.trim()) return
     // 修正依頼を営業に送信（ステータスを「営業修正中」に変更）
+    const currentHistory = (selectedProject as any).statusHistory as Array<{ status: string; timestamp: string; changedBy?: string; note?: string }> | undefined
+    const updatedHistory = addStatusHistory(currentHistory, "営業修正中", "イベントチーム", `修正依頼: ${correctionRequest}`)
+
     updateProduct(selectedProject.id, { 
       projectStatus: "営業修正中",
       correctionRequest: correctionRequest,
+      statusHistory: updatedHistory,
     })
     addNotification("営業に修正依頼を送信しました")
     setShowCorrectionModal(false)
@@ -530,6 +619,8 @@ export function EventTeamDashboard({
         return <Badge className="bg-blue-600 text-white">イベントチーム確認中</Badge>
       case "営業修正中":
         return <Badge className="bg-orange-600 text-white">営業修正中</Badge>
+      case "本押さえ依頼":
+        return <Badge className="bg-purple-600 text-white">本押さえ依頼</Badge>
       case "手配進行中":
         return <Badge className="bg-blue-600 text-white">手配進行中</Badge>
       case "イベント終了処理中":
@@ -620,29 +711,29 @@ export function EventTeamDashboard({
                 <CardHeader>
                   <CardTitle className="text-lg font-semibold text-slate-900">押さえ依頼</CardTitle>
                   <CardDescription className="text-slate-600">
-                    キャスティング情報を確認して仮押さえを行ってください
+                    キャスティング情報を確認して押さえ処理を行ってください
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {(() => {
-                    // pending状態のキャストごとに案件をグルーピングし、
+                    // pendingまたはconfirmed_request状態のキャストごとに案件をグルーピングし、
                     // さらにプロダクション単位でグルーピングする
                     const projectsByCast = new Map<
                       string,
-                      { castName: string; castType: "companion" | "director" | "mc"; projects: Project[] }
+                      { castName: string; castType: "companion" | "director" | "mc"; status: "pending" | "confirmed_request"; projects: Project[] }
                     >()
                     
                     temporaryHoldRequests.forEach((project) => {
-                      const compStatus = ((project as any).companionBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">
-                      const dirStatus = ((project as any).directorBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">
-                      const mcStatus = ((project as any).mcBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">
+                      const compStatus = ((project as any).companionBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed_request" | "confirmed">
+                      const dirStatus = ((project as any).directorBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed_request" | "confirmed">
+                      const mcStatus = ((project as any).mcBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed_request" | "confirmed">
                       
-                      // companionでpendingのキャストを追加
+                      // companionでpendingまたはconfirmed_requestのキャストを追加
                       Object.entries(compStatus).forEach(([name, status]) => {
-                        if (status === "pending") {
+                        if (status === "pending" || status === "confirmed_request") {
                           const key = `companion-${name}`
                           if (!projectsByCast.has(key)) {
-                            projectsByCast.set(key, { castName: name, castType: "companion", projects: [] })
+                            projectsByCast.set(key, { castName: name, castType: "companion", status: status as "pending" | "confirmed_request", projects: [] })
                           }
                           // 重複チェック（同じ案件が複数のキャストで表示される可能性があるため）
                           if (!projectsByCast.get(key)!.projects.find(p => p.id === project.id)) {
@@ -651,12 +742,12 @@ export function EventTeamDashboard({
                         }
                       })
                       
-                      // directorでpendingのキャストを追加
+                      // directorでpendingまたはconfirmed_requestのキャストを追加
                       Object.entries(dirStatus).forEach(([name, status]) => {
-                        if (status === "pending") {
+                        if (status === "pending" || status === "confirmed_request") {
                           const key = `director-${name}`
                           if (!projectsByCast.has(key)) {
-                            projectsByCast.set(key, { castName: name, castType: "director", projects: [] })
+                            projectsByCast.set(key, { castName: name, castType: "director", status: status as "pending" | "confirmed_request", projects: [] })
                           }
                           // 重複チェック
                           if (!projectsByCast.get(key)!.projects.find(p => p.id === project.id)) {
@@ -665,12 +756,12 @@ export function EventTeamDashboard({
                         }
                       })
                       
-                      // mcでpendingのキャストを追加
+                      // mcでpendingまたはconfirmed_requestのキャストを追加
                       Object.entries(mcStatus).forEach(([name, status]) => {
-                        if (status === "pending") {
+                        if (status === "pending" || status === "confirmed_request") {
                           const key = `mc-${name}`
                           if (!projectsByCast.has(key)) {
-                            projectsByCast.set(key, { castName: name, castType: "mc", projects: [] })
+                            projectsByCast.set(key, { castName: name, castType: "mc", status: status as "pending" | "confirmed_request", projects: [] })
                           }
                           // 重複チェック
                           if (!projectsByCast.get(key)!.projects.find(p => p.id === project.id)) {
@@ -689,12 +780,12 @@ export function EventTeamDashboard({
                       )
                     }
                     
-                    // pending状態のキャストが検出されない場合、すべての案件を表示
+                    // pendingまたはconfirmed_request状態のキャストが検出されない場合、すべての案件を表示
                     if (projectsByCast.size === 0) {
                       return (
                         <div className="space-y-4">
                           <div className="text-sm text-slate-600 bg-yellow-50 border border-yellow-200 rounded p-3">
-                            注意: pending状態のキャストが見つかりませんでした。すべての仮押さえ依頼案件を表示します。
+                            注意: 押さえ依頼状態のキャストが見つかりませんでした。すべての押さえ依頼案件を表示します。
                           </div>
                           <Table>
                             <TableHeader>
@@ -740,6 +831,7 @@ export function EventTeamDashboard({
                     type CastGroup = {
                       castName: string
                       castType: "companion" | "director" | "mc"
+                      status: "pending" | "confirmed_request"
                       projects: Project[]
                     }
                     type ProductionGroup = {
@@ -750,7 +842,7 @@ export function EventTeamDashboard({
 
                     const groupsByProduction = new Map<string, ProductionGroup>()
 
-                    for (const [, { castName, castType, projects }] of projectsByCast.entries()) {
+                    for (const [, { castName, castType, status, projects }] of projectsByCast.entries()) {
                       // コンパニオンの場合のみ、プロダクション情報を使用
                       let productionName = "フリー"
                       let productionKey = "free"
@@ -791,6 +883,7 @@ export function EventTeamDashboard({
                       groupsByProduction.get(key)!.casts.push({
                         castName,
                         castType,
+                        status,
                         projects,
                       })
                     }
@@ -811,13 +904,14 @@ export function EventTeamDashboard({
                             </div>
 
                             <div className="space-y-6">
-                              {casts.map(({ castName, castType, projects }) => {
+                              {casts.map(({ castName, castType, status, projects }) => {
                                 const castTypeLabel =
                                   castType === "companion"
                                     ? "コンパニオン"
                                     : castType === "director"
                                       ? "ディレクター"
                                       : "MC"
+                                const statusLabel = status === "pending" ? "仮押さえ依頼" : "本押さえ依頼"
                                 // 重複を除去（同じ案件が複数のキャストで表示される可能性があるため）
                                 const uniqueProjects = Array.from(new Map(projects.map((p) => [p.id, p])).values())
 
@@ -838,7 +932,7 @@ export function EventTeamDashboard({
                                     <TableHead>案件No</TableHead>
                                     <TableHead>クライアント</TableHead>
                                     <TableHead>実施日</TableHead>
-                                    <TableHead>仮押さえ進捗</TableHead>
+                                    <TableHead>押さえ進捗</TableHead>
                                     <TableHead>ステータス</TableHead>
                                     <TableHead>操作</TableHead>
                                   </TableRow>
@@ -848,9 +942,9 @@ export function EventTeamDashboard({
                                     const selectedCompanions = normalizeSelectedNames((project as any).selectedCompanions)
                                     const selectedDirectors = normalizeSelectedNames((project as any).selectedDirectors)
                                     const selectedMcs = normalizeSelectedNames((project as any).selectedMcs)
-                                    const compStatus = ((project as any).companionBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">
-                                    const dirStatus = ((project as any).directorBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">
-                                    const mcStatus = ((project as any).mcBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">
+                                    const compStatus = ((project as any).companionBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed_request" | "confirmed">
+                                    const dirStatus = ((project as any).directorBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed_request" | "confirmed">
+                                    const mcStatus = ((project as any).mcBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed_request" | "confirmed">
                                     const compFail = ((project as any).companionTentativeHoldFailureComment ?? {}) as Record<string, string>
                                     const dirFail = ((project as any).directorTentativeHoldFailureComment ?? {}) as Record<string, string>
                                     const mcFail = ((project as any).mcTentativeHoldFailureComment ?? {}) as Record<string, string>
@@ -890,7 +984,7 @@ export function EventTeamDashboard({
                                             variant="destructive"
                                             onClick={() => handleTemporaryHoldFailure(project)}
                                           >
-                                            仮押さえ不可
+                                            {project.projectStatus === "本押さえ依頼" ? "本押さえ不可" : "仮押さえ不可"}
                                           </Button>
                                         </div>
                                       </TableCell>
@@ -1060,41 +1154,55 @@ export function EventTeamDashboard({
                                 })()}
                               </TableCell>
                               <TableCell className="sticky right-0 bg-white z-10">
-                                <Button
-                                  size="sm"
-                                  variant="default"
-                                  onClick={() => {
-                                    // 最終入力の状態に応じて遷移先を決定
-                                    const confirmedCompanions = project.confirmedCompanions ?? []
-                                    const confirmedDirectors = project.confirmedDirectors ?? []
-                                    const confirmedMcs = project.confirmedMcs ?? []
-                                    
-                                    // 1. キャスト入力が未完了か確認
-                                    const companionCount = Number(project.companionCount) || 0
-                                    const directorCount = Number(project.directorCount) || 0
-                                    const mcCount = Number(project.mcCount) || 0
-                                    
-                                    const isCastingIncomplete = 
-                                      confirmedCompanions.length < companionCount ||
-                                      confirmedDirectors.length < directorCount ||
-                                      confirmedMcs.length < mcCount ||
-                                      (companionCount > 0 && confirmedCompanions.length === 0) ||
-                                      (directorCount > 0 && confirmedDirectors.length === 0) ||
-                                      (mcCount > 0 && confirmedMcs.length === 0)
-                                    
-                                    if (isCastingIncomplete) {
-                                      // キャスト入力が未完了 → 確定キャスト入力画面
-                                      router.push(`/project/${project.id}/arrangement`)
-                                    } else {
-                                      // キャスト入力完了 → 各種手配実行画面
-                                      router.push(`/project/${project.id}/auto-arrangement`)
-                                    }
-                                  }}
-                                  className="gap-2"
-                                >
-                                  <Send className="h-4 w-4" />
-                                  各種手配実行
-                                </Button>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setSelectedProjectForHistory(project)
+                                      setShowStatusHistoryModal(true)
+                                    }}
+                                    className="gap-2"
+                                  >
+                                    <History className="h-4 w-4" />
+                                    履歴
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    onClick={() => {
+                                      // 最終入力の状態に応じて遷移先を決定
+                                      const confirmedCompanions = project.confirmedCompanions ?? []
+                                      const confirmedDirectors = project.confirmedDirectors ?? []
+                                      const confirmedMcs = project.confirmedMcs ?? []
+                                      
+                                      // 1. キャスト入力が未完了か確認
+                                      const companionCount = Number(project.companionCount) || 0
+                                      const directorCount = Number(project.directorCount) || 0
+                                      const mcCount = Number(project.mcCount) || 0
+                                      
+                                      const isCastingIncomplete = 
+                                        confirmedCompanions.length < companionCount ||
+                                        confirmedDirectors.length < directorCount ||
+                                        confirmedMcs.length < mcCount ||
+                                        (companionCount > 0 && confirmedCompanions.length === 0) ||
+                                        (directorCount > 0 && confirmedDirectors.length === 0) ||
+                                        (mcCount > 0 && confirmedMcs.length === 0)
+                                      
+                                      if (isCastingIncomplete) {
+                                        // キャスト入力が未完了 → 確定キャスト入力画面
+                                        router.push(`/project/${project.id}/arrangement`)
+                                      } else {
+                                        // キャスト入力完了 → 各種手配実行画面
+                                        router.push(`/project/${project.id}/auto-arrangement`)
+                                      }
+                                    }}
+                                    className="gap-2"
+                                  >
+                                    <Send className="h-4 w-4" />
+                                    各種手配実行
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           )
@@ -1394,7 +1502,7 @@ export function EventTeamDashboard({
 
               <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-lg">仮押さえ状況（キャストごと）</h4>
+                  <h4 className="font-semibold text-lg">押さえ状況（キャストごと）</h4>
                   <Badge className="bg-yellow-100 text-yellow-900 border border-yellow-200">
                     進捗: {(() => {
                       const selectedCompanions = normalizeSelectedNames((selectedProject as any).selectedCompanions)
@@ -1418,9 +1526,19 @@ export function EventTeamDashboard({
                       {normalizeSelectedNames((selectedProject as any).selectedCompanions).map((name) => {
                         const current = draftCompanionBookingStatus[name]
                         const failureComment = draftCompanionFailureComment[name]
+                        // 元のステータスを取得（selectedProjectから、モーダルを開いた時点での値）
+                        const originalStatus = ((selectedProject as any).companionBookingStatus ?? {})[name] as "pending" | "tentative" | "confirmed_request" | "confirmed" | undefined
+                        // 現在のステータスを優先し、存在しない場合は元のステータスを使用
+                        const actualStatus = current ?? originalStatus
                         const value =
-                          current === "confirmed" ? "confirmed" : failureComment !== undefined ? "failed" : current === "tentative" ? "tentative" : "pending"
-                        const disabled = current === "confirmed"
+                          actualStatus === "confirmed" ? "confirmed" : actualStatus === "confirmed_request" ? "confirmed_request" : failureComment !== undefined ? "failed" : actualStatus === "tentative" ? "tentative" : "pending"
+                        const disabled = actualStatus === "confirmed"
+                        // 元のステータスに基づいて選択可能なオプションを制限
+                        // 元のステータスがpendingまたは未設定（pending扱い）の場合
+                        const isPending = originalStatus === "pending" || (!originalStatus && actualStatus !== "confirmed_request" && actualStatus !== "confirmed")
+                        // 元のステータスがconfirmed_requestの場合
+                        const isConfirmedRequest = originalStatus === "confirmed_request" || (actualStatus === "confirmed_request" && originalStatus !== "pending")
+                        const failureLabel = isConfirmedRequest ? "本押さえ不可" : "仮押さえ不可"
                         return (
                           <div key={name} className="space-y-2">
                             <div className="flex items-center gap-3">
@@ -1430,7 +1548,11 @@ export function EventTeamDashboard({
                                 onValueChange={(v) => {
                                   if (disabled) return
                                   if (v === "pending") {
-                                    setDraftCompanionBookingStatus((prev) => ({ ...prev, [name]: "pending" }))
+                                    setDraftCompanionBookingStatus((prev) => {
+                                      const next = { ...prev }
+                                      delete next[name]
+                                      return next
+                                    })
                                     setDraftCompanionFailureComment((prev) => {
                                       const next = { ...prev }
                                       delete next[name]
@@ -1453,35 +1575,55 @@ export function EventTeamDashboard({
                                     })
                                     setDraftCompanionFailureComment((prev) => ({ ...prev, [name]: prev[name] ?? "" }))
                                   }
+                                  if (v === "confirmed_request") {
+                                    setDraftCompanionBookingStatus((prev) => ({ ...prev, [name]: "confirmed_request" }))
+                                    setDraftCompanionFailureComment((prev) => {
+                                      const next = { ...prev }
+                                      delete next[name]
+                                      return next
+                                    })
+                                  }
+                                  if (v === "confirmed") {
+                                    setDraftCompanionBookingStatus((prev) => ({ ...prev, [name]: "confirmed" }))
+                                    setDraftCompanionFailureComment((prev) => {
+                                      const next = { ...prev }
+                                      delete next[name]
+                                      return next
+                                    })
+                                  }
                                 }}
                               >
                                 <SelectTrigger className="w-[180px]">
                                   <SelectValue placeholder="状態" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="pending">仮押さえ依頼</SelectItem>
-                                  <SelectItem value="tentative">仮押さえ</SelectItem>
-                                  <SelectItem value="failed">仮押さえ不可</SelectItem>
-                                  <SelectItem value="confirmed" disabled>
-                                    本押さえ
-                                  </SelectItem>
+                                  {isPending && (
+                                    <>
+                                      <SelectItem value="pending">仮押さえ依頼</SelectItem>
+                                      <SelectItem value="tentative">仮押さえ</SelectItem>
+                                      <SelectItem value="failed">仮押さえ不可</SelectItem>
+                                    </>
+                                  )}
+                                  {isConfirmedRequest && (
+                                    <>
+                                      <SelectItem value="confirmed_request">本押さえ依頼</SelectItem>
+                                      <SelectItem value="confirmed">本押さえ</SelectItem>
+                                      <SelectItem value="failed">本押さえ不可</SelectItem>
+                                    </>
+                                  )}
+                                  {!isPending && !isConfirmedRequest && (
+                                    <>
+                                      <SelectItem value="pending">仮押さえ依頼</SelectItem>
+                                      <SelectItem value="tentative">仮押さえ</SelectItem>
+                                      <SelectItem value="failed">仮押さえ不可</SelectItem>
+                                      <SelectItem value="confirmed_request">本押さえ依頼</SelectItem>
+                                      <SelectItem value="confirmed" disabled>
+                                        本押さえ
+                                      </SelectItem>
+                                    </>
+                                  )}
                                 </SelectContent>
                               </Select>
-                              {current === "confirmed" && (
-                                <Badge variant="outline" className="text-xs border-slate-300 bg-white text-slate-700">
-                                  本押さえ
-                                </Badge>
-                              )}
-                              {value === "tentative" && (
-                                <Badge variant="outline" className="text-xs border-yellow-200 bg-yellow-100 text-yellow-900">
-                                  仮押さえ
-                                </Badge>
-                              )}
-                              {value === "failed" && (
-                                <Badge variant="outline" className="text-xs border-red-200 bg-red-50 text-red-700">
-                                  仮押さえ不可
-                                </Badge>
-                              )}
                             </div>
                             {value === "failed" && (
                               <Input
@@ -1509,9 +1651,19 @@ export function EventTeamDashboard({
                       {normalizeSelectedNames((selectedProject as any).selectedDirectors).map((name) => {
                         const current = draftDirectorBookingStatus[name]
                         const failureComment = draftDirectorFailureComment[name]
+                        // 元のステータスを取得（selectedProjectから、モーダルを開いた時点での値）
+                        const originalStatus = ((selectedProject as any).directorBookingStatus ?? {})[name] as "pending" | "tentative" | "confirmed_request" | "confirmed" | undefined
+                        // 現在のステータスを優先し、存在しない場合は元のステータスを使用
+                        const actualStatus = current ?? originalStatus
                         const value =
-                          current === "confirmed" ? "confirmed" : failureComment !== undefined ? "failed" : current === "tentative" ? "tentative" : "pending"
-                        const disabled = current === "confirmed"
+                          actualStatus === "confirmed" ? "confirmed" : actualStatus === "confirmed_request" ? "confirmed_request" : failureComment !== undefined ? "failed" : actualStatus === "tentative" ? "tentative" : "pending"
+                        const disabled = actualStatus === "confirmed"
+                        // 元のステータスに基づいて選択可能なオプションを制限
+                        // 元のステータスがpendingまたは未設定（pending扱い）の場合
+                        const isPending = originalStatus === "pending" || (!originalStatus && actualStatus !== "confirmed_request" && actualStatus !== "confirmed")
+                        // 元のステータスがconfirmed_requestの場合
+                        const isConfirmedRequest = originalStatus === "confirmed_request" || (actualStatus === "confirmed_request" && originalStatus !== "pending")
+                        const failureLabel = isConfirmedRequest ? "本押さえ不可" : "仮押さえ不可"
                         return (
                           <div key={name} className="space-y-2">
                             <div className="flex items-center gap-3">
@@ -1548,35 +1700,55 @@ export function EventTeamDashboard({
                                     })
                                     setDraftDirectorFailureComment((prev) => ({ ...prev, [name]: prev[name] ?? "" }))
                                   }
+                                  if (v === "confirmed_request") {
+                                    setDraftDirectorBookingStatus((prev) => ({ ...prev, [name]: "confirmed_request" }))
+                                    setDraftDirectorFailureComment((prev) => {
+                                      const next = { ...prev }
+                                      delete next[name]
+                                      return next
+                                    })
+                                  }
+                                  if (v === "confirmed") {
+                                    setDraftDirectorBookingStatus((prev) => ({ ...prev, [name]: "confirmed" }))
+                                    setDraftDirectorFailureComment((prev) => {
+                                      const next = { ...prev }
+                                      delete next[name]
+                                      return next
+                                    })
+                                  }
                                 }}
                               >
                                 <SelectTrigger className="w-[180px]">
                                   <SelectValue placeholder="状態" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="pending">仮押さえ依頼</SelectItem>
-                                  <SelectItem value="tentative">仮押さえ</SelectItem>
-                                  <SelectItem value="failed">仮押さえ不可</SelectItem>
-                                  <SelectItem value="confirmed" disabled>
-                                    本押さえ
-                                  </SelectItem>
+                                  {isPending && (
+                                    <>
+                                      <SelectItem value="pending">仮押さえ依頼</SelectItem>
+                                      <SelectItem value="tentative">仮押さえ</SelectItem>
+                                      <SelectItem value="failed">仮押さえ不可</SelectItem>
+                                    </>
+                                  )}
+                                  {isConfirmedRequest && (
+                                    <>
+                                      <SelectItem value="confirmed_request">本押さえ依頼</SelectItem>
+                                      <SelectItem value="confirmed">本押さえ</SelectItem>
+                                      <SelectItem value="failed">本押さえ不可</SelectItem>
+                                    </>
+                                  )}
+                                  {!isPending && !isConfirmedRequest && (
+                                    <>
+                                      <SelectItem value="pending">仮押さえ依頼</SelectItem>
+                                      <SelectItem value="tentative">仮押さえ</SelectItem>
+                                      <SelectItem value="failed">仮押さえ不可</SelectItem>
+                                      <SelectItem value="confirmed_request">本押さえ依頼</SelectItem>
+                                      <SelectItem value="confirmed" disabled>
+                                        本押さえ
+                                      </SelectItem>
+                                    </>
+                                  )}
                                 </SelectContent>
                               </Select>
-                              {current === "confirmed" && (
-                                <Badge variant="outline" className="text-xs border-slate-300 bg-white text-slate-700">
-                                  本押さえ
-                                </Badge>
-                              )}
-                              {value === "tentative" && (
-                                <Badge variant="outline" className="text-xs border-yellow-200 bg-yellow-100 text-yellow-900">
-                                  仮押さえ
-                                </Badge>
-                              )}
-                              {value === "failed" && (
-                                <Badge variant="outline" className="text-xs border-red-200 bg-red-50 text-red-700">
-                                  仮押さえ不可
-                                </Badge>
-                              )}
                             </div>
                             {value === "failed" && (
                               <Input
@@ -1604,9 +1776,19 @@ export function EventTeamDashboard({
                       {normalizeSelectedNames((selectedProject as any).selectedMcs).map((name) => {
                         const current = draftMcBookingStatus[name]
                         const failureComment = draftMcFailureComment[name]
+                        // 元のステータスを取得（selectedProjectから、モーダルを開いた時点での値）
+                        const originalStatus = ((selectedProject as any).mcBookingStatus ?? {})[name] as "pending" | "tentative" | "confirmed_request" | "confirmed" | undefined
+                        // 現在のステータスを優先し、存在しない場合は元のステータスを使用
+                        const actualStatus = current ?? originalStatus
                         const value =
-                          current === "confirmed" ? "confirmed" : failureComment !== undefined ? "failed" : current === "tentative" ? "tentative" : "pending"
-                        const disabled = current === "confirmed"
+                          actualStatus === "confirmed" ? "confirmed" : actualStatus === "confirmed_request" ? "confirmed_request" : failureComment !== undefined ? "failed" : actualStatus === "tentative" ? "tentative" : "pending"
+                        const disabled = actualStatus === "confirmed"
+                        // 元のステータスに基づいて選択可能なオプションを制限
+                        // 元のステータスがpendingまたは未設定（pending扱い）の場合
+                        const isPending = originalStatus === "pending" || (!originalStatus && actualStatus !== "confirmed_request" && actualStatus !== "confirmed")
+                        // 元のステータスがconfirmed_requestの場合
+                        const isConfirmedRequest = originalStatus === "confirmed_request" || (actualStatus === "confirmed_request" && originalStatus !== "pending")
+                        const failureLabel = isConfirmedRequest ? "本押さえ不可" : "仮押さえ不可"
                         return (
                           <div key={name} className="space-y-2">
                             <div className="flex items-center gap-3">
@@ -1643,35 +1825,55 @@ export function EventTeamDashboard({
                                     })
                                     setDraftMcFailureComment((prev) => ({ ...prev, [name]: prev[name] ?? "" }))
                                   }
+                                  if (v === "confirmed_request") {
+                                    setDraftMcBookingStatus((prev) => ({ ...prev, [name]: "confirmed_request" }))
+                                    setDraftMcFailureComment((prev) => {
+                                      const next = { ...prev }
+                                      delete next[name]
+                                      return next
+                                    })
+                                  }
+                                  if (v === "confirmed") {
+                                    setDraftMcBookingStatus((prev) => ({ ...prev, [name]: "confirmed" }))
+                                    setDraftMcFailureComment((prev) => {
+                                      const next = { ...prev }
+                                      delete next[name]
+                                      return next
+                                    })
+                                  }
                                 }}
                               >
                                 <SelectTrigger className="w-[180px]">
                                   <SelectValue placeholder="状態" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="pending">仮押さえ依頼</SelectItem>
-                                  <SelectItem value="tentative">仮押さえ</SelectItem>
-                                  <SelectItem value="failed">仮押さえ不可</SelectItem>
-                                  <SelectItem value="confirmed" disabled>
-                                    本押さえ
-                                  </SelectItem>
+                                  {isPending && (
+                                    <>
+                                      <SelectItem value="pending">仮押さえ依頼</SelectItem>
+                                      <SelectItem value="tentative">仮押さえ</SelectItem>
+                                      <SelectItem value="failed">仮押さえ不可</SelectItem>
+                                    </>
+                                  )}
+                                  {isConfirmedRequest && (
+                                    <>
+                                      <SelectItem value="confirmed_request">本押さえ依頼</SelectItem>
+                                      <SelectItem value="confirmed">本押さえ</SelectItem>
+                                      <SelectItem value="failed">本押さえ不可</SelectItem>
+                                    </>
+                                  )}
+                                  {!isPending && !isConfirmedRequest && (
+                                    <>
+                                      <SelectItem value="pending">仮押さえ依頼</SelectItem>
+                                      <SelectItem value="tentative">仮押さえ</SelectItem>
+                                      <SelectItem value="failed">仮押さえ不可</SelectItem>
+                                      <SelectItem value="confirmed_request">本押さえ依頼</SelectItem>
+                                      <SelectItem value="confirmed" disabled>
+                                        本押さえ
+                                      </SelectItem>
+                                    </>
+                                  )}
                                 </SelectContent>
                               </Select>
-                              {current === "confirmed" && (
-                                <Badge variant="outline" className="text-xs border-slate-300 bg-white text-slate-700">
-                                  本押さえ
-                                </Badge>
-                              )}
-                              {value === "tentative" && (
-                                <Badge variant="outline" className="text-xs border-yellow-200 bg-yellow-100 text-yellow-900">
-                                  仮押さえ
-                                </Badge>
-                              )}
-                              {value === "failed" && (
-                                <Badge variant="outline" className="text-xs border-red-200 bg-red-50 text-red-700">
-                                  仮押さえ不可
-                                </Badge>
-                              )}
                             </div>
                             {value === "failed" && (
                               <Input
@@ -1700,7 +1902,7 @@ export function EventTeamDashboard({
               閉じる
             </Button>
             <Button onClick={handleConfirmTemporaryHoldFromCasting}>
-              仮押さえ状況を保存
+              押さえ状況を保存
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2183,7 +2385,7 @@ export function EventTeamDashboard({
                 
                 // ステータスチェック
                 const statusMatch = 
-                  (costExportStatuses.inProgress && p.projectStatus === "手配進行中") ||
+                  (costExportStatuses.inProgress && (p.projectStatus === "本押さえ依頼" || p.projectStatus === "手配進行中")) ||
                   (costExportStatuses.postEvent && p.projectStatus === "イベント終了処理中")
                 
                 return statusMatch
@@ -2381,6 +2583,81 @@ export function EventTeamDashboard({
               修正依頼を送信
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ステータス履歴モーダル */}
+      <Dialog open={showStatusHistoryModal} onOpenChange={setShowStatusHistoryModal}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>ステータス変更履歴</DialogTitle>
+            <DialogDescription>
+              {selectedProjectForHistory?.projectName} のステータス変更履歴
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedProjectForHistory && (
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-slate-700">案件情報</div>
+                <div className="text-sm text-slate-600 space-y-1">
+                  <div>案件No: {selectedProjectForHistory.projectNumber}</div>
+                  <div>クライアント: {selectedProjectForHistory.clientName}</div>
+                  <div>実施日: {selectedProjectForHistory.date}</div>
+                </div>
+              </div>
+            )}
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-slate-700">変更履歴</div>
+              {selectedProjectForHistory && (selectedProjectForHistory as any).statusHistory && (selectedProjectForHistory as any).statusHistory.length > 0 ? (
+                <div className="space-y-3">
+                  {((selectedProjectForHistory as any).statusHistory as Array<{
+                    status: string
+                    timestamp: string
+                    changedBy?: string
+                    note?: string
+                  }>)
+                    .slice()
+                    .reverse()
+                    .map((entry, index) => (
+                      <div key={index} className="border-l-2 border-slate-200 pl-4 py-2">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant="outline" className="text-xs">
+                                {entry.status}
+                              </Badge>
+                              <span className="text-sm text-slate-600">
+                                {new Date(entry.timestamp).toLocaleString("ja-JP", {
+                                  year: "numeric",
+                                  month: "2-digit",
+                                  day: "2-digit",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                            </div>
+                            {entry.changedBy && (
+                              <div className="text-xs text-slate-500 mb-1">
+                                変更者: {entry.changedBy}
+                              </div>
+                            )}
+                            {entry.note && (
+                              <div className="text-sm text-slate-700 mt-1">
+                                {entry.note}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <div className="text-sm text-slate-500 py-4 text-center">
+                  履歴がありません
+                </div>
+              )}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 

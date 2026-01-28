@@ -19,7 +19,7 @@ type ParseMeta = {
   shouldResave: boolean
 }
 
-type CastBookingStatus = "pending" | "tentative" | "confirmed"
+type CastBookingStatus = "pending" | "tentative" | "confirmed_request" | "confirmed"
 
 function ensureBookingStatusFromConfirmed(
   names: unknown,
@@ -30,8 +30,8 @@ function ensureBookingStatusFromConfirmed(
   for (const n of names) {
     const name = typeof n === "string" ? n.trim() : ""
     if (!name || name === "未定") continue
-    // pending状態は上書きしない（confirmedのみ設定）
-    if (out[name] !== "pending") {
+    // pending状態とconfirmed_request状態は上書きしない（confirmedのみ設定）
+    if (out[name] !== "pending" && out[name] !== "confirmed_request") {
       out[name] = "confirmed"
     }
   }
@@ -63,6 +63,19 @@ function ensureBookingStatusFromSelectedTentativeWhenNeeded(
       if (!name || name === "未定") continue
       // 既存の状態がなければpendingを設定（confirmedやtentativeは上書きしない）
       if (!out[name]) out[name] = "pending"
+    }
+    return out
+  }
+  // projectStatus === "本押さえ依頼"の場合、選択されたキャストをconfirmed_request状態で初期化
+  if (ps === "本押さえ依頼") {
+    if (!Array.isArray(selected)) return out
+    for (const n of selected) {
+      const name = typeof n === "string" ? n.trim() : ""
+      if (!name || name === "未定") continue
+      // 既存の状態がなければconfirmed_requestを設定（confirmedは上書きしない）
+      if (!out[name] || out[name] === "pending" || out[name] === "tentative") {
+        out[name] = "confirmed_request"
+      }
     }
     return out
   }

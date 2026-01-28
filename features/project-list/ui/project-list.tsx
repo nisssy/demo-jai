@@ -559,6 +559,8 @@ Co・Dir担当`
         return <Badge className="bg-orange-600 text-white">営業修正中</Badge>
       case "営業確認中":
         return <Badge className="bg-orange-600 text-white">営業確認中</Badge>
+      case "本押さえ依頼":
+        return <Badge className="bg-purple-600 text-white">本押さえ依頼</Badge>
       case "手配進行中":
         return <Badge className="bg-blue-600 text-white">手配進行中</Badge>
       case "イベント終了処理中":

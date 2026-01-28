@@ -196,14 +196,15 @@ export const ProductEntitySchema = z
     nominatedDirectors: z.record(z.boolean()).optional(),
     nominatedMcs: z.record(z.boolean()).optional(),
     /**
-     * キャストごとのブッキング状態（商材の実施期間に対する 仮押さえ依頼/仮押さえ/本押さえ）
+     * キャストごとのブッキング状態（商材の実施期間に対する 仮押さえ依頼/仮押さえ/本押さえ依頼/本押さえ）
      * - pending: 仮押さえ依頼（案件作成時の初期状態）
      * - tentative: 仮押さえ
+     * - confirmed_request: 本押さえ依頼
      * - confirmed: 本押さえ
      */
-    companionBookingStatus: z.record(z.enum(["pending", "tentative", "confirmed"])).optional(),
-    directorBookingStatus: z.record(z.enum(["pending", "tentative", "confirmed"])).optional(),
-    mcBookingStatus: z.record(z.enum(["pending", "tentative", "confirmed"])).optional(),
+    companionBookingStatus: z.record(z.enum(["pending", "tentative", "confirmed_request", "confirmed"])).optional(),
+    directorBookingStatus: z.record(z.enum(["pending", "tentative", "confirmed_request", "confirmed"])).optional(),
+    mcBookingStatus: z.record(z.enum(["pending", "tentative", "confirmed_request", "confirmed"])).optional(),
     /** キャストごとの「仮押さえ不可」理由（入っているキャストは仮押さえ不可扱い） */
     companionTentativeHoldFailureComment: z.record(z.string()).optional(),
     directorTentativeHoldFailureComment: z.record(z.string()).optional(),
@@ -242,6 +243,18 @@ export const ProductEntitySchema = z
     // 見積書関連（デモ）
     quoteGenerated: z.boolean().optional(),
     quoteData: z.any().optional(),
+
+    // ステータス履歴
+    statusHistory: z
+      .array(
+        z.object({
+          status: z.string(),
+          timestamp: z.string(),
+          changedBy: z.string().optional(),
+          note: z.string().optional(),
+        }),
+      )
+      .optional(),
   })
   .passthrough()
 
