@@ -181,7 +181,9 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
     itemRefs.current = {}
     setEmailTo([])
     setEmailFrom(1) // デフォルトで山田太郎（id=1）に戻す
-    setEmailFromInput("") // 表示値は初期化し、初回レンダー時のuseEffectで再設定
+    // デフォルトの従業員（山田太郎）の名前を初期値として設定
+    const defaultEmployee = getEmployees().find((e) => e.id === 1)
+    setEmailFromInput(defaultEmployee?.name || "")
     setEmailCc([])
     setEmailBcc([])
     setCcSearchQuery("")
@@ -208,6 +210,16 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
       resetState()
     }
   }, [open])
+
+  // モーダルが開かれた時、またはemailFromが1（山田太郎）に設定されている時に、emailFromInputに名前を設定
+  useEffect(() => {
+    if (open && emailFrom === 1 && !emailFromInput.trim()) {
+      const defaultEmployee = getEmployees().find((e) => e.id === 1)
+      if (defaultEmployee) {
+        setEmailFromInput(defaultEmployee.name)
+      }
+    }
+  }, [open, emailFrom, emailFromInput, getEmployees])
 
   const selectedProjectForQuote = project
 
