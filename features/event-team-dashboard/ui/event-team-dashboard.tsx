@@ -32,7 +32,7 @@ export function EventTeamDashboard({
   addNotification,
 }: EventTeamDashboardProps) {
   const router = useAppRouter()
-  const { getProducts, updateProduct } = useProject()
+  const { getProducts, updateProduct, getCompanions, getProductions } = useProject()
   const allProjects = useMemo(() => getProducts(), [getProducts])
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [showCastingInfoModal, setShowCastingInfoModal] = useState(false)
@@ -72,6 +72,19 @@ export function EventTeamDashboard({
   const [draftCompanionFailureComment, setDraftCompanionFailureComment] = useState<Record<string, string>>({})
   const [draftDirectorFailureComment, setDraftDirectorFailureComment] = useState<Record<string, string>>({})
   const [draftMcFailureComment, setDraftMcFailureComment] = useState<Record<string, string>>({})
+
+  // プロダクション情報（id → プロダクション）と、コンパニオン情報（名前 → コンパニオン）をマップ化
+  const productionsById = useMemo(() => {
+    const byId = new Map<number, { id: number; name: string; address: string; phone: string }>()
+    getProductions().forEach((p) => byId.set(p.id, p as any))
+    return byId
+  }, [getProductions])
+
+  const companionsByName = useMemo(() => {
+    const byName = new Map<string, { id: number; name: string; productionId: number }>()
+    getCompanions().forEach((c) => byName.set(c.name, c as any))
+    return byName
+  }, [getCompanions])
 
   const normalizeSelectedNames = (raw?: unknown) => {
     if (!Array.isArray(raw)) return [] as string[]
@@ -522,8 +535,12 @@ export function EventTeamDashboard({
                 </CardHeader>
                 <CardContent>
                   {(() => {
-                    // pending状態のキャストごとに案件をグループ化
-                    const projectsByCast = new Map<string, { castName: string; castType: "companion" | "director" | "mc"; projects: Project[] }>()
+                    // pending状態のキャストごとに案件をグルーピングし、
+                    // さらにプロダクション単位でグルーピングする
+                    const projectsByCast = new Map<
+                      string,
+                      { castName: string; castType: "companion" | "director" | "mc"; projects: Project[] }
+                    >()
                     
                     temporaryHoldRequests.forEach((project) => {
                       const compStatus = ((project as any).companionBookingStatus ?? {}) as Record<string, "pending" | "tentative" | "confirmed">
@@ -573,7 +590,7 @@ export function EventTeamDashboard({
                       })
                     })
                     
-                    // temporaryHoldRequestsが空の場合
+                    // 仮押さえ依頼の案件自体がない場合
                     if (temporaryHoldRequests.length === 0) {
                       return (
                         <div className="text-center py-8 text-slate-500">
@@ -629,20 +646,98 @@ export function EventTeamDashboard({
                       )
                     }
                     
+                    // プロダクション単位にグルーピング
+                    type CastGroup = {
+                      castName: string
+                      castType: "companion" | "director" | "mc"
+                      projects: Project[]
+                    }
+                    type ProductionGroup = {
+                      productionKey: string
+                      productionName: string
+                      casts: CastGroup[]
+                    }
+
+                    const groupsByProduction = new Map<string, ProductionGroup>()
+
+                    for (const [, { castName, castType, projects }] of projectsByCast.entries()) {
+                      // コンパニオンの場合のみ、プロダクション情報を使用
+                      let productionName = "フリー"
+                      let productionKey = "free"
+
+                      if (castType === "companion") {
+                        const companion = companionsByName.get(castName)
+                        if (companion) {
+                          const prod = productionsById.get(companion.productionId)
+                          if (prod) {
+                            productionName = prod.name
+                            productionKey = `production-${prod.id}`
+                          } else {
+                            // プロダクションが見つからないコンパニオンも「フリー」として扱う
+                            productionName = "フリー"
+                            productionKey = "free"
+                          }
+                        } else {
+                          // コンパニオンマスタに存在しない場合も「フリー」として扱う
+                          productionName = "フリー"
+                          productionKey = "free"
+                        }
+                      } else {
+                        // ディレクター / MC については「フリー」として扱う
+                        // すべてのディレクター/MCを同じ「フリー」プロダクションにまとめる
+                        productionName = "フリー"
+                        productionKey = "free"
+                      }
+
+                      const key = productionKey
+                      if (!groupsByProduction.has(key)) {
+                        groupsByProduction.set(key, {
+                          productionKey: key,
+                          productionName,
+                          casts: [],
+                        })
+                      }
+
+                      groupsByProduction.get(key)!.casts.push({
+                        castName,
+                        castType,
+                        projects,
+                      })
+                    }
+
                     return (
                       <div className="space-y-6">
-                        {Array.from(projectsByCast.entries()).map(([key, { castName, castType, projects }]) => {
-                          const castTypeLabel = castType === "companion" ? "コンパニオン" : castType === "director" ? "ディレクター" : "MC"
-                          // 重複を除去（同じ案件が複数のキャストで表示される可能性があるため）
-                          const uniqueProjects = Array.from(new Map(projects.map(p => [p.id, p])).values())
-                          
+                        {Array.from(groupsByProduction.values()).map(({ productionKey, productionName, casts }) => (
+                          <div key={productionKey} className="border border-slate-300 rounded-lg p-4 space-y-4 bg-slate-50/50">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h2 className="text-base font-semibold text-slate-900">
+                                  プロダクション: {productionName}
+                                </h2>
+                                <p className="text-xs text-slate-600 mt-1">
+                                  キャスト: {casts.length}名
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="space-y-6">
+                              {casts.map(({ castName, castType, projects }) => {
+                                const castTypeLabel =
+                                  castType === "companion"
+                                    ? "コンパニオン"
+                                    : castType === "director"
+                                      ? "ディレクター"
+                                      : "MC"
+                                // 重複を除去（同じ案件が複数のキャストで表示される可能性があるため）
+                                const uniqueProjects = Array.from(new Map(projects.map((p) => [p.id, p])).values())
+
                           return (
-                            <div key={key} className="border border-slate-200 rounded-lg p-4">
-                              <div className="mb-4">
-                                <h3 className="text-base font-semibold text-slate-900">
+                            <div key={`${productionKey}-${castType}-${castName}`} className="border border-slate-200 rounded-lg p-4 bg-white">
+                              <div className="mb-3">
+                                <h3 className="text-sm font-semibold text-slate-900">
                                   {castTypeLabel}: {castName}
                                 </h3>
-                                <p className="text-sm text-slate-600 mt-1">
+                                <p className="text-xs text-slate-600 mt-1">
                                   {uniqueProjects.length}件の案件
                                 </p>
                               </div>
@@ -716,7 +811,10 @@ export function EventTeamDashboard({
                               </Table>
                             </div>
                           )
-                        })}
+                              })}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )
                   })()}
