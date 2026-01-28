@@ -26,6 +26,91 @@ type EventTeamDashboardProps = {
 
 type Project = NonNullable<ProjectData["projects"]>[number]
 
+// アンケート結果のCSVを生成する関数
+const generateSurveyCsv = (project: Project): string => {
+  // CSVヘッダー（5つの質問項目）
+  const headers = [
+    "回答者名",
+    "満足度",
+    "コメント",
+    "次回開催希望",
+    "改善点・要望"
+  ]
+
+  // 5人分のサンプル回答データ
+  const responses = [
+    {
+      name: "回答者1",
+      satisfaction: "非常に満足",
+      comment: "イベントの進行がスムーズで、キャストの対応も素晴らしかったです。",
+      nextEventDesired: "来月も開催希望",
+      improvement: "特に改善点はありません。"
+    },
+    {
+      name: "回答者2",
+      satisfaction: "満足",
+      comment: "会場の雰囲気が良く、お客様の反応も上々でした。",
+      nextEventDesired: "3ヶ月後に開催希望",
+      improvement: "もう少し時間を長くしてほしいです。"
+    },
+    {
+      name: "回答者3",
+      satisfaction: "満足",
+      comment: "キャストのパフォーマンスが良く、イベントは成功しました。",
+      nextEventDesired: "次回の新台入替時も開催希望",
+      improvement: "音響設備の改善をお願いしたいです。"
+    },
+    {
+      name: "回答者4",
+      satisfaction: "非常に満足",
+      comment: "お客様の満足度が高く、来店数も増加しました。",
+      nextEventDesired: "2ヶ月後に開催希望",
+      improvement: "キャストの人数を増やしてほしいです。"
+    },
+    {
+      name: "回答者5",
+      satisfaction: "満足",
+      comment: "イベントの内容が充実しており、お客様も楽しそうでした。",
+      nextEventDesired: "来年の同じ時期に開催希望",
+      improvement: "会場のレイアウトを少し変更してほしいです。"
+    }
+  ]
+
+  // 実際のアンケート結果がある場合は、最初の回答として使用
+  const actualResult = (project as any).surveyResult
+  if (actualResult) {
+    responses[0] = {
+      name: "回答者1",
+      satisfaction: actualResult.satisfaction || "満足",
+      comment: actualResult.comment || "",
+      nextEventDesired: actualResult.nextEventDesired || "",
+      improvement: "特に改善点はありません。"
+    }
+  }
+
+  // CSVデータを構築
+  const csvRows: string[] = []
+  
+  // ヘッダー行
+  csvRows.push(headers.map(h => `"${h}"`).join(","))
+  
+  // データ行（5人分）
+  responses.forEach(response => {
+    const row = [
+      response.name,
+      response.satisfaction,
+      response.comment,
+      response.nextEventDesired,
+      response.improvement
+    ]
+    // CSV形式に変換（カンマや改行を含む可能性があるため、ダブルクォートで囲む）
+    csvRows.push(row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+  })
+
+  // BOMを追加してExcelで文字化けしないようにする
+  return "\uFEFF" + csvRows.join("\n")
+}
+
 export function EventTeamDashboard({
   projectData,
   setProjectData,
@@ -276,7 +361,12 @@ export function EventTeamDashboard({
             // 実施日の翌日以降（実施日より前の日）にステータスを更新
             if (projectDate < today) {
               updatedProjectsRef.current.add(p.id)
-              updateProjectRef.current(p.id, { projectStatus: "イベント終了処理中" })
+              const todayStr = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, "0")}/${String(today.getDate()).padStart(2, "0")}`
+              updateProjectRef.current(p.id, { 
+                projectStatus: "イベント終了処理中",
+                surveySent: (p as any).surveySent !== undefined ? (p as any).surveySent : true,
+                surveySentDate: (p as any).surveySentDate || todayStr,
+              })
             }
           }
         }
@@ -1045,11 +1135,17 @@ export function EventTeamDashboard({
                           <TableHead>クライアント</TableHead>
                           <TableHead>実施日</TableHead>
                           <TableHead>ステータス</TableHead>
+                          <TableHead>アンケート状況</TableHead>
                           <TableHead className="sticky right-0 bg-white z-10">操作</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {postEventProjects.map((project) => {
+                          // イベント終了処理中の案件はデフォルトでアンケート送付済みとして扱う
+                          const surveySent = (project as any).surveySent !== false
+                          const surveyResult = (project as any).surveyResult
+                          const hasSurveyResult = surveyResult && (surveyResult.satisfaction || surveyResult.comment || surveyResult.nextEventDesired)
+                          
                           return (
                             <TableRow key={project.id}>
                               <TableCell className="font-medium sticky left-0 bg-white z-10">{project.projectName}</TableCell>
@@ -1057,11 +1153,18 @@ export function EventTeamDashboard({
                               <TableCell>{project.clientName}</TableCell>
                               <TableCell>{project.date}</TableCell>
                               <TableCell>{getStatusBadge(project.projectStatus || "")}</TableCell>
+                              <TableCell>
+                                <Badge 
+                                  variant="outline" 
+                                  className={hasSurveyResult 
+                                    ? "bg-blue-50 text-blue-700 border-blue-200" 
+                                    : "bg-green-50 text-green-700 border-green-200"}
+                                >
+                                  {hasSurveyResult ? "アンケート回答受領済み" : "アンケート送付済み"}
+                                </Badge>
+                              </TableCell>
                               <TableCell className="sticky right-0 bg-white z-10">
                                 <div className="flex gap-2">
-                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                    アンケート送付済み
-                                  </Badge>
                                   <Button
                                     size="sm"
                                     variant="default"
@@ -1893,7 +1996,35 @@ export function EventTeamDashboard({
               </div>
               
               <div className="space-y-4">
-                <h4 className="font-semibold text-lg">アンケート回答内容</h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold text-lg">アンケート回答内容</h4>
+                  {selectedProject.surveyResult && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        // CSVデータを生成（5つの質問に対する5人分の回答）
+                        const csvData = generateSurveyCsv(selectedProject)
+                        // CSVファイルをダウンロード
+                        const blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" })
+                        const link = document.createElement("a")
+                        const url = URL.createObjectURL(blob)
+                        link.setAttribute("href", url)
+                        link.setAttribute("download", `アンケート結果_${selectedProject.projectName}_${selectedProject.eventDate || selectedProject.date || ""}.csv`)
+                        link.style.visibility = "hidden"
+                        document.body.appendChild(link)
+                        link.click()
+                        document.body.removeChild(link)
+                        URL.revokeObjectURL(url)
+                        addNotification("アンケート結果をCSVでダウンロードしました")
+                      }}
+                      className="gap-2"
+                    >
+                      <Download className="h-4 w-4" />
+                      CSVダウンロード
+                    </Button>
+                  )}
+                </div>
                 {selectedProject.surveyResult ? (
                   <div className="border rounded-lg p-4 space-y-3">
                     <div>
