@@ -596,6 +596,8 @@ export function ProjectRegistrationImpl({
     switch (eventType) {
       case "トリニティガール":
         return 100000
+      case "スロセレ":
+        return 70000
       default:
         return 0
     }
@@ -2570,6 +2572,8 @@ export function ProjectRegistrationImpl({
                           className="bg-slate-50"
                         />
                       </div>
+                      {productInfo.eventType !== "スロセレ" && (
+                      <>
                       <div className="space-y-2">
                         <Label htmlFor={`mustSeeFlag-${productInfo.id}`}>必見フラグ</Label>
                         <Select
@@ -2625,6 +2629,8 @@ export function ProjectRegistrationImpl({
                           onChange={(e) => updateProductInfo(index, { publicationTime: e.target.value })}
                         />
                       </div>
+                      </>
+                      )}
                       <div className="space-y-2">
                         <Label htmlFor={`reportRequired-${productInfo.id}`}>レポート要否</Label>
                         <Select
@@ -3074,216 +3080,6 @@ export function ProjectRegistrationImpl({
                 )}
               </div>
 
-              {/* MC */}
-              <div className="space-y-4 bg-emerald-50/50 border border-emerald-200/50 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold">MC</Label>
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor={`mcCount-${productInfo.id}`} className="text-sm text-slate-700">
-                      人数:
-                    </Label>
-                    <Input
-                      id={`mcCount-${productInfo.id}`}
-                      type="number"
-                      min="0"
-                      value={productInfo.mcCount}
-                      onChange={(e) => {
-                        const count = e.target.value
-                        updateProductInfo(index, { mcCount: count })
-                        // 人数が0になった場合、選択をクリア
-                        if (count === "0" || count === "") {
-                            updateProductInfo(index, { selectedMcs: new Set(["未定"]), nominatedMcs: {} })
-                        }
-                      }}
-                      className="w-20"
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
-                
-                {Number(productInfo.mcCount) > 0 && (
-                  <>
-                    {/* 未定選択肢 */}
-                    <div className="space-y-2">
-                      <div className="grid grid-cols-3 gap-3">
-                    <div
-                      className={`p-4 border-2 rounded-lg transition-all cursor-pointer ${
-                        productInfo.selectedMcs.has("未定")
-                          ? "border-blue-500 bg-blue-50"
-                          : "border-slate-200 hover:border-slate-300"
-                      }`}
-                      onClick={() => {
-                        updateSelectedMcs(index, "未定")
-                      }}
-                    >
-                      <div className="w-full text-left">
-                        <div className="flex items-center gap-2">
-                          <div className="font-medium text-slate-900">未定</div>
-                          {productInfo.selectedMcs.has("未定") && (
-                            <CheckCircle2 className="h-4 w-4 text-blue-600" />
-                          )}
-                        </div>
-                        <Badge variant="outline" className="mt-2">
-                          未定
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 専属MC */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-slate-700">専属</Label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {mcs.filter((m) => m.status !== "busy").map((mc) => {
-                      const isSelected = productInfo.selectedMcs.has(mc.name)
-                      const isNominated = Boolean(productInfo.nominatedMcs?.[mc.name])
-                      const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
-                      return (
-                        <div
-                          key={mc.name}
-                          className={`p-4 border-2 rounded-lg transition-all cursor-pointer ${
-                            isSelected
-                              ? "border-blue-500 bg-blue-50"
-                              : "border-slate-200 hover:border-slate-300"
-                          }`}
-                          onClick={() => {
-                            updateSelectedMcs(index, mc.name)
-                          }}
-                        >
-                          <div className="w-full text-left">
-                            <div className="flex items-center gap-2">
-                              <div className="font-medium text-slate-900">{mc.name}</div>
-                              {isSelected && (
-                                <CheckCircle2 className="h-4 w-4 text-blue-600" />
-                              )}
-                              {isSelected && isNominated && (
-                                <Badge variant="outline" className="ml-1 border-purple-200 bg-purple-50 text-purple-700">
-                                  指名
-                                </Badge>
-                              )}
-                            </div>
-                            <Badge
-                              variant={mc.status === "available" ? "default" : "secondary"}
-                              className={mc.status === "tentative" ? "mt-2 bg-yellow-100 text-yellow-900 border border-yellow-200" : "mt-2"}
-                            >
-                              {mc.status === "available" ? (
-                                <>
-                                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                                  空き（手配可）
-                                </>
-                              ) : (
-                                <>
-                                  <AlertTriangle className="h-3 w-3 mr-1" />
-                                  仮押さえあり
-                                </>
-                              )}
-                            </Badge>
-                            <div className="mt-2 text-sm text-slate-900">
-                              <span className="text-slate-600">予想金額: </span>
-                              <span className="font-semibold">¥{((mcHourlyRates[mc.name] || 0) * durationHours).toLocaleString()}</span>
-                            </div>
-                            {isSelected && mc.name !== "未定" && (
-                              <div className="mt-2 flex items-center gap-2">
-                                <Checkbox
-                                  checked={isNominated}
-                                  onCheckedChange={(checked) => {
-                                    const next = { ...(productInfo.nominatedMcs || {}) }
-                                    next[mc.name] = Boolean(checked)
-                                    updateProductInfo(index, { nominatedMcs: next })
-                                  }}
-                                />
-                                <span className="text-xs text-slate-700">指名</span>
-                              </div>
-                            )}
-                          </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleOpenCalendarModal(mc.name, mc.status, "mc", index)
-                            }}
-                            className="mt-2 text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                          >
-                            <Calendar className="h-3 w-3" />
-                            カレンダーで詳細を確認
-                          </button>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                {/* 外部MC */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-slate-700">外部</Label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {externalMcs
-                      .filter((mc) => checkMcAvailability(mc) !== "busy")
-                      .map((mc) => {
-                      const availability = checkMcAvailability(mc)
-                      const isSelected = productInfo.selectedMcs.has(mc)
-                      const isNominated = Boolean(productInfo.nominatedMcs?.[mc])
-                      const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
-                      return (
-                        <div
-                          key={mc}
-                          className={`p-4 border-2 rounded-lg transition-all cursor-pointer ${
-                            isSelected
-                              ? "border-blue-500 bg-blue-50"
-                              : "border-slate-200 hover:border-slate-300"
-                          }`}
-                          onClick={() => {
-                            updateSelectedMcs(index, mc)
-                          }}
-                        >
-                          <div className="w-full text-left">
-                            <div className="flex items-center gap-2">
-                              <div className="font-medium text-slate-900">{mc}</div>
-                              {isSelected && (
-                                <CheckCircle2 className="h-4 w-4 text-blue-600" />
-                              )}
-                              {isSelected && isNominated && (
-                                <Badge variant="outline" className="ml-1 border-purple-200 bg-purple-50 text-purple-700">
-                                  指名
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="mt-2 flex items-center gap-2">
-                              <Badge variant="outline">外部</Badge>
-                              <Badge
-                                variant={availability === "available" ? "default" : "secondary"}
-                                className={availability === "tentative" ? "bg-yellow-100 text-yellow-900 border border-yellow-200" : ""}
-                              >
-                                {availability === "available" ? "空き" : "仮押さえあり"}
-                              </Badge>
-                            </div>
-                            <div className="mt-2 text-sm text-slate-900">
-                              <span className="text-slate-600">予想金額: </span>
-                              <span className="font-semibold">¥{((mcHourlyRates[mc] || 0) * durationHours).toLocaleString()}</span>
-                            </div>
-                            {isSelected && mc !== "未定" && (
-                              <div className="mt-2 flex items-center gap-2">
-                                <Checkbox
-                                  checked={isNominated}
-                                  onCheckedChange={(checked) => {
-                                    const next = { ...(productInfo.nominatedMcs || {}) }
-                                    next[mc] = Boolean(checked)
-                                    updateProductInfo(index, { nominatedMcs: next })
-                                  }}
-                                />
-                                <span className="text-xs text-slate-700">指名</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-                  </>
-                )}
-              </div>
-
               {/* 宿泊費 */}
               <div className="space-y-4 bg-slate-50/50 border border-slate-200/50 rounded-lg p-4">
                 <Label className="text-base font-semibold">宿泊費</Label>
@@ -3370,35 +3166,11 @@ export function ProjectRegistrationImpl({
                   return Math.round(cost)
                 })()
                 
-                // MCのコスト計算
-                const mcCost = (() => {
-                  const selectedWithoutUndecided = Array.from(productInfo.selectedMcs).filter(n => n !== "未定")
-                  const hasUndecided = productInfo.selectedMcs.has("未定")
-                  const count = Number(productInfo.mcCount) || 0
-                  
-                  // 選択されているキャストのコスト
-                  let cost = selectedWithoutUndecided.reduce((total, name) => {
-                    const hourlyRate = mcHourlyRates[name] || 0
-                    return total + (hourlyRate * durationHours)
-                  }, 0)
-                  
-                  // 人数が入力されている場合、選択数が人数より少ない分の推定金額を計算
-                  if (count > 0) {
-                    const selectedCount = selectedWithoutUndecided.length
-                    const undecidedCount = count - selectedCount
-                    if (undecidedCount > 0) {
-                      cost += averageMcRate * durationHours * undecidedCount
-                    }
-                  }
-                  
-                  return Math.round(cost)
-                })()
-                const totalCost = Math.round(companionCost + directorCost + mcCost)
+                const totalCost = Math.round(companionCost + directorCost)
                 // 宿泊費の計算用：入力された人数の合計（未定を含む）
                 const totalCastCount = 
                   (Number(productInfo.companionCount) || 0) +
-                  (Number(productInfo.directorCount) || 0) +
-                  (Number(productInfo.mcCount) || 0)
+                  (Number(productInfo.directorCount) || 0)
                 const performanceFeeDiscountValue = Number(productInfo.performanceFeeDiscount) || 0
                 const performanceFeeAfterDiscount = Math.round(Math.max(0, totalCost - performanceFeeDiscountValue))
                 const totalTransportationFee = Math.round(Number(productInfo.transportationFeeTotal) || 0)
@@ -3509,46 +3281,6 @@ export function ProjectRegistrationImpl({
                             </div>
                           )}
                           
-                          {/* MC内訳 */}
-                          {Number(productInfo.mcCount) > 0 && (
-                            <div className="space-y-1">
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-slate-600 font-medium">MC</span>
-                                <span className="font-medium text-slate-900">¥{Math.round(mcCost).toLocaleString()}</span>
-                              </div>
-                            {(() => {
-                              const selectedWithoutUndecided = Array.from(productInfo.selectedMcs).filter(n => n !== "未定")
-                              const selectedCount = selectedWithoutUndecided.length
-                              const count = Number(productInfo.mcCount) || 0
-                              const undecidedCount = count > 0 ? count - selectedCount : 0
-                              const selectedCost = selectedWithoutUndecided.reduce((total, name) => {
-                                const hourlyRate = mcHourlyRates[name] || 0
-                                return total + (hourlyRate * durationHours)
-                              }, 0)
-                              const undecidedCost = undecidedCount > 0 ? averageMcRate * durationHours * undecidedCount : 0
-                              
-                              return (
-                                <div className="pl-4 space-y-1 text-xs">
-                                  <div className="text-slate-500 mb-1">
-                                    稼働時間: {durationHours.toFixed(1)}時間
-                                  </div>
-                                  {selectedCount > 0 && (
-                                    <div className="flex items-center justify-between text-slate-500">
-                                      <span>選択済み ({selectedCount}人)</span>
-                                      <span>¥{Math.round(selectedCost).toLocaleString()}</span>
-                                    </div>
-                                  )}
-                                  {undecidedCount > 0 && (
-                                    <div className="flex items-center justify-between text-slate-500">
-                                      <span>未確定 ({undecidedCount}人)</span>
-                                      <span>¥{Math.round(undecidedCost).toLocaleString()}</span>
-                                    </div>
-                                  )}
-                                </div>
-                              )
-                            })()}
-                            </div>
-                          )}
                         </div>
                         <div className="flex items-center justify-between gap-4 pt-2 border-t border-slate-200">
                           <div className="flex-1">
@@ -3724,29 +3456,10 @@ export function ProjectRegistrationImpl({
             return Math.round(cost)
           })()
           
-          // MCのコスト計算
-          const mcCost = (() => {
-            const selectedWithoutUndecided = Array.from(productInfo.selectedMcs).filter(n => n !== "未定")
-            const count = Number(productInfo.mcCount) || 0
-            let cost = selectedWithoutUndecided.reduce((total, name) => {
-              const hourlyRate = mcHourlyRates[name] || 0
-              return total + (hourlyRate * durationHours)
-            }, 0)
-            if (count > 0) {
-              const selectedCount = selectedWithoutUndecided.length
-              const undecidedCount = count - selectedCount
-              if (undecidedCount > 0) {
-                cost += averageMcRate * durationHours * undecidedCount
-              }
-            }
-            return Math.round(cost)
-          })()
-          
-          const totalCost = Math.round(companionCost + directorCost + mcCost)
+          const totalCost = Math.round(companionCost + directorCost)
           const totalCastCount = 
             (Number(productInfo.companionCount) || 0) +
-            (Number(productInfo.directorCount) || 0) +
-            (Number(productInfo.mcCount) || 0)
+            (Number(productInfo.directorCount) || 0)
           const performanceFeeDiscountValue = Number(productInfo.performanceFeeDiscount) || 0
           const performanceFeeAfterDiscount = Math.round(Math.max(0, totalCost - performanceFeeDiscountValue))
           const totalTransportationFee = Math.round(Number(productInfo.transportationFeeTotal) || 0)

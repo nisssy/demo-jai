@@ -363,6 +363,7 @@ export const ProjectListView = ({
             <div className="text-center py-12 text-slate-500">
               {(searchProjectNumber ||
               searchProjectName ||
+              selectedSalesPersonId != null ||
               searchDateFrom ||
               searchDateTo ||
               searchCategory ||
