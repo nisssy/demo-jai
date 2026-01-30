@@ -121,7 +121,7 @@ export function ProjectListFilters(props: ProjectListFiltersProps) {
   const clearAll = () => {
     onSearchProjectNumberChange("")
     onSearchProjectNameChange("")
-    onSelectedSalesPersonIdChange(1) // デフォルトに戻す
+    onSelectedSalesPersonIdChange(null)
     onSalesPersonSearchQueryChange("")
     onSearchDateModeChange("execution")
     onSearchDateFromChange("")
@@ -447,14 +447,14 @@ export function ProjectListFilters(props: ProjectListFiltersProps) {
                   </button>
                 </Badge>
               )}
-              {selectedSalesPersonId && (
+              {selectedSalesPersonId != null && (
                 <Badge variant="secondary" className="gap-1">
                   ホール担当: {getEmployeeById(selectedSalesPersonId)?.name || ""}
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation()
-                      onSelectedSalesPersonIdChange(1) // デフォルトに戻す
+                      onSelectedSalesPersonIdChange(null)
                     }}
                     className="ml-1 hover:text-red-600 cursor-pointer"
                   >

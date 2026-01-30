@@ -71,7 +71,7 @@ export function useProjectList({
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null)
   const [searchProjectNumber, setSearchProjectNumber] = useState("")
   const [searchProjectName, setSearchProjectName] = useState("")
-  const [selectedSalesPersonId, setSelectedSalesPersonId] = useState<number | null>(1)
+  const [selectedSalesPersonId, setSelectedSalesPersonId] = useState<number | null>(1) // デフォルト: 山田 太郎
   const [salesPersonSearchOpen, setSalesPersonSearchOpen] = useState(false)
   const [salesPersonSearchQuery, setSalesPersonSearchQuery] = useState("")
   const [searchDateMode, setSearchDateMode] = useState<"execution" | "created">("execution")
