@@ -21,6 +21,8 @@ type QuoteStep = "select" | "recipient" | "email-settings" | "template" | "quote
 
 type QuoteRecipient = "company" | "hall"
 
+type EmailTemplate = "standard" | "polite" | "concise"
+
 type EditableQuoteSubitem = { id: string; item: string; amount: number; visible: boolean }
 type EditableQuoteItem = {
   id: string
@@ -90,6 +92,7 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
   const [toSearchOpen, setToSearchOpen] = useState(false)
   const [toSearchQuery, setToSearchQuery] = useState("")
   const [toSearchType, setToSearchType] = useState<"company" | "hall">("hall")
+  const [selectedEmailTemplate, setSelectedEmailTemplate] = useState<EmailTemplate>("standard")
 
   const [quoteProjectData, setQuoteProjectData] = useState<ProjectData>({
     projectName: "",
@@ -188,6 +191,7 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
     setEmailBcc([])
     setCcSearchQuery("")
     setBccSearchQuery("")
+    setSelectedEmailTemplate("standard")
     setQuoteProjectData({
       projectName: "",
       clientName: "",
@@ -227,6 +231,50 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
     if (!selectedProjectForQuote) return []
     return selectedProjectForQuote.products.filter((p) => selectedProductsForQuote.has(p.id))
   }, [selectedProductsForQuote, selectedProjectForQuote])
+
+  // メールテンプレート生成関数
+  const generateEmailTemplate = (templateType: EmailTemplate, clientName: string, projectName: string): string => {
+    switch (templateType) {
+      case "standard":
+        return `${clientName} 御中
+
+平素より大変お世話になっております。
+DMM の営業担当でございます。
+
+このたびは「${projectName}」の件につきまして、
+お見積書をお送りいたします。
+
+ご検討のほど、何卒よろしくお願い申し上げます。
+`
+      case "polite":
+        return `${clientName} 御中
+
+平素は格別のご高配を賜り、厚く御礼申し上げます。
+DMM の営業担当でございます。
+
+このたびは、「${projectName}」の件につきまして、
+お見積書をご提出させていただきます。
+
+ご多忙中とは存じますが、ご検討いただけますと幸いでございます。
+何かご不明な点やご質問がございましたら、
+お気軽にお申し付けくださいませ。
+
+今後とも、何卒よろしくお願い申し上げます。
+`
+      case "concise":
+        return `${clientName} 御中
+
+お世話になっております。
+DMM の営業担当です。
+
+「${projectName}」の見積書をお送りします。
+
+ご確認よろしくお願いいたします。
+`
+      default:
+        return ""
+    }
+  }
 
   // emailFromInputの変更に応じてemailFromを更新（検索結果から選択された場合は除く）
   const handleEmailFromInputChange = (value: string) => {
@@ -1009,16 +1057,7 @@ export function QuoteDialog({ open, onOpenChange, project, onRequestClose, updat
                   onClick={() => {
                     // メール文面を自動生成
                     if (!quoteProjectData.emailDraft) {
-                      const email = `${quoteProjectData.clientName} 御中
-
-平素より大変お世話になっております。
-DMM の営業担当でございます。
-
-このたびは「${quoteProjectData.projectName}」の件につきまして、
-お見積書をお送りいたします。
-
-ご検討のほど、何卒よろしくお願い申し上げます。
-`
+                      const email = generateEmailTemplate(selectedEmailTemplate, quoteProjectData.clientName, quoteProjectData.projectName)
                       setQuoteProjectData({ ...quoteProjectData, emailDraft: email })
                       setEmailGenerated(true)
                     }
@@ -1404,16 +1443,7 @@ DMM の営業担当でございます。
                     }
                     // メール文面を自動生成（まだ生成されていない場合）
                     if (!quoteProjectData.emailDraft) {
-                      const email = `${quoteProjectData.clientName} 御中
-
-平素より大変お世話になっております。
-DMM の営業担当でございます。
-
-このたびは「${quoteProjectData.projectName}」の件につきまして、
-お見積書をお送りいたします。
-
-ご検討のほど、何卒よろしくお願い申し上げます。
-`
+                      const email = generateEmailTemplate(selectedEmailTemplate, quoteProjectData.clientName, quoteProjectData.projectName)
                       setQuoteProjectData({ ...quoteProjectData, emailDraft: email })
                       setEmailGenerated(true)
                     }
@@ -1489,14 +1519,84 @@ DMM の営業担当でございます。
                 </div>
 
                 {/* メール文面 */}
-                <div className="bg-white border-2 border-slate-300 rounded-lg shadow-lg p-4">
-                  <Label className="text-sm font-medium text-slate-700 mb-2 block">送付メール文面</Label>
-                  <Textarea
-                    value={quoteProjectData.emailDraft}
-                    onChange={(e) => setQuoteProjectData({ ...quoteProjectData, emailDraft: e.target.value })}
-                    rows={16}
-                    className="font-mono text-sm"
-                  />
+                <div className="bg-white border-2 border-slate-300 rounded-lg shadow-lg p-4 space-y-4">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium text-slate-700">テンプレート選択</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Button
+                        type="button"
+                        variant={selectedEmailTemplate === "standard" ? "default" : "outline"}
+                        className={`h-auto py-3 ${
+                          selectedEmailTemplate === "standard"
+                            ? "bg-blue-600 hover:bg-blue-700 text-white"
+                            : "bg-white hover:bg-slate-50"
+                        }`}
+                        onClick={() => {
+                          setSelectedEmailTemplate("standard")
+                          const email = generateEmailTemplate("standard", quoteProjectData.clientName, quoteProjectData.projectName)
+                          setQuoteProjectData({ ...quoteProjectData, emailDraft: email })
+                        }}
+                      >
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="font-semibold text-sm">標準</span>
+                          <span className={`text-xs ${selectedEmailTemplate === "standard" ? "text-blue-100" : "text-slate-500"}`}>
+                            ビジネスに適した文面
+                          </span>
+                        </div>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={selectedEmailTemplate === "polite" ? "default" : "outline"}
+                        className={`h-auto py-3 ${
+                          selectedEmailTemplate === "polite"
+                            ? "bg-blue-600 hover:bg-blue-700 text-white"
+                            : "bg-white hover:bg-slate-50"
+                        }`}
+                        onClick={() => {
+                          setSelectedEmailTemplate("polite")
+                          const email = generateEmailTemplate("polite", quoteProjectData.clientName, quoteProjectData.projectName)
+                          setQuoteProjectData({ ...quoteProjectData, emailDraft: email })
+                        }}
+                      >
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="font-semibold text-sm">丁寧</span>
+                          <span className={`text-xs ${selectedEmailTemplate === "polite" ? "text-blue-100" : "text-slate-500"}`}>
+                            より丁寧な表現
+                          </span>
+                        </div>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={selectedEmailTemplate === "concise" ? "default" : "outline"}
+                        className={`h-auto py-3 ${
+                          selectedEmailTemplate === "concise"
+                            ? "bg-blue-600 hover:bg-blue-700 text-white"
+                            : "bg-white hover:bg-slate-50"
+                        }`}
+                        onClick={() => {
+                          setSelectedEmailTemplate("concise")
+                          const email = generateEmailTemplate("concise", quoteProjectData.clientName, quoteProjectData.projectName)
+                          setQuoteProjectData({ ...quoteProjectData, emailDraft: email })
+                        }}
+                      >
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="font-semibold text-sm">簡潔</span>
+                          <span className={`text-xs ${selectedEmailTemplate === "concise" ? "text-blue-100" : "text-slate-500"}`}>
+                            短く要点をまとめた文面
+                          </span>
+                        </div>
+                      </Button>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-slate-700 mb-2 block">送付メール文面</Label>
+                    <Textarea
+                      value={quoteProjectData.emailDraft}
+                      onChange={(e) => setQuoteProjectData({ ...quoteProjectData, emailDraft: e.target.value })}
+                      rows={16}
+                      className="font-mono text-sm"
+                    />
+                  </div>
                 </div>
               </div>
 
