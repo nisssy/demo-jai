@@ -16,6 +16,8 @@ export type HallData = {
   discountAmount: number
   address?: string
   email?: string
+  /** 都道府県（バナー表示・案件情報用） */
+  prefecture?: string
 }
 
 export type ProductionData = {
@@ -120,6 +122,20 @@ export type DemoProductEntity = {
   isAccommodationAutoFilled?: boolean
   quoteGenerated?: boolean
   quoteData?: unknown
+  /** バナー画像を作成済み（パチタウン連携はこの後に実行） */
+  bannerGenerated?: boolean
+  /** 作成したバナーの内容（プレビュー表示用） */
+  bannerData?: {
+    date: string
+    dayOfWeek: string
+    prefecture: string
+    storeName: string
+    targetMachines: string[]
+  }
+  /** 顧客が専用フォームで入力した対象機種（スロット機種名・複数可） */
+  targetMachineNames?: string[]
+  /** 機種マスタで変換したパチタウン用機種名 */
+  pachitownMachineNames?: string[]
   /** ステータス変更履歴 */
   statusHistory?: Array<{
     status: string

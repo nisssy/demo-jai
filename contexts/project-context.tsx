@@ -192,7 +192,30 @@ const generateInitialHalls = (): HallData[] => {
         "藤沢店": "神奈川県藤沢市",
         "鎌倉店": "神奈川県鎌倉市",
       }
+      const prefectureMap: Record<string, string> = {
+        "本店": "東京都",
+        "渋谷店": "東京都",
+        "新宿店": "東京都",
+        "池袋店": "東京都",
+        "上野店": "東京都",
+        "錦糸町店": "東京都",
+        "新橋店": "東京都",
+        "横浜店": "神奈川県",
+        "川崎店": "神奈川県",
+        "大宮店": "埼玉県",
+        "千葉店": "千葉県",
+        "船橋店": "千葉県",
+        "柏店": "千葉県",
+        "立川店": "東京都",
+        "八王子店": "東京都",
+        "町田店": "東京都",
+        "相模原店": "神奈川県",
+        "厚木店": "神奈川県",
+        "藤沢店": "神奈川県",
+        "鎌倉店": "神奈川県",
+      }
       const addressBase = wardMap[location] || "東京都"
+      const prefecture = prefectureMap[location] ?? "東京都"
 
       halls.push({
         id: hallCounter,
@@ -203,6 +226,7 @@ const generateInitialHalls = (): HallData[] => {
         salesPersonName: employeeNames[salesPersonIndex],
         companyId: company.id,
         discountAmount: generateRandomDiscount(), // 5000円〜50000円のランダムな割引金額
+        prefecture,
       })
       hallCounter++
     }
@@ -275,6 +299,7 @@ const initialProjects: Product[] = [
     eventProductName: "新台入替キャンペーン①",
     eventDate: "2025/12/10",
     estimatedBillingAmount: 650000,
+    targetMachineNames: ["北斗の拳 転生", "パチスロ シン・エヴァンゲリオン"],
     ...getCompanyAndHallInfo("マルハン渋谷店"),
   },
   {
@@ -296,6 +321,7 @@ const initialProjects: Product[] = [
     eventProductName: "新台入替キャンペーン②",
     eventDate: "2025/12/15",
     estimatedBillingAmount: 580000,
+    targetMachineNames: ["パチスロ 機動戦士ガンダム 哀・戦士編"],
     ...getCompanyAndHallInfo("マルハン渋谷店"),
   },
   {
@@ -339,6 +365,7 @@ const initialProjects: Product[] = [
     eventProductName: "年末年始イベント①",
     eventDate: "2025/12/28",
     estimatedBillingAmount: 550000,
+    targetMachineNames: ["スーパー海物語 IN 沖縄2", "パチスロ 真・三國無双"],
     ...getCompanyAndHallInfo("マルハン渋谷店"),
   },
   {
@@ -533,6 +560,7 @@ const initialProjects: Product[] = [
     eventProductName: "新機種導入イベント①",
     eventDate: "2026/02/20",
     estimatedBillingAmount: 600000,
+    targetMachineNames: ["パチスロ 北斗の拳", "エヴァンゲリオン 〜魂の軌跡〜"],
     ...getCompanyAndHallInfo("ガイア池袋店"),
   },
   {
@@ -2659,6 +2687,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           isAccommodationAutoFilled: (row as any).isAccommodationAutoFilled,
           quoteGenerated: (row as any).quoteGenerated,
           quoteData: (row as any).quoteData,
+          targetMachineNames: (row as any).targetMachineNames,
+          pachitownMachineNames: (row as any).pachitownMachineNames,
+          bannerGenerated: (row as any).bannerGenerated,
+          bannerData: (row as any).bannerData,
           statusHistory: (row as any).statusHistory,
         } as any)
       }
@@ -2882,6 +2914,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           isAccommodationAutoFilled: (row as any).isAccommodationAutoFilled,
           quoteGenerated: (row as any).quoteGenerated,
           quoteData: (row as any).quoteData,
+          targetMachineNames: (row as any).targetMachineNames,
+          pachitownMachineNames: (row as any).pachitownMachineNames,
+          bannerGenerated: (row as any).bannerGenerated,
+          bannerData: (row as any).bannerData,
         } as any)
       }
     }

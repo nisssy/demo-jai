@@ -1,5 +1,5 @@
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Briefcase, Users } from "lucide-react"
+import { Briefcase, Users, Package, Truck } from "lucide-react"
 import type { Role } from "@/types/project"
 
 export type RoleSelectionViewProps = {
@@ -40,6 +40,30 @@ export const RoleSelectionView = ({ onSelectRole }: RoleSelectionViewProps) => {
               <CardTitle className="text-2xl">イベントチーム</CardTitle>
               <CardDescription className="text-base">
                 案件の確認、イベントの実施準備を行います
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => onSelectRole("ProductManagement")}>
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center">
+                <Package className="h-8 w-8 text-amber-600" />
+              </div>
+              <CardTitle className="text-2xl">商材管理課</CardTitle>
+              <CardDescription className="text-base">
+                商材マスタの管理、案件別商材の確認を行います
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => onSelectRole("OutsourcingVendor")}>
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center">
+                <Truck className="h-8 w-8 text-violet-600" />
+              </div>
+              <CardTitle className="text-2xl">外注業者</CardTitle>
+              <CardDescription className="text-base">
+                依頼された手配の一覧確認、対応状況の報告を行います
               </CardDescription>
             </CardHeader>
           </Card>

@@ -5,6 +5,8 @@ import { useAppRouter } from "@/hooks/use-app-router"
 import { ProjectList } from "@/components/screens/project-list"
 import { RoleSelection } from "@/components/screens/role-selection"
 import { EventTeamDashboard } from "@/components/screens/event-team-dashboard"
+import { ProductManagementDashboard } from "@/components/screens/product-management-dashboard"
+import { OutsourcingVendorDashboard } from "@/components/screens/outsourcing-vendor-dashboard"
 import { useProject } from "@/contexts/project-context"
 import { Suspense } from "react"
 
@@ -35,6 +37,32 @@ function HomePageContent() {
     return (
       <main className="px-8 py-8 max-w-7xl mx-auto">
         <EventTeamDashboard
+          projectData={projectData}
+          setProjectData={setProjectData}
+          addNotification={addNotification}
+        />
+      </main>
+    )
+  }
+
+  // 商材管理課の場合は専用ダッシュボードを表示
+  if (currentRole === "ProductManagement") {
+    return (
+      <main className="px-8 py-8 max-w-7xl mx-auto">
+        <ProductManagementDashboard
+          projectData={projectData}
+          setProjectData={setProjectData}
+          addNotification={addNotification}
+        />
+      </main>
+    )
+  }
+
+  // 外注業者の場合は専用ダッシュボードを表示
+  if (currentRole === "OutsourcingVendor") {
+    return (
+      <main className="px-8 py-8 max-w-7xl mx-auto">
+        <OutsourcingVendorDashboard
           projectData={projectData}
           setProjectData={setProjectData}
           addNotification={addNotification}

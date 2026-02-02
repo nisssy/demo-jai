@@ -394,11 +394,11 @@ export const ProjectListView = ({
                     <Card key={projectNumber} className="hover:shadow-md transition-shadow">
                       <CardContent className="p-6">
                         <div className="mb-4 pb-4 border-b-2 border-slate-300">
-                          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                            <div className="flex items-center gap-3 flex-shrink-0">
-                              <div className="flex flex-col gap-1">
-                                <h2 className="text-3xl font-bold text-slate-900 whitespace-nowrap">{projectName}</h2>
-                                <div className="flex items-center gap-3">
+                          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <div className="flex flex-col gap-1 min-w-0 w-full">
+                                <h2 className="text-3xl font-bold text-slate-900 break-words">{projectName}</h2>
+                                <div className="flex items-center gap-3 flex-wrap">
                                   <span className="text-sm font-medium text-slate-600 whitespace-nowrap">案件No: {projectNumber}</span>
                                   <Badge variant="outline" className="whitespace-nowrap">
                                     {projectProducts.length}件の商材
@@ -407,7 +407,7 @@ export const ProjectListView = ({
                               </div>
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
+                            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 min-w-0 flex-1">
                               <div className="flex items-center gap-2">
                                 <Building2 className="h-4 w-4" />
                                 <span>
@@ -444,7 +444,7 @@ export const ProjectListView = ({
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
                               <Button onClick={() => onClickEditProject(projectNumber)} variant="outline" className="gap-2">
                                 <Edit2 className="h-4 w-4" />
                                 案件を編集
@@ -590,11 +590,11 @@ export const ProjectListView = ({
                     <Card key={projectNumber} className="hover:shadow-md transition-shadow">
                       <CardContent className="p-6">
                         <div className="mb-4 pb-4 border-b-2 border-slate-300">
-                          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                            <div className="flex items-center gap-3 flex-shrink-0">
-                              <div className="flex flex-col gap-1">
-                                <h2 className="text-3xl font-bold text-slate-900 whitespace-nowrap">{projectName}</h2>
-                                <div className="flex items-center gap-3">
+                          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <div className="flex flex-col gap-1 min-w-0 w-full">
+                                <h2 className="text-3xl font-bold text-slate-900 break-words">{projectName}</h2>
+                                <div className="flex items-center gap-3 flex-wrap">
                                   <span className="text-sm font-medium text-slate-600 whitespace-nowrap">案件No: {projectNumber}</span>
                                   <Badge variant="outline" className="whitespace-nowrap">
                                     {projectProducts.length}件の修正対象商材
@@ -603,7 +603,7 @@ export const ProjectListView = ({
                               </div>
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
+                            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 min-w-0 flex-1">
                               <div className="flex items-center gap-2">
                                 <Building2 className="h-4 w-4" />
                                 <span>
@@ -640,7 +640,7 @@ export const ProjectListView = ({
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
                               <Button onClick={() => onClickEditProject(projectNumber)} variant="outline" className="gap-2">
                                 <Edit2 className="h-4 w-4" />
                                 案件を編集
@@ -721,11 +721,11 @@ export const ProjectListView = ({
                     <Card key={projectNumber} className="hover:shadow-md transition-shadow">
                       <CardContent className="p-6">
                         <div className="mb-4 pb-4 border-b-2 border-slate-300">
-                          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                            <div className="flex items-center gap-3 flex-shrink-0">
-                              <div className="flex flex-col gap-1">
-                                <h2 className="text-3xl font-bold text-slate-900 whitespace-nowrap">{projectName}</h2>
-                                <div className="flex items-center gap-3">
+                          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <div className="flex flex-col gap-1 min-w-0 w-full">
+                                <h2 className="text-3xl font-bold text-slate-900 break-words">{projectName}</h2>
+                                <div className="flex items-center gap-3 flex-wrap">
                                   <span className="text-sm font-medium text-slate-600 whitespace-nowrap">案件No: {projectNumber}</span>
                                   <Badge variant="outline" className="whitespace-nowrap">
                                     {projectProducts.length}件の仮押さえ不可商材
@@ -734,7 +734,7 @@ export const ProjectListView = ({
                               </div>
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
+                            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 min-w-0 flex-1">
                               <div className="flex items-center gap-2">
                                 <Building2 className="h-4 w-4" />
                                 <span>
@@ -771,7 +771,7 @@ export const ProjectListView = ({
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
                               <Button onClick={() => onClickEditProject(projectNumber)} variant="outline" className="gap-2">
                                 <Edit2 className="h-4 w-4" />
                                 案件を編集

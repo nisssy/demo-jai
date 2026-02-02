@@ -19,6 +19,8 @@ export const HallDataSchema = z.object({
   address: z.string().optional(),
   /** メールアドレス（見積書送付用） */
   email: z.string().optional(),
+  /** 都道府県（バナー表示・案件情報用） */
+  prefecture: z.string().optional(),
 })
 
 /**
