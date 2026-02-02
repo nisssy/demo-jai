@@ -97,6 +97,17 @@ export type ProjectData = {
     targetMachineNames?: string[]
     /** 機種マスタで変換したパチタウン用機種名 */
     pachitownMachineNames?: string[]
+    /** イベント終了後の写真（URLやID、外注業者が参照） */
+    eventPhotos?: string[]
+    /** レポートアップロード済み（外注業者が作成・アップロード） */
+    reportUploaded?: boolean
+    reportUploadedAt?: string
+    /** レポートメモ（デモ用） */
+    reportNote?: string
+    /** 事後データ：取引結果（外注業者が入力、商材に反映） */
+    postEventTransactionResult?: string
+    /** 事後データ：機種別データ（外注業者が入力、商材に反映） */
+    postEventMachineData?: string
     /** ステータス変更履歴 */
     statusHistory?: Array<{
       status: string

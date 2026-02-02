@@ -66,18 +66,31 @@ export function Header() {
               </AlertDialogContent>
             </AlertDialog>
 
-            {/* Current Role Display */}
+            {/* Current Role Display（画面に応じて表記を切り替え） */}
             {currentRole !== null && (
               <div className="flex items-center gap-2">
-                {currentRole === "Sales" ? (
+                {currentRole === "Sales" && (
                   <Badge variant="default" className="bg-blue-600 text-white px-3 py-1.5 gap-2">
                     <Briefcase className="h-4 w-4" />
                     <span className="font-semibold">営業</span>
                   </Badge>
-                ) : (
+                )}
+                {currentRole === "Internal" && (
                   <Badge variant="default" className="bg-green-600 text-white px-3 py-1.5 gap-2">
                     <Users className="h-4 w-4" />
                     <span className="font-semibold">イベントチーム</span>
+                  </Badge>
+                )}
+                {currentRole === "ProductManagement" && (
+                  <Badge variant="default" className="bg-violet-600 text-white px-3 py-1.5 gap-2">
+                    <Briefcase className="h-4 w-4" />
+                    <span className="font-semibold">商材管理課</span>
+                  </Badge>
+                )}
+                {currentRole === "OutsourcingVendor" && (
+                  <Badge variant="default" className="bg-amber-600 text-white px-3 py-1.5 gap-2">
+                    <Users className="h-4 w-4" />
+                    <span className="font-semibold">外注業者</span>
                   </Badge>
                 )}
               </div>
