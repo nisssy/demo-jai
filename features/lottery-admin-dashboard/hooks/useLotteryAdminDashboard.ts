@@ -22,7 +22,7 @@ type LotteryProduct = {
   prizeOrdersByVendor?: PrizeOrderDocument[]
 }
 
-export function useLotteryAdminDashboard({ addNotification }: UseLotteryAdminDashboardArgs) => {
+export function useLotteryAdminDashboard({ addNotification }: UseLotteryAdminDashboardArgs) {
   const { getProducts, updateProduct, createDesignRequest, getDesignRequests, getTradingPartners } = useProject()
 
   // タブ状態

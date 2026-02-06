@@ -4,9 +4,7 @@ import { useState, useMemo, useCallback } from "react"
 import { useProject } from "@/contexts/project-context"
 import type { PrizeOrderDocument, PrizeDeliveryInfoByVendor } from "@/types/lottery"
 
-export type UseP
-
-rizeVendorDashboardArgs = {
+export type UsePrizeVendorDashboardArgs = {
   addNotification: (message: string) => void
 }
 
