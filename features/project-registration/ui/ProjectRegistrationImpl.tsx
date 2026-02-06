@@ -306,8 +306,12 @@ export function ProjectRegistrationImpl({
         // 人数制限をチェック（未定以外の選択数がmaxCountを超えないように）
         const selectedWithoutUndecided = Array.from(newSelected).filter(n => n !== "未定")
         if (maxCount > 0 && selectedWithoutUndecided.length >= maxCount) {
-          // 既に最大数に達している場合は追加しない
-          return
+          // 既に最大数に達している場合は、クリックしたキャストで先頭の選択を置き換え（変更を可能にする）
+          const toRemove = selectedWithoutUndecided[0]
+          if (toRemove !== undefined) {
+            newSelected.delete(toRemove)
+            delete nominated[toRemove]
+          }
         }
         newSelected.add(name)
         if (nominated[name] === undefined) nominated[name] = false
@@ -346,8 +350,12 @@ export function ProjectRegistrationImpl({
         // 人数制限をチェック（未定以外の選択数がmaxCountを超えないように）
         const selectedWithoutUndecided = Array.from(newSelected).filter(n => n !== "未定")
         if (maxCount > 0 && selectedWithoutUndecided.length >= maxCount) {
-          // 既に最大数に達している場合は追加しない
-          return
+          // 既に最大数に達している場合は、クリックしたキャストで先頭の選択を置き換え（変更を可能にする）
+          const toRemove = selectedWithoutUndecided[0]
+          if (toRemove !== undefined) {
+            newSelected.delete(toRemove)
+            delete nominated[toRemove]
+          }
         }
         newSelected.add(name)
         if (nominated[name] === undefined) nominated[name] = false
@@ -382,8 +390,12 @@ export function ProjectRegistrationImpl({
         // 人数制限をチェック（未定以外の選択数がmaxCountを超えないように）
         const selectedWithoutUndecided = Array.from(newSelected).filter(n => n !== "未定")
         if (maxCount > 0 && selectedWithoutUndecided.length >= maxCount) {
-          // 既に最大数に達している場合は追加しない
-          return
+          // 既に最大数に達している場合は、クリックしたキャストで先頭の選択を置き換え（変更を可能にする）
+          const toRemove = selectedWithoutUndecided[0]
+          if (toRemove !== undefined) {
+            newSelected.delete(toRemove)
+            delete nominated[toRemove]
+          }
         }
         newSelected.add(name)
         if (nominated[name] === undefined) nominated[name] = false
@@ -2210,6 +2222,15 @@ export function ProjectRegistrationImpl({
                               setHallName(hall.name)
                               setHallId(hall.hallId)
                               setAcquirerName(hall.salesPersonName)
+                              // ホールから法人を自動設定
+                              if (hall.companyId) {
+                                const company = getCompanyById(hall.companyId)
+                                if (company) {
+                                  setCompanyId(company.companyId)
+                                  setCompanyName(company.name)
+                                  setSelectedCompanyId(company.id)
+                                }
+                              }
                               // ホール変更により交通費（所属住所→ホール住所）を再計算
                               setProductInfos((prev) =>
                                 prev.map((p) => ({
@@ -2228,6 +2249,10 @@ export function ProjectRegistrationImpl({
                                 }
                                 if (prev.acquirerName) {
                                   delete newErrors.acquirerName
+                                  hasChanges = true
+                                }
+                                if (prev.companyName) {
+                                  delete newErrors.companyName
                                   hasChanges = true
                                 }
                                 return hasChanges ? newErrors : prev
@@ -2769,7 +2794,10 @@ export function ProjectRegistrationImpl({
                               <span className="font-semibold">¥{((companionHourlyRates[talent.name] || 0) * durationHours).toLocaleString()}</span>
                             </div>
                             {isSelected && talent.name !== "未定" && (
-                              <div className="mt-2 flex items-center gap-2">
+                              <div
+                                className="mt-2 flex items-center gap-2"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <Checkbox
                                   checked={isNominated}
                                   onCheckedChange={(checked) => {
@@ -2847,7 +2875,10 @@ export function ProjectRegistrationImpl({
                               <span className="font-semibold">¥{((companionHourlyRates[companion] || 0) * durationHours).toLocaleString()}</span>
                             </div>
                             {isSelected && companion !== "未定" && (
-                              <div className="mt-2 flex items-center gap-2">
+                              <div
+                                className="mt-2 flex items-center gap-2"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <Checkbox
                                   checked={isNominated}
                                   onCheckedChange={(checked) => {
@@ -2980,7 +3011,10 @@ export function ProjectRegistrationImpl({
                               <span className="font-semibold">¥{((directorHourlyRates[director.name] || 0) * durationHours).toLocaleString()}</span>
                             </div>
                             {isSelected && director.name !== "未定" && (
-                              <div className="mt-2 flex items-center gap-2">
+                              <div
+                                className="mt-2 flex items-center gap-2"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <Checkbox
                                   checked={isNominated}
                                   onCheckedChange={(checked) => {
@@ -3058,7 +3092,10 @@ export function ProjectRegistrationImpl({
                               <span className="font-semibold">¥{((directorHourlyRates[director] || 0) * durationHours).toLocaleString()}</span>
                             </div>
                             {isSelected && director !== "未定" && (
-                              <div className="mt-2 flex items-center gap-2">
+                              <div
+                                className="mt-2 flex items-center gap-2"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <Checkbox
                                   checked={isNominated}
                                   onCheckedChange={(checked) => {

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react"
+import { useSearchParams } from "next/navigation"
 import type { ProjectData } from "@/types/project"
 import { useProject } from "@/contexts/project-context"
 import { useAppRouter } from "@/hooks/use-app-router"
@@ -77,12 +78,21 @@ const generateSurveyCsv = (project: Project): string => {
 
 export function useEventTeamDashboard({ projectData, setProjectData, addNotification }: UseEventTeamDashboardArgs) {
   const router = useAppRouter()
+  const searchParams = useSearchParams()
   const { getProducts, updateProduct, getCompanions, getProductions } = useProject()
   const allProjects = useMemo(() => getProducts(), [getProducts])
 
+  // URLパラメータからタブの初期値を取得
+  const tabFromUrl = searchParams?.get("tab") as "arrangements" | "confirmation" | "postEvent" | null
+  const subTabFromUrl = searchParams?.get("subTab") as "holdRequest" | "inProgress" | null
+
   // 共通状態
-  const [activeTab, setActiveTab] = useState<"arrangements" | "confirmation" | "postEvent">("arrangements")
-  const [arrangementsSubTab, setArrangementsSubTab] = useState<"holdRequest" | "inProgress">("holdRequest")
+  const [activeTab, setActiveTab] = useState<"arrangements" | "confirmation" | "postEvent">(
+    tabFromUrl && ["arrangements", "confirmation", "postEvent"].includes(tabFromUrl) ? tabFromUrl : "arrangements"
+  )
+  const [arrangementsSubTab, setArrangementsSubTab] = useState<"holdRequest" | "inProgress">(
+    subTabFromUrl && ["holdRequest", "inProgress"].includes(subTabFromUrl) ? subTabFromUrl : "holdRequest"
+  )
 
   // 選択されたプロジェクト
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
@@ -1029,6 +1039,33 @@ export function useEventTeamDashboard({ projectData, setProjectData, addNotifica
     return holdRequestGroupsByProduction.length > 0
   }, [holdRequestGroupsByProduction])
 
+  // タブ変更時にURLを更新する関数
+  const handleActiveTabChange = useCallback((tab: "arrangements" | "confirmation" | "postEvent") => {
+    setActiveTab(tab)
+    const params = new URLSearchParams(searchParams?.toString() || "")
+    params.set("tab", tab)
+    if (tab === "arrangements") {
+      // arrangementsタブの場合はsubTabパラメータも保持
+      if (!params.has("subTab")) {
+        params.set("subTab", arrangementsSubTab)
+      }
+    } else {
+      // 他のタブの場合はsubTabパラメータを削除
+      params.delete("subTab")
+    }
+    router.replace(`?${params.toString()}`, { scroll: false })
+  }, [router, searchParams, arrangementsSubTab])
+
+  const handleArrangementsSubTabChange = useCallback((subTab: "holdRequest" | "inProgress") => {
+    setArrangementsSubTab(subTab)
+    const params = new URLSearchParams(searchParams?.toString() || "")
+    params.set("subTab", subTab)
+    if (!params.has("tab")) {
+      params.set("tab", "arrangements")
+    }
+    router.replace(`?${params.toString()}`, { scroll: false })
+  }, [router, searchParams])
+
   return {
     router,
     updateProduct,
@@ -1041,9 +1078,9 @@ export function useEventTeamDashboard({ projectData, setProjectData, addNotifica
 
     // 共通状態
     activeTab,
-    setActiveTab,
+    setActiveTab: handleActiveTabChange,
     arrangementsSubTab,
-    setArrangementsSubTab,
+    setArrangementsSubTab: handleArrangementsSubTabChange,
 
     // プロジェクトリスト
     arrangementProjects,

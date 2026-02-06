@@ -1,6 +1,7 @@
 "use client"
 
 import { useSearchParams } from "next/navigation"
+import { useEffect } from "react"
 import { useAppRouter } from "@/hooks/use-app-router"
 import { ProjectList } from "@/components/screens/project-list"
 import { RoleSelection } from "@/components/screens/role-selection"
@@ -9,15 +10,32 @@ import { ProductManagementDashboard } from "@/components/screens/product-managem
 import { OutsourcingVendorDashboard } from "@/components/screens/outsourcing-vendor-dashboard"
 import { useProject } from "@/contexts/project-context"
 import { Suspense } from "react"
+import type { Role } from "@/types/project"
 
 function HomePageContent() {
   const router = useAppRouter()
   const searchParams = useSearchParams()
   const { projectData, setProjectData, currentRole, setCurrentRole, addNotification } = useProject()
-  
-  // クエリパラメータからタブを取得（デフォルトは"projects"）
+
+  // クエリパラメータからロールとタブを取得
+  const roleFromQuery = searchParams?.get("role") as Role | null
   const tabFromQuery = searchParams?.get("tab")
   const initialTab: "projects" | "corrections" = tabFromQuery === "corrections" ? "corrections" : "projects"
+
+  // URLパラメータとロール状態を同期
+  useEffect(() => {
+    const validRoles: Role[] = ["Sales", "Internal", "ProductManagement", "OutsourcingVendor"]
+
+    if (roleFromQuery && validRoles.includes(roleFromQuery)) {
+      // URLにロールパラメータがある場合、contextのロールと同期
+      if (currentRole !== roleFromQuery) {
+        setCurrentRole(roleFromQuery)
+      }
+    } else if (!roleFromQuery && currentRole) {
+      // URLにロールパラメータがない場合、contextのロールをクリア
+      setCurrentRole(null)
+    }
+  }, [roleFromQuery, currentRole, setCurrentRole])
 
   // ロールが選択されていない場合はロール選択画面を表示
   if (currentRole === null) {
@@ -26,6 +44,10 @@ function HomePageContent() {
         <RoleSelection
           onSelectRole={(role) => {
             setCurrentRole(role)
+            // ロール選択時にURLパラメータを追加
+            const params = new URLSearchParams(searchParams?.toString() || "")
+            params.set("role", role)
+            router.replace(`?${params.toString()}`, { scroll: false })
           }}
         />
       </main>

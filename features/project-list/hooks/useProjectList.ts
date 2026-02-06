@@ -1,12 +1,13 @@
 "use client"
 
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import type { ProjectData, Role } from "@/types/project"
 import { useProject } from "@/contexts/project-context"
 import { useAppRouter } from "@/hooks/use-app-router"
 import type { ProjectItem, ValidationResult } from "@/features/project-list/model/types"
 import type { DemoProject } from "@/lib/demo-db/types"
 import { generateQuotePDF } from "@/features/project-list/lib/quote"
-import { useCallback, useEffect, useMemo, useState } from "react"
 
 export type ProjectListTab = "projects" | "corrections" | "temporaryHoldFailure"
 
@@ -34,6 +35,7 @@ export function useProjectList({
   initialTab = "projects",
 }: UseProjectListArgs) {
   const router = useAppRouter()
+  const searchParams = useSearchParams()
   const {
     getProjects,
     getProducts,
@@ -398,12 +400,20 @@ Co・Dir担当`
     URL.revokeObjectURL(url)
   }, [])
 
+  // タブ変更時にURLを更新する関数
+  const handleActiveTabChange = useCallback((tab: ProjectListTab) => {
+    setActiveTab(tab)
+    const params = new URLSearchParams(searchParams?.toString() || "")
+    params.set("tab", tab)
+    router.replace(`?${params.toString()}`, { scroll: false })
+  }, [router, searchParams])
+
   return {
     router,
     updateProduct,
 
     activeTab,
-    setActiveTab,
+    setActiveTab: handleActiveTabChange,
 
     allProducts,
     eligibleProjects,
