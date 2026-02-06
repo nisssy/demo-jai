@@ -980,7 +980,7 @@ export function ProjectRegistrationImpl({
         projectStatus: newProjectStatus,
         // 仮押さえ不可の案件を更新する場合は、コメントをクリア
         ...(isTemporaryHoldFailure && { temporaryHoldFailureComment: undefined }),
-        // イベントチームへのコメントを保存
+        // マネジメント部へのコメントを保存
         ...(correctionComment !== undefined && { correctionComment: correctionComment }),
         category: productInfo.category,
         eventType: productInfo.eventType,
@@ -3915,15 +3915,15 @@ export function ProjectRegistrationImpl({
         </DialogContent>
       </Dialog>
 
-      {/* イベントチームへのコメント入力と送信ボタン（修正依頼がある商材編集の場合のみ、一番下に配置） */}
+      {/* マネジメント部へのコメント入力と送信ボタン（修正依頼がある商材編集の場合のみ、一番下に配置） */}
       {isProductEditMode && correctionRequest && correctionComment !== undefined && onCorrectionCommentChange && (
         <Card>
           <CardHeader>
-            <CardTitle>イベントチームへのコメント</CardTitle>
+            <CardTitle>マネジメント部へのコメント</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="correction-comment">修正内容についてイベントチームに伝えたいことがあれば記入してください（任意）</Label>
+              <Label htmlFor="correction-comment">修正内容についてマネジメント部に伝えたいことがあれば記入してください（任意）</Label>
               <Textarea
                 id="correction-comment"
                 value={correctionComment ?? ""}
@@ -3932,13 +3932,13 @@ export function ProjectRegistrationImpl({
                     onCorrectionCommentChange(e.target.value)
                   }
                 }}
-                placeholder="修正内容についてイベントチームに伝えたいことがあれば記入してください"
+                placeholder="修正内容についてマネジメント部に伝えたいことがあれば記入してください"
                 rows={4}
               />
             </div>
             <div className="flex justify-end pt-2">
               <Button onClick={onNext} className="gap-2">
-                更新してイベントチームへ送信
+                更新してマネジメント部へ送信
               </Button>
             </div>
           </CardContent>

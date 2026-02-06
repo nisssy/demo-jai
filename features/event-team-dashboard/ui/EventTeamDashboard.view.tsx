@@ -86,7 +86,7 @@ export const EventTeamDashboardView = ({
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-900">イベントチーム ダッシュボード</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">マネジメント部 ダッシュボード</h1>
         <Button variant="outline" onClick={onOpenCostExportModal} className="gap-2">
           <Download className="h-4 w-4" />
           コスト出力

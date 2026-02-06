@@ -303,7 +303,7 @@ export function useEventTeamDashboard({ projectData, setProjectData, addNotifica
   }, [allProjects])
 
   const confirmationRequests = useMemo(() => {
-    return allProjects.filter((p) => p.projectStatus === "イベントチーム確認中")
+    return allProjects.filter((p) => p.projectStatus === "マネジメント部確認中")
   }, [allProjects])
 
   const postEventProjects = useMemo(() => {
@@ -420,7 +420,7 @@ export function useEventTeamDashboard({ projectData, setProjectData, addNotifica
 
     const currentHistory = (selectedProject as any).statusHistory as Array<{ status: string; timestamp: string; changedBy?: string; note?: string }> | undefined
     const updatedHistory =
-      currentStatus !== nextProjectStatus ? addStatusHistory(currentHistory, nextProjectStatus, "イベントチーム", "押さえ状況を保存") : currentHistory
+      currentStatus !== nextProjectStatus ? addStatusHistory(currentHistory, nextProjectStatus, "マネジメント部", "押さえ状況を保存") : currentHistory
 
     updateProduct(selectedProject.id, {
       companionBookingStatus: draftCompanionBookingStatus,
@@ -546,7 +546,7 @@ export function useEventTeamDashboard({ projectData, setProjectData, addNotifica
     })
 
     const currentHistory = (selectedProject as any).statusHistory as Array<{ status: string; timestamp: string; changedBy?: string; note?: string }> | undefined
-    const updatedHistory = addStatusHistory(currentHistory, "本押さえ依頼", "イベントチーム", "内容確認を完了")
+    const updatedHistory = addStatusHistory(currentHistory, "本押さえ依頼", "マネジメント部", "内容確認を完了")
 
     updateProduct(selectedProject.id, {
       projectStatus: "本押さえ依頼",
@@ -568,7 +568,7 @@ export function useEventTeamDashboard({ projectData, setProjectData, addNotifica
   const handleSubmitCorrection = useCallback(() => {
     if (!selectedProject || !correctionRequest.trim()) return
     const currentHistory = (selectedProject as any).statusHistory as Array<{ status: string; timestamp: string; changedBy?: string; note?: string }> | undefined
-    const updatedHistory = addStatusHistory(currentHistory, "営業修正中", "イベントチーム", `修正依頼: ${correctionRequest}`)
+    const updatedHistory = addStatusHistory(currentHistory, "営業修正中", "マネジメント部", `修正依頼: ${correctionRequest}`)
 
     updateProduct(selectedProject.id, {
       projectStatus: "営業修正中",

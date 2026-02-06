@@ -78,7 +78,7 @@ export function OrderConfirmDialog({
       if (typeof project.id === "number") {
         updateProduct(project.id, {
           status: "ordered",
-          projectStatus: "イベントチーム確認中",
+          projectStatus: "マネジメント部確認中",
         })
       }
 

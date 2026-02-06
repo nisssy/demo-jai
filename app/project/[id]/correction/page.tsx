@@ -58,13 +58,13 @@ function ProjectCorrectionPageContent() {
 
   const handleSave = () => {
     if (!projectId) return
-    
-    // プロジェクトを更新し、ステータスを「イベントチーム確認中」に変更
+
+    // プロジェクトを更新し、ステータスを「マネジメント部確認中」に変更
     updateProduct(projectId, {
-      projectStatus: "イベントチーム確認中",
+      projectStatus: "マネジメント部確認中",
       correctionComment: correctionComment,
     })
-    
+
     addNotification("修正を完了しました")
     
     if (tab === "corrections") {

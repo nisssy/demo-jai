@@ -37,7 +37,7 @@ export const RoleSelectionView = ({ onSelectRole }: RoleSelectionViewProps) => {
               <div className="mx-auto mb-4 w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
                 <Users className="h-8 w-8 text-green-600" />
               </div>
-              <CardTitle className="text-2xl">イベントチーム</CardTitle>
+              <CardTitle className="text-2xl">マネジメント部</CardTitle>
               <CardDescription className="text-base">
                 案件の確認、イベントの実施準備を行います
               </CardDescription>

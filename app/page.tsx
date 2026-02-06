@@ -62,7 +62,7 @@ function HomePageContent() {
     )
   }
 
-  // イベントチームの場合は専用ダッシュボードを表示
+  // マネジメント部の場合は専用ダッシュボードを表示
   if (currentRole === "Internal") {
     return (
       <main className="px-8 py-8 max-w-7xl mx-auto">

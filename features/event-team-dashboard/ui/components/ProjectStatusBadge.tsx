@@ -19,8 +19,8 @@ export const ProjectStatusBadge = ({ status }: ProjectStatusBadgeProps) => {
       return <Badge className="bg-green-600 text-white">仮押さえ済み</Badge>
     case "営業確認中":
       return <Badge className="bg-orange-600 text-white">営業確認中</Badge>
-    case "イベントチーム確認中":
-      return <Badge className="bg-blue-600 text-white">イベントチーム確認中</Badge>
+    case "マネジメント部確認中":
+      return <Badge className="bg-blue-600 text-white">マネジメント部確認中</Badge>
     case "営業修正中":
       return <Badge className="bg-orange-600 text-white">営業修正中</Badge>
     case "本押さえ依頼":

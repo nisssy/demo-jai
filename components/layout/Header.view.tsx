@@ -76,7 +76,7 @@ export const HeaderView = ({
                 {currentRole === "Internal" && (
                   <Badge variant="default" className="bg-green-600 text-white px-3 py-1.5 gap-2">
                     <Users className="h-4 w-4" />
-                    <span className="font-semibold">イベントチーム</span>
+                    <span className="font-semibold">マネジメント部</span>
                   </Badge>
                 )}
                 {currentRole === "ProductManagement" && (
