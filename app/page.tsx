@@ -8,6 +8,9 @@ import { RoleSelection } from "@/components/screens/role-selection"
 import { EventTeamDashboard } from "@/components/screens/event-team-dashboard"
 import { ProductManagementDashboard } from "@/components/screens/product-management-dashboard"
 import { OutsourcingVendorDashboard } from "@/components/screens/outsourcing-vendor-dashboard"
+import { LotteryAdminDashboard } from "@/components/screens/lottery-admin-dashboard"
+import { DesignVendorDashboard } from "@/components/screens/design-vendor-dashboard"
+import { PrizeVendorDashboard } from "@/components/screens/prize-vendor-dashboard"
 import { useProject } from "@/contexts/project-context"
 import { Suspense } from "react"
 import type { Role } from "@/types/project"
@@ -105,10 +108,7 @@ function HomePageContent() {
   if (currentRole === "LotteryAdmin") {
     return (
       <main className="px-8 py-8 max-w-7xl mx-auto">
-        <div className="text-center py-12">
-          <h1 className="text-3xl font-bold text-slate-900 mb-4">事務管理課（抽選管理）</h1>
-          <p className="text-slate-600">実装準備中...</p>
-        </div>
+        <LotteryAdminDashboard addNotification={addNotification} />
       </main>
     )
   }
@@ -117,10 +117,7 @@ function HomePageContent() {
   if (currentRole === "DesignVendor") {
     return (
       <main className="px-8 py-8 max-w-7xl mx-auto">
-        <div className="text-center py-12">
-          <h1 className="text-3xl font-bold text-slate-900 mb-4">デザイン業者</h1>
-          <p className="text-slate-600">実装準備中...</p>
-        </div>
+        <DesignVendorDashboard addNotification={addNotification} />
       </main>
     )
   }
@@ -129,10 +126,7 @@ function HomePageContent() {
   if (currentRole === "PrizeVendor") {
     return (
       <main className="px-8 py-8 max-w-7xl mx-auto">
-        <div className="text-center py-12">
-          <h1 className="text-3xl font-bold text-slate-900 mb-4">景品業者</h1>
-          <p className="text-slate-600">実装準備中...</p>
-        </div>
+        <PrizeVendorDashboard addNotification={addNotification} />
       </main>
     )
   }
