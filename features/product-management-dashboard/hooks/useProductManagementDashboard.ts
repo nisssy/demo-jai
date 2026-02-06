@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useCallback, useEffect, useRef } from "react"
+import { useSearchParams } from "next/navigation"
+import { useAppRouter } from "@/hooks/use-app-router"
 import type { ProjectData } from "@/types/project"
 import { useProject } from "@/contexts/project-context"
 import type { MachineMaster, BannerEditState, BannerData } from "@/features/product-management-dashboard/model/types"
@@ -24,7 +26,17 @@ function loadMachineMasters(): MachineMaster[] {
     const raw = localStorage.getItem(MACHINE_MASTERS_STORAGE_KEY)
     if (!raw) return INITIAL_MACHINE_MASTERS
     const parsed = JSON.parse(raw) as MachineMaster[]
-    return Array.isArray(parsed) ? parsed : INITIAL_MACHINE_MASTERS
+    if (!Array.isArray(parsed)) return INITIAL_MACHINE_MASTERS
+
+    // 既存のマスタに、INITIAL_MACHINE_MASTERSから不足しているものをマージ
+    const existingNames = new Set(parsed.map(m => m.name.toLowerCase()))
+    const merged = [...parsed]
+    for (const initial of INITIAL_MACHINE_MASTERS) {
+      if (!existingNames.has(initial.name.toLowerCase())) {
+        merged.push(initial)
+      }
+    }
+    return merged
   } catch {
     return INITIAL_MACHINE_MASTERS
   }
@@ -86,8 +98,16 @@ export function useProductManagementDashboard({
   setProjectData,
   addNotification,
 }: UseProductManagementDashboardArgs) {
+  const router = useAppRouter()
+  const searchParams = useSearchParams()
   const { getProducts, getHalls, updateProduct } = useProject()
-  const [activeTab, setActiveTab] = useState<ProductManagementDashboardTab>("machineMaster")
+
+  // URLパラメータからタブの初期値を取得
+  const tabFromUrl = searchParams?.get("tab") as ProductManagementDashboardTab | null
+
+  const [activeTab, setActiveTab] = useState<ProductManagementDashboardTab>(
+    tabFromUrl && ["machineMaster", "projectMachines"].includes(tabFromUrl) ? tabFromUrl : "machineMaster"
+  )
   const [machineMasters, setMachineMastersState] = useState<MachineMaster[]>(loadMachineMasters)
   const [bannerEdit, setBannerEdit] = useState<BannerEditState>(DEFAULT_BANNER_EDIT)
   const [bannerModalOpen, setBannerModalOpen] = useState(false)
@@ -225,9 +245,52 @@ export function useProductManagementDashboard({
     [updateProduct, addNotification]
   )
 
+  // 変換後の機種名編集
+  const [editingProductId, setEditingProductId] = useState<number | null>(null)
+  const [editingMachineIndex, setEditingMachineIndex] = useState<number | null>(null)
+  const [editingMachineName, setEditingMachineName] = useState("")
+
+  const handleStartEditMachine = useCallback((productId: number, index: number, currentName: string) => {
+    setEditingProductId(productId)
+    setEditingMachineIndex(index)
+    setEditingMachineName(currentName)
+  }, [])
+
+  const handleEditMachineNameChange = useCallback((value: string) => {
+    setEditingMachineName(value)
+  }, [])
+
+  const handleSaveEditMachine = useCallback((productId: number, index: number) => {
+    const product = products.find((p) => p.id === productId)
+    if (!product) return
+
+    const pachitownMachineNames = [...((product as any).pachitownMachineNames || [])]
+    pachitownMachineNames[index] = editingMachineName.trim()
+
+    updateProduct(productId, { pachitownMachineNames })
+    setEditingProductId(null)
+    setEditingMachineIndex(null)
+    setEditingMachineName("")
+    addNotification("機種名を更新しました。")
+  }, [products, editingMachineName, updateProduct, addNotification])
+
+  const handleCancelEditMachine = useCallback(() => {
+    setEditingProductId(null)
+    setEditingMachineIndex(null)
+    setEditingMachineName("")
+  }, [])
+
+  // タブ変更時にURLを更新する関数
+  const handleActiveTabChange = useCallback((tab: ProductManagementDashboardTab) => {
+    setActiveTab(tab)
+    const params = new URLSearchParams(searchParams?.toString() || "")
+    params.set("tab", tab)
+    router.replace(`?${params.toString()}`, { scroll: false })
+  }, [router, searchParams])
+
   return {
     activeTab,
-    setActiveTab,
+    setActiveTab: handleActiveTabChange,
     products,
     machineMasters,
     newMachineName,
@@ -245,5 +308,13 @@ export function useProductManagementDashboard({
     updateBannerEdit,
     handlePachitownLink,
     addNotification,
+    // 機種名編集
+    editingProductId,
+    editingMachineIndex,
+    editingMachineName,
+    handleStartEditMachine,
+    handleEditMachineNameChange,
+    handleSaveEditMachine,
+    handleCancelEditMachine,
   }
 }

@@ -71,4 +71,7 @@ export const INITIAL_MACHINE_MASTERS: MachineMaster[] = [
   { id: 3, name: "パチスロ シン・エヴァンゲリオン", pachitownName: "シン・エヴァンゲリオン" },
   { id: 4, name: "エヴァンゲリオン 〜魂の軌跡〜", pachitownName: "シン・エヴァンゲリオン" },
   { id: 5, name: "シン・エヴァンゲリオン", pachitownName: "シン・エヴァンゲリオン" },
+  { id: 6, name: "パチスロ 機動戦士ガンダム 哀・戦士編", pachitownName: "機動戦士ガンダム 哀・戦士編" },
+  { id: 7, name: "スーパー海物語 IN 沖縄2", pachitownName: "海物語 IN 沖縄2" },
+  { id: 8, name: "パチスロ 真・三國無双", pachitownName: "真・三國無双" },
 ]

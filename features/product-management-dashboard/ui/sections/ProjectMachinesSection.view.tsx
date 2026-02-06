@@ -1,7 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { FileText, CheckCircle2, AlertCircle, Link2, ImageIcon } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { FileText, CheckCircle2, AlertCircle, Link2, ImageIcon, Edit2, Check, X } from "lucide-react"
 import { BannerPreviewView } from "@/features/product-management-dashboard/ui/components/BannerPreview.view"
 import type { BannerData } from "@/features/product-management-dashboard/model/types"
 
@@ -22,12 +23,26 @@ export type ProjectMachinesSectionViewProps = {
   projects: ProjectWithMachines[]
   onOpenBanner: (productId: number) => void
   onPachitownLink: (productId: number) => void
+  editingProductId: number | null
+  editingMachineIndex: number | null
+  editingMachineName: string
+  onStartEditMachine: (productId: number, index: number, currentName: string) => void
+  onEditMachineNameChange: (value: string) => void
+  onSaveEditMachine: (productId: number, index: number) => void
+  onCancelEditMachine: () => void
 }
 
 export const ProjectMachinesSectionView = ({
   projects,
   onOpenBanner,
   onPachitownLink,
+  editingProductId,
+  editingMachineIndex,
+  editingMachineName,
+  onStartEditMachine,
+  onEditMachineNameChange,
+  onSaveEditMachine,
+  onCancelEditMachine,
 }: ProjectMachinesSectionViewProps) => {
   const hasMachines = (p: ProjectWithMachines) => (p.targetMachineNames?.length ?? 0) > 0
 
@@ -114,18 +129,70 @@ export const ProjectMachinesSectionView = ({
                               </div>
                             </div>
                             {hasConverted && (
-                              <div>
-                                <span className="text-xs font-medium text-slate-500">変換後（パチタウン用）: </span>
-                                <div className="mt-1 flex flex-wrap gap-2">
-                                  {p.pachitownMachineNames.map((name, i) => (
-                                    <span
-                                      key={i}
-                                      className="inline-flex items-center rounded-md bg-amber-100 px-2.5 py-0.5 text-sm font-medium text-amber-800"
-                                    >
-                                      {name}
-                                    </span>
-                                  ))}
+                              <div className="bg-amber-50/50 rounded-lg p-3 border border-amber-100">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-xs font-semibold text-amber-900">変換後（パチタウン用）</span>
+                                  <Badge variant="outline" className="text-xs bg-white border-amber-200 text-amber-700">
+                                    <Edit2 className="h-2.5 w-2.5 mr-1" />
+                                    クリックで編集可能
+                                  </Badge>
                                 </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {p.pachitownMachineNames.map((name, i) => {
+                                    const isEditing = editingProductId === p.id && editingMachineIndex === i
+                                    return isEditing ? (
+                                      <div key={i} className="inline-flex items-center gap-1 bg-white rounded-md border-2 border-amber-400 p-1">
+                                        <Input
+                                          value={editingMachineName}
+                                          onChange={(e) => onEditMachineNameChange(e.target.value)}
+                                          className="h-7 w-40 text-sm border-none focus-visible:ring-0"
+                                          autoFocus
+                                          onKeyDown={(e) => {
+                                            if (e.key === "Enter") {
+                                              onSaveEditMachine(p.id, i)
+                                            } else if (e.key === "Escape") {
+                                              onCancelEditMachine()
+                                            }
+                                          }}
+                                          placeholder="機種名を入力"
+                                        />
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-7 w-7 p-0 hover:bg-green-100"
+                                          onClick={() => onSaveEditMachine(p.id, i)}
+                                          title="保存 (Enter)"
+                                        >
+                                          <Check className="h-4 w-4 text-green-600" />
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-7 w-7 p-0 hover:bg-red-100"
+                                          onClick={onCancelEditMachine}
+                                          title="キャンセル (Esc)"
+                                        >
+                                          <X className="h-4 w-4 text-red-600" />
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <button
+                                        key={i}
+                                        type="button"
+                                        className="group inline-flex items-center gap-1.5 rounded-md bg-white border-2 border-amber-200 px-3 py-1.5 text-sm font-medium text-amber-900 hover:border-amber-400 hover:bg-amber-50 transition-all cursor-pointer"
+                                        onClick={() => onStartEditMachine(p.id, i, name)}
+                                        title="クリックして編集"
+                                      >
+                                        <span>{name}</span>
+                                        <Edit2 className="h-3 w-3 text-amber-600 opacity-50 group-hover:opacity-100 transition-opacity" />
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                                <p className="text-xs text-amber-700 mt-2 flex items-center gap-1">
+                                  <Edit2 className="h-3 w-3" />
+                                  機種名をクリックすると修正できます
+                                </p>
                               </div>
                             )}
                           </div>

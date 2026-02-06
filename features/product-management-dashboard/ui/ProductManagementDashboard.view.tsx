@@ -23,6 +23,14 @@ export type ProductManagementDashboardViewProps = {
   projectMachinesList: ProjectWithMachines[]
   onOpenBanner: (productId: number) => void
   onPachitownLink: (productId: number) => void
+  // 機種名編集
+  editingProductId: number | null
+  editingMachineIndex: number | null
+  editingMachineName: string
+  onStartEditMachine: (productId: number, index: number, currentName: string) => void
+  onEditMachineNameChange: (value: string) => void
+  onSaveEditMachine: (productId: number, index: number) => void
+  onCancelEditMachine: () => void
   // バナー作成モーダル
   bannerModalOpen: boolean
   onBannerModalOpenChange: (open: boolean) => void
@@ -47,6 +55,13 @@ export const ProductManagementDashboardView = ({
   projectMachinesList,
   onOpenBanner,
   onPachitownLink,
+  editingProductId,
+  editingMachineIndex,
+  editingMachineName,
+  onStartEditMachine,
+  onEditMachineNameChange,
+  onSaveEditMachine,
+  onCancelEditMachine,
   bannerModalOpen,
   onBannerModalOpenChange,
   bannerEdit,
@@ -100,6 +115,13 @@ export const ProductManagementDashboardView = ({
             projects={projectMachinesList}
             onOpenBanner={onOpenBanner}
             onPachitownLink={onPachitownLink}
+            editingProductId={editingProductId}
+            editingMachineIndex={editingMachineIndex}
+            editingMachineName={editingMachineName}
+            onStartEditMachine={onStartEditMachine}
+            onEditMachineNameChange={onEditMachineNameChange}
+            onSaveEditMachine={onSaveEditMachine}
+            onCancelEditMachine={onCancelEditMachine}
           />
         </TabsContent>
       </Tabs>

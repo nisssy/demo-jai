@@ -60,6 +60,13 @@ export const ProductManagementDashboardContainer = ({
       bannerEdit={state.bannerEdit}
       onBannerEditChange={state.updateBannerEdit}
       onCloseBannerModal={state.closeBannerModal}
+      editingProductId={state.editingProductId}
+      editingMachineIndex={state.editingMachineIndex}
+      editingMachineName={state.editingMachineName}
+      onStartEditMachine={state.handleStartEditMachine}
+      onEditMachineNameChange={state.handleEditMachineNameChange}
+      onSaveEditMachine={state.handleSaveEditMachine}
+      onCancelEditMachine={state.handleCancelEditMachine}
     />
   )
 }
