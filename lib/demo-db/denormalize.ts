@@ -7,7 +7,11 @@ import type {
   HallData,
   ProductionData,
   CompanionData,
+  PrizeVendorData,
+  PrizeData,
+  TradingPartnerData,
 } from "@/lib/demo-db/types"
+import type { DesignRequest } from "@/types/lottery"
 
 export type DemoDbV3Data = {
   projects: DemoProjectEntity[]
@@ -17,6 +21,11 @@ export type DemoDbV3Data = {
   productions: ProductionData[]
   companions: CompanionData[]
   employees: EmployeeData[]
+  // 合同抽選会用データ
+  prizeVendors?: PrizeVendorData[]
+  prizes?: PrizeData[]
+  tradingPartners?: TradingPartnerData[]
+  designRequests?: DesignRequest[]
 }
 
 const PROJECT_KEYS: Array<keyof DemoProject> = [

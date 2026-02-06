@@ -13,7 +13,11 @@ import type {
   DemoProductEntity,
   DemoProject,
   DemoProjectEntity,
+  PrizeVendorData,
+  PrizeData,
+  TradingPartnerData,
 } from "@/lib/demo-db/types"
+import type { DesignRequest, DesignRequestComment } from "@/types/lottery"
 import { denormalizeProjects, type DemoDbV3Data } from "@/lib/demo-db/denormalize"
 import {
   findCompanyByCompanyId as findCompanyByCompanyIdRepo,
@@ -66,6 +70,19 @@ type ProjectContextType = {
   getEmployeeById: (id: number) => EmployeeData | null
   getEmployeeByName: (name: string) => EmployeeData | null
   searchEmployees: (query: string) => EmployeeData[]
+  // 合同抽選会：デザイン依頼
+  getDesignRequests: () => DesignRequest[]
+  getDesignRequestById: (id: string) => DesignRequest | null
+  getDesignRequestsByVendorId: (vendorId: string) => DesignRequest[]
+  getDesignRequestsByProjectId: (projectId: number) => DesignRequest[]
+  createDesignRequest: (request: Omit<DesignRequest, "id">) => DesignRequest
+  updateDesignRequest: (id: string, updates: Partial<DesignRequest>) => DesignRequest | null
+  addDesignRequestComment: (requestId: string, comment: Omit<DesignRequestComment, "id">) => DesignRequest | null
+  // 合同抽選会：マスタデータ
+  getPrizeVendors: () => PrizeVendorData[]
+  getPrizes: () => PrizeData[]
+  getTradingPartners: () => TradingPartnerData[]
+  getTradingPartnersByIndustry: (industry: "printing" | "design" | "prize") => TradingPartnerData[]
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined)
@@ -2623,6 +2640,34 @@ const initialProjects: Product[] = [
   },
 ]
 
+// 合同抽選会：景品業者の初期データ
+const initialPrizeVendors: PrizeVendorData[] = [
+  { id: 1, name: "景品卸売センター", email: "keihin-center@example.com" },
+  { id: 2, name: "プライズワールド", email: "prize-world@example.com" },
+  { id: 3, name: "ギフトサプライ", email: "gift-supply@example.com" },
+]
+
+// 合同抽選会：景品マスタの初期データ
+const initialPrizes: PrizeData[] = [
+  { id: 1, name: "液晶テレビ 50インチ", vendorId: 1 },
+  { id: 2, name: "ノートパソコン", vendorId: 1 },
+  { id: 3, name: "掃除機ロボット", vendorId: 2 },
+  { id: 4, name: "電動自転車", vendorId: 2 },
+  { id: 5, name: "高級炊飯器", vendorId: 3 },
+  { id: 6, name: "コーヒーメーカー", vendorId: 3 },
+  { id: 7, name: "クオカード 5000円分", vendorId: 1 },
+  { id: 8, name: "クオカード 10000円分", vendorId: 1 },
+]
+
+// 合同抽選会：取引先の初期データ
+const initialTradingPartners: TradingPartnerData[] = [
+  { id: 1, name: "デザインスタジオABC", email: "abc-design@example.com", industry: "design" },
+  { id: 2, name: "クリエイティブワークス", email: "creative-works@example.com", industry: "design" },
+  { id: 3, name: "プリントエキスパート", email: "print-expert@example.com", industry: "printing" },
+  { id: 4, name: "景品卸売センター", email: "keihin-center@example.com", industry: "prize" },
+  { id: 5, name: "プライズワールド", email: "prize-world@example.com", industry: "prize" },
+]
+
 function getDemoDbSeed() {
   return {
     // seedは旧形式（商材行）で保持しているので、Provider側で正規化して使う
@@ -2632,6 +2677,11 @@ function getDemoDbSeed() {
     productions: initialProductions,
     companions: initialCompanions,
     employees: initialEmployees,
+    // 合同抽選会用データ
+    prizeVendors: initialPrizeVendors,
+    prizes: initialPrizes,
+    tradingPartners: initialTradingPartners,
+    designRequests: [],
   }
 }
 
@@ -2671,6 +2721,11 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         productions,
         companions,
         employees,
+        // 合同抽選会用データ
+        prizeVendors: ((initialDb as any).prizeVendors as PrizeVendorData[] | undefined) ?? initialSeed.prizeVendors ?? [],
+        prizes: ((initialDb as any).prizes as PrizeData[] | undefined) ?? initialSeed.prizes ?? [],
+        tradingPartners: ((initialDb as any).tradingPartners as TradingPartnerData[] | undefined) ?? initialSeed.tradingPartners ?? [],
+        designRequests: ((initialDb as any).designRequests as DesignRequest[] | undefined) ?? [],
       }
     }
 
@@ -2779,8 +2834,32 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    return { projects, products, halls, companies, productions, companions, employees }
-  }, [initialDb, initialSeed.companies, initialSeed.halls, initialSeed.projects, initialSeed.productions, initialSeed.companions, initialSeed.employees])
+    return {
+      projects,
+      products,
+      halls,
+      companies,
+      productions,
+      companions,
+      employees,
+      // 合同抽選会用データ
+      prizeVendors: initialSeed.prizeVendors ?? [],
+      prizes: initialSeed.prizes ?? [],
+      tradingPartners: initialSeed.tradingPartners ?? [],
+      designRequests: [],
+    }
+  }, [
+    initialDb,
+    initialSeed.companies,
+    initialSeed.halls,
+    initialSeed.projects,
+    initialSeed.productions,
+    initialSeed.companions,
+    initialSeed.employees,
+    initialSeed.prizeVendors,
+    initialSeed.prizes,
+    initialSeed.tradingPartners,
+  ])
 
   // v3: 正規化DB（projects=案件, products=商材）
   const [projectEntities, setProjectEntities] = useState<DemoProjectEntity[]>(() => {
@@ -2811,6 +2890,22 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   // 従業員（マスタ）
   const [employees, setEmployees] = useState<EmployeeData[]>(() => {
     return (initialV3 as any).employees ?? initialSeed.employees
+  })
+
+  // 合同抽選会：マスタデータ
+  const [prizeVendors, setPrizeVendors] = useState<PrizeVendorData[]>(() => {
+    return (initialV3 as any).prizeVendors ?? initialSeed.prizeVendors ?? []
+  })
+  const [prizes, setPrizes] = useState<PrizeData[]>(() => {
+    return (initialV3 as any).prizes ?? initialSeed.prizes ?? []
+  })
+  const [tradingPartners, setTradingPartners] = useState<TradingPartnerData[]>(() => {
+    return (initialV3 as any).tradingPartners ?? initialSeed.tradingPartners ?? []
+  })
+
+  // 合同抽選会：デザイン依頼
+  const [designRequests, setDesignRequests] = useState<DesignRequest[]>(() => {
+    return (initialV3 as any).designRequests ?? []
   })
 
   const denormalizedProducts = useMemo(() => {
@@ -2853,8 +2948,32 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   // デモ用擬似DBをlocalStorageに永続化（projects/halls/companies 全保存）
   useEffect(() => {
-    saveDemoDbToStorage({ projects: projectEntities, products: productEntities, halls, companies, productions, companions, employees } as any)
-  }, [projectEntities, productEntities, halls, companies, productions, companions, employees])
+    saveDemoDbToStorage({
+      projects: projectEntities,
+      products: productEntities,
+      halls,
+      companies,
+      productions,
+      companions,
+      employees,
+      prizeVendors,
+      prizes,
+      tradingPartners,
+      designRequests,
+    } as any)
+  }, [
+    projectEntities,
+    productEntities,
+    halls,
+    companies,
+    productions,
+    companions,
+    employees,
+    prizeVendors,
+    prizes,
+    tradingPartners,
+    designRequests,
+  ])
 
   const addNotification = useCallback((message: string) => {
     setNotifications((prev) => [message, ...prev])
@@ -3242,6 +3361,90 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     return getHallsByCompanyIdRepo(halls, companyId)
   }, [halls])
 
+  // 合同抽選会：デザイン依頼関連
+  const getDesignRequests = useCallback((): DesignRequest[] => {
+    return designRequests
+  }, [designRequests])
+
+  const getDesignRequestById = useCallback((id: string): DesignRequest | null => {
+    return designRequests.find((r) => r.id === id) || null
+  }, [designRequests])
+
+  const getDesignRequestsByVendorId = useCallback((vendorId: string): DesignRequest[] => {
+    return designRequests.filter((r) => r.vendorId === vendorId)
+  }, [designRequests])
+
+  const getDesignRequestsByProjectId = useCallback((projectId: number): DesignRequest[] => {
+    return designRequests.filter((r) => r.projectId === projectId)
+  }, [designRequests])
+
+  const createDesignRequest = useCallback((request: Omit<DesignRequest, "id">): DesignRequest => {
+    const newRequest: DesignRequest = {
+      ...request,
+      id: `dr-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    }
+    setDesignRequests((prev) => [...prev, newRequest])
+    return newRequest
+  }, [])
+
+  const updateDesignRequest = useCallback((id: string, updates: Partial<DesignRequest>): DesignRequest | null => {
+    let updated: DesignRequest | null = null
+    setDesignRequests((prev) =>
+      prev.map((r) => {
+        if (r.id === id) {
+          updated = { ...r, ...updates }
+          return updated
+        }
+        return r
+      })
+    )
+    return updated
+  }, [])
+
+  const addDesignRequestComment = useCallback(
+    (requestId: string, comment: Omit<DesignRequestComment, "id">): DesignRequest | null => {
+      const newComment: DesignRequestComment = {
+        ...comment,
+        id: `comment-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      }
+      let updated: DesignRequest | null = null
+      setDesignRequests((prev) =>
+        prev.map((r) => {
+          if (r.id === requestId) {
+            updated = {
+              ...r,
+              comments: [...r.comments, newComment],
+            }
+            return updated
+          }
+          return r
+        })
+      )
+      return updated
+    },
+    []
+  )
+
+  // 合同抽選会：マスタデータ関連
+  const getPrizeVendors = useCallback((): PrizeVendorData[] => {
+    return prizeVendors
+  }, [prizeVendors])
+
+  const getPrizes = useCallback((): PrizeData[] => {
+    return prizes
+  }, [prizes])
+
+  const getTradingPartners = useCallback((): TradingPartnerData[] => {
+    return tradingPartners
+  }, [tradingPartners])
+
+  const getTradingPartnersByIndustry = useCallback(
+    (industry: "printing" | "design" | "prize"): TradingPartnerData[] => {
+      return tradingPartners.filter((p) => p.industry === industry)
+    },
+    [tradingPartners]
+  )
+
   return (
     <ProjectContext.Provider
       value={{
@@ -3275,6 +3478,19 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         getEmployeeById,
         getEmployeeByName,
         searchEmployees,
+        // 合同抽選会：デザイン依頼
+        getDesignRequests,
+        getDesignRequestById,
+        getDesignRequestsByVendorId,
+        getDesignRequestsByProjectId,
+        createDesignRequest,
+        updateDesignRequest,
+        addDesignRequestComment,
+        // 合同抽選会：マスタデータ
+        getPrizeVendors,
+        getPrizes,
+        getTradingPartners,
+        getTradingPartnersByIndustry,
       }}
     >
       {children}
