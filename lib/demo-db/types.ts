@@ -1,4 +1,5 @@
 import type { ProjectData } from "@/types/project"
+import type { LotteryProductFields, DesignRequest } from "@/types/lottery"
 
 export type CompanyData = {
   id: number
@@ -38,6 +39,30 @@ export type EmployeeData = {
   name: string
   email: string
   department?: string
+}
+
+/** 景品業者 */
+export type PrizeVendorData = {
+  id: number
+  name: string
+  email?: string
+}
+
+/** 景品マスタ */
+export type PrizeData = {
+  id: number
+  name: string
+  /** 景品業者ID */
+  vendorId: number
+}
+
+/** 取引先（業種付き） */
+export type TradingPartnerData = {
+  id: number
+  name: string
+  email?: string
+  /** 業種: printing=印刷業者, design=デザイン業者, prize=景品業者 */
+  industry: "printing" | "design" | "prize"
 }
 
 // v2までの「1行=商材(案件情報も含む)」形式（UI互換のため残す）
@@ -154,5 +179,13 @@ export type DemoProductEntity = {
     note?: string
   }>
   [key: string]: unknown
+} & LotteryProductFields
+
+/** デザイン依頼を含むグローバルデータ型 */
+export type DemoDbData = {
+  designRequests?: DesignRequest[]
+  prizeVendors?: PrizeVendorData[]
+  prizes?: PrizeData[]
+  tradingPartners?: TradingPartnerData[]
 }
 

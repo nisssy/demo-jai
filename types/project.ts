@@ -1,4 +1,11 @@
-export type Role = "Sales" | "Internal" | "ProductManagement" | "OutsourcingVendor"
+export type Role =
+  | "Sales"
+  | "Internal"
+  | "ProductManagement"
+  | "OutsourcingVendor"
+  | "LotteryAdmin"      // 事務管理課（合同抽選会専用）
+  | "DesignVendor"      // デザイン業者（合同抽選会専用）
+  | "PrizeVendor"       // 景品業者（合同抽選会専用）
 
 export type ProjectData = {
   projectName: string
