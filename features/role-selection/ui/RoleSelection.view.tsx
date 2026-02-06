@@ -1,5 +1,5 @@
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Briefcase, Users, Package, Truck } from "lucide-react"
+import { Briefcase, Users, Package, Truck, Award, Palette, Gift } from "lucide-react"
 import type { Role } from "@/types/project"
 
 export type RoleSelectionViewProps = {
@@ -19,7 +19,7 @@ export const RoleSelectionView = ({ onSelectRole }: RoleSelectionViewProps) => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => onSelectRole("Sales")}>
             <CardHeader className="text-center">
               <div className="mx-auto mb-4 w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
@@ -64,6 +64,42 @@ export const RoleSelectionView = ({ onSelectRole }: RoleSelectionViewProps) => {
               <CardTitle className="text-2xl">外注業者</CardTitle>
               <CardDescription className="text-base">
                 依頼された手配の一覧確認、対応状況の報告を行います
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => onSelectRole("LotteryAdmin")}>
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center">
+                <Award className="h-8 w-8 text-rose-600" />
+              </div>
+              <CardTitle className="text-2xl">事務管理課（抽選）</CardTitle>
+              <CardDescription className="text-base">
+                合同抽選会の管理、景品発注、配送確認を行います
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => onSelectRole("DesignVendor")}>
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center">
+                <Palette className="h-8 w-8 text-indigo-600" />
+              </div>
+              <CardTitle className="text-2xl">デザイン業者</CardTitle>
+              <CardDescription className="text-base">
+                ポスター・DM・当選通知書のデザイン制作を行います
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => onSelectRole("PrizeVendor")}>
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
+                <Gift className="h-8 w-8 text-emerald-600" />
+              </div>
+              <CardTitle className="text-2xl">景品業者</CardTitle>
+              <CardDescription className="text-base">
+                景品の手配、配送情報の入力を行います
               </CardDescription>
             </CardHeader>
           </Card>

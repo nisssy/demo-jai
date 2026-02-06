@@ -24,7 +24,15 @@ function HomePageContent() {
 
   // URLパラメータとロール状態を同期
   useEffect(() => {
-    const validRoles: Role[] = ["Sales", "Internal", "ProductManagement", "OutsourcingVendor"]
+    const validRoles: Role[] = [
+      "Sales",
+      "Internal",
+      "ProductManagement",
+      "OutsourcingVendor",
+      "LotteryAdmin",
+      "DesignVendor",
+      "PrizeVendor",
+    ]
 
     if (roleFromQuery && validRoles.includes(roleFromQuery)) {
       // URLにロールパラメータがある場合、contextのロールと同期
@@ -89,6 +97,42 @@ function HomePageContent() {
           setProjectData={setProjectData}
           addNotification={addNotification}
         />
+      </main>
+    )
+  }
+
+  // 事務管理課（抽選）の場合は専用ダッシュボードを表示
+  if (currentRole === "LotteryAdmin") {
+    return (
+      <main className="px-8 py-8 max-w-7xl mx-auto">
+        <div className="text-center py-12">
+          <h1 className="text-3xl font-bold text-slate-900 mb-4">事務管理課（抽選管理）</h1>
+          <p className="text-slate-600">実装準備中...</p>
+        </div>
+      </main>
+    )
+  }
+
+  // デザイン業者の場合は専用ダッシュボードを表示
+  if (currentRole === "DesignVendor") {
+    return (
+      <main className="px-8 py-8 max-w-7xl mx-auto">
+        <div className="text-center py-12">
+          <h1 className="text-3xl font-bold text-slate-900 mb-4">デザイン業者</h1>
+          <p className="text-slate-600">実装準備中...</p>
+        </div>
+      </main>
+    )
+  }
+
+  // 景品業者の場合は専用ダッシュボードを表示
+  if (currentRole === "PrizeVendor") {
+    return (
+      <main className="px-8 py-8 max-w-7xl mx-auto">
+        <div className="text-center py-12">
+          <h1 className="text-3xl font-bold text-slate-900 mb-4">景品業者</h1>
+          <p className="text-slate-600">実装準備中...</p>
+        </div>
       </main>
     )
   }
