@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef, ReactNode } from "react"
 import { useToast } from "@/hooks/use-toast"
 import type { ProjectData, Role } from "@/types/project"
+import type { GoudouRole } from "@/types"
 import { clearDemoDbStorage, loadDemoDbFromStorageMeta, saveDemoDbToStorage } from "@/lib/demo-db/storage"
 import type {
   CompanyData,
@@ -37,6 +38,8 @@ type ProjectContextType = {
   setProjectData: (data: ProjectData) => void
   currentRole: Role | null
   setCurrentRole: (role: Role | null) => void
+  currentGoudouRole: GoudouRole | null
+  setCurrentGoudouRole: (role: GoudouRole | null) => void
   notifications: string[]
   addNotification: (message: string) => void
   // デモ用擬似DBの操作
@@ -75,6 +78,7 @@ type ProjectContextType = {
   getDesignRequestById: (id: string) => DesignRequest | null
   getDesignRequestsByVendorId: (vendorId: string) => DesignRequest[]
   getDesignRequestsByProjectId: (projectId: number) => DesignRequest[]
+  getDesignRequestsByProjectAndType: (projectId: number, type: string) => DesignRequest[]
   createDesignRequest: (request: Omit<DesignRequest, "id">) => DesignRequest
   updateDesignRequest: (id: string, updates: Partial<DesignRequest>) => DesignRequest | null
   addDesignRequestComment: (requestId: string, comment: Omit<DesignRequestComment, "id">) => DesignRequest | null
@@ -2638,6 +2642,95 @@ const initialProjects: Product[] = [
     ],
     ...getCompanyAndHallInfo("ダイナム新宿店"),
   },
+  // 合同抽選会データ
+  {
+    id: 85,
+    projectNumber: "33",
+    projectName: "2026年1月 合同抽選会",
+    clientName: "マルハン渋谷店",
+    date: "2026/01/20",
+    venue: "マルハン渋谷店",
+    talent: "山田 太郎",
+    estimateAmount: "¥800,000",
+    status: "ordered",
+    salesPersonName: "山田 太郎",
+    requestDate: "2025/12/01",
+    hallName: "マルハン渋谷店",
+    projectStatus: "受注",
+    category: "Point",
+    eventType: "合同抽選会",
+    eventProductName: "2026年1月 合同抽選会",
+    eventStartDate: "2026/01/15",
+    eventEndDate: "2026/01/20",
+    estimatedBillingAmount: 800000,
+    executionStatus: "実施中",
+    castAssignments: [
+      { id: "cast-1", castType: "トリニティガール", castName: "Rio", status: "本押さえ済み" },
+      { id: "cast-2", castType: "トリニティガール", castName: "Ayaka", status: "本押さえ済み" },
+      { id: "cast-3", castType: "スロセレ", castName: "山田 花子", status: "本押さえ依頼" },
+    ],
+    posterStatus: "完了",
+    dmStatus: "完了",
+    ...getCompanyAndHallInfo("マルハン渋谷店"),
+  },
+  {
+    id: 86,
+    projectNumber: "34",
+    projectName: "2026年2月 合同抽選会",
+    clientName: "ABC新宿店",
+    date: "2026/02/15",
+    venue: "ABC新宿店",
+    talent: "佐藤 次郎",
+    estimateAmount: "¥650,000",
+    status: "ordered",
+    salesPersonName: "佐藤 次郎",
+    requestDate: "2025/12/15",
+    hallName: "ABC新宿店",
+    projectStatus: "受注",
+    category: "Point",
+    eventType: "合同抽選会",
+    eventProductName: "2026年2月 合同抽選会",
+    eventStartDate: "2026/02/10",
+    eventEndDate: "2026/02/15",
+    estimatedBillingAmount: 650000,
+    executionStatus: "実施前",
+    castAssignments: [
+      { id: "cast-4", castType: "トリニティガール", castName: "Mai", status: "仮押さえ済み" },
+      { id: "cast-5", castType: "ディレクター", castName: "田中 健太", status: "仮押さえ依頼" },
+    ],
+    posterStatus: "進行中",
+    dmStatus: "未着手",
+    ...getCompanyAndHallInfo("ABC新宿店"),
+  },
+  {
+    id: 87,
+    projectNumber: "35",
+    projectName: "2025年12月 合同抽選会",
+    clientName: "ダイナム新宿店",
+    date: "2025/12/25",
+    venue: "ダイナム新宿店",
+    talent: "佐藤 次郎",
+    estimateAmount: "¥750,000",
+    status: "ordered",
+    salesPersonName: "佐藤 次郎",
+    requestDate: "2025/11/01",
+    hallName: "ダイナム新宿店",
+    projectStatus: "受注",
+    category: "Point",
+    eventType: "合同抽選会",
+    eventProductName: "2025年12月 合同抽選会",
+    eventStartDate: "2025/12/20",
+    eventEndDate: "2025/12/25",
+    estimatedBillingAmount: 750000,
+    executionStatus: "実施完了",
+    castAssignments: [
+      { id: "cast-6", castType: "トリニティガール", castName: "Yuki", status: "完了" },
+      { id: "cast-7", castType: "MC", castName: "鈴木 一郎", status: "完了" },
+    ],
+    posterStatus: "完了",
+    dmStatus: "完了",
+    ...getCompanyAndHallInfo("ダイナム新宿店"),
+  },
 ]
 
 // 合同抽選会：景品業者の初期データ
@@ -2668,6 +2761,101 @@ const initialTradingPartners: TradingPartnerData[] = [
   { id: 5, name: "プライズワールド", email: "prize-world@example.com", industry: "prize" },
 ]
 
+// 合同抽選会：デザイン依頼の初期データ（デモ用）
+const initialDesignRequests: DesignRequest[] = [
+  {
+    id: "dr-demo-1",
+    requestType: "poster",
+    projectId: 1,
+    projectName: "春の大抽選会",
+    companyName: "株式会社マルハン",
+    hallNames: ["マルハン新宿店", "マルハン渋谷店"],
+    eventStartDate: "2026/03/15",
+    eventEndDate: "2026/03/31",
+    requestedAt: "2026-02-08T10:00:00Z",
+    requestedBy: "1",
+    requestedByName: "山田 太郎",
+    status: "requested",
+    vendorId: "3",
+    vendorName: "プリントエキスパート",
+    comments: [],
+    prizeInfo: [
+      { rank: "A賞", name: "Nintendo Switch", quantity: "3" },
+      { rank: "B賞", name: "JCBギフトカード5000円分", quantity: "10" },
+      { rank: "C賞", name: "クオカード1000円分", quantity: "50" },
+    ],
+  },
+  {
+    id: "dr-demo-2",
+    requestType: "dm",
+    projectId: 1,
+    projectName: "春の大抽選会",
+    companyName: "株式会社マルハン",
+    hallNames: ["マルハン新宿店", "マルハン渋谷店"],
+    eventStartDate: "2026/03/15",
+    eventEndDate: "2026/03/31",
+    requestedAt: "2026-02-07T14:30:00Z",
+    requestedBy: "1",
+    requestedByName: "山田 太郎",
+    status: "uploaded",
+    vendorId: "1",
+    vendorName: "デザインスタジオABC",
+    uploadedFileName: "dm_spring_lottery_v1.pdf",
+    uploadedAt: "2026-02-08T09:15:00Z",
+    comments: [
+      {
+        id: "c1",
+        role: "Sales",
+        authorId: "1",
+        authorName: "山田 太郎",
+        text: "デザイン確認しました。問題ありません。",
+        createdAt: "2026-02-08T11:00:00Z",
+      },
+    ],
+  },
+  {
+    id: "dr-demo-3",
+    requestType: "poster",
+    projectId: 2,
+    projectName: "GW特別抽選会",
+    companyName: "株式会社ダイナム",
+    hallNames: ["ダイナム池袋店"],
+    eventStartDate: "2026/04/29",
+    eventEndDate: "2026/05/06",
+    requestedAt: "2026-02-09T08:00:00Z",
+    requestedBy: "2",
+    requestedByName: "佐藤 次郎",
+    status: "uploaded",
+    vendorId: "3",
+    vendorName: "プリントエキスパート",
+    uploadedFileName: "poster_gw_lottery_v2.pdf",
+    uploadedAt: "2026-02-09T15:45:00Z",
+    comments: [],
+    prizeInfo: [
+      { rank: "特賞", name: "ディズニーランドペアチケット", quantity: "2" },
+      { rank: "A賞", name: "高級和牛セット", quantity: "5" },
+      { rank: "B賞", name: "商品券3000円分", quantity: "20" },
+    ],
+  },
+  {
+    id: "dr-demo-4",
+    requestType: "winner-list",
+    projectId: 2,
+    projectName: "GW特別抽選会",
+    companyName: "株式会社ダイナム",
+    hallNames: ["ダイナム池袋店"],
+    eventStartDate: "2026/04/29",
+    eventEndDate: "2026/05/06",
+    requestedAt: "2026-02-10T10:30:00Z",
+    requestedBy: "2",
+    requestedByName: "佐藤 次郎",
+    status: "requested",
+    vendorId: "2",
+    vendorName: "クリエイティブワークス",
+    comments: [],
+  },
+]
+
 function getDemoDbSeed() {
   return {
     // seedは旧形式（商材行）で保持しているので、Provider側で正規化して使う
@@ -2681,12 +2869,13 @@ function getDemoDbSeed() {
     prizeVendors: initialPrizeVendors,
     prizes: initialPrizes,
     tradingPartners: initialTradingPartners,
-    designRequests: [],
+    designRequests: initialDesignRequests,
   }
 }
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const [currentRole, setCurrentRole] = useState<Role | null>(null)
+  const [currentGoudouRole, setCurrentGoudouRole] = useState<GoudouRole | null>(null)
   const [notifications, setNotifications] = useState<string[]>([])
   const { toast } = useToast()
 
@@ -2725,7 +2914,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         prizeVendors: ((initialDb as any).prizeVendors as PrizeVendorData[] | undefined) ?? initialSeed.prizeVendors ?? [],
         prizes: ((initialDb as any).prizes as PrizeData[] | undefined) ?? initialSeed.prizes ?? [],
         tradingPartners: ((initialDb as any).tradingPartners as TradingPartnerData[] | undefined) ?? initialSeed.tradingPartners ?? [],
-        designRequests: ((initialDb as any).designRequests as DesignRequest[] | undefined) ?? [],
+        designRequests: ((initialDb as any).designRequests as DesignRequest[] | undefined) ?? initialSeed.designRequests ?? [],
       }
     }
 
@@ -2846,7 +3035,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       prizeVendors: initialSeed.prizeVendors ?? [],
       prizes: initialSeed.prizes ?? [],
       tradingPartners: initialSeed.tradingPartners ?? [],
-      designRequests: [],
+      designRequests: initialSeed.designRequests ?? [],
     }
   }, [
     initialDb,
@@ -3241,6 +3430,20 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       isAccommodationAutoFilled: (productInput as any).isAccommodationAutoFilled,
       quoteGenerated: (productInput as any).quoteGenerated,
       quoteData: (productInput as any).quoteData,
+      // 合同抽選会フィールド
+      hallNames: (productInput as any).hallNames,
+      hallQuotes: (productInput as any).hallQuotes,
+      prizeInfo: (productInput as any).prizeInfo,
+      dmMailing: (productInput as any).dmMailing,
+      area: (productInput as any).area,
+      readingCertainty: (productInput as any).readingCertainty,
+      budget: (productInput as any).budget,
+      eventStartDate: (productInput as any).eventStartDate,
+      eventEndDate: (productInput as any).eventEndDate,
+      executionStatus: (productInput as any).executionStatus,
+      castAssignments: (productInput as any).castAssignments,
+      posterStatus: (productInput as any).posterStatus,
+      dmStatus: (productInput as any).dmStatus,
     }
 
     setProjectEntities(nextProjectEntities)
@@ -3378,6 +3581,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     return designRequests.filter((r) => r.projectId === projectId)
   }, [designRequests])
 
+  const getDesignRequestsByProjectAndType = useCallback((projectId: number, type: string): DesignRequest[] => {
+    return designRequests.filter((r) => r.projectId === projectId && r.type === type)
+  }, [designRequests])
+
   const createDesignRequest = useCallback((request: Omit<DesignRequest, "id">): DesignRequest => {
     const newRequest: DesignRequest = {
       ...request,
@@ -3452,6 +3659,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         setProjectData,
         currentRole,
         setCurrentRole,
+        currentGoudouRole,
+        setCurrentGoudouRole,
         notifications,
         addNotification,
         resetDemoData,
@@ -3483,6 +3692,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         getDesignRequestById,
         getDesignRequestsByVendorId,
         getDesignRequestsByProjectId,
+        getDesignRequestsByProjectAndType,
         createDesignRequest,
         updateDesignRequest,
         addDesignRequestComment,
