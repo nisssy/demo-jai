@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef, ReactNode } from "react"
 import { useToast } from "@/hooks/use-toast"
 import type { ProjectData, Role } from "@/types/project"
-import type { GoudouRole } from "@/types"
+import type { GoudouRole, Project as VendorProject } from "@/types"
 import { clearDemoDbStorage, loadDemoDbFromStorageMeta, saveDemoDbToStorage } from "@/lib/demo-db/storage"
 import type {
   CompanyData,
@@ -44,6 +44,9 @@ type ProjectContextType = {
   addNotification: (message: string) => void
   // デモ用擬似DBの操作
   resetDemoData: () => void
+  refreshFromStorage: () => void
+  // ベンダー画面用（合同抽選会プロジェクト一覧）
+  projects: VendorProject[]
   // 案件(Project)操作関数（正規化）
   getProjects: () => DemoProjectEntity[]
   getProjectByProjectNumber: (projectNumber: string) => DemoProjectEntity | null
@@ -74,6 +77,7 @@ type ProjectContextType = {
   getEmployeeByName: (name: string) => EmployeeData | null
   searchEmployees: (query: string) => EmployeeData[]
   // 合同抽選会：デザイン依頼
+  designRequests: DesignRequest[]
   getDesignRequests: () => DesignRequest[]
   getDesignRequestById: (id: string) => DesignRequest | null
   getDesignRequestsByVendorId: (vendorId: string) => DesignRequest[]
@@ -3334,6 +3338,45 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     return denormalizedProducts
   }, [denormalizedProducts])
 
+  // ベンダー画面用: 合同抽選会プロジェクトをProject型に変換
+  const projects = useMemo((): VendorProject[] => {
+    return denormalizedProducts
+      .filter((p) => p.category === "Point") // 合同抽選会のみ
+      .map((p) => ({
+        id: p.id,
+        projectNumber: p.projectNumber,
+        projectName: p.projectName,
+        companyName: p.companyName || "",
+        hallNames: (p as any).hallNames || [p.hallName].filter(Boolean),
+        eventStartDate: (p as any).eventStartDate || p.date || "",
+        eventEndDate: (p as any).eventEndDate || p.date || "",
+        area: (p as any).area,
+        status: (p.projectStatus === "受注" ? "order-received" : p.projectStatus === "提案中" ? "proposing" : "before-proposal") as "before-proposal" | "proposing" | "order-received",
+        readingCertainty: (p as any).readingCertainty,
+        dmMailing: (p as any).dmMailing,
+        budget: (p as any).budget || p.estimateAmount || "",
+        createdAt: (p as any).createdAt,
+        salesPersonId: (p as any).salesPersonId,
+        insightPersonId: (p as any).insightPersonId,
+        posterCount: (p as any).posterCount,
+        target: (p as any).target,
+        hallQuotes: (p as any).hallQuotes,
+        prizeInfo: (p as any).prizeInfo,
+        deliveryVendor: (p as any).deliveryVendor,
+        orderFileName: (p as any).orderFileName,
+        prizeOrderedAt: (p as any).prizeOrderedAt,
+        deliveryInfos: (p as any).deliveryInfos,
+      }))
+  }, [denormalizedProducts])
+
+  const refreshFromStorage = useCallback(() => {
+    // ストレージから再読み込み（デモ用：既にreactiveなので実質不要だが、明示的に再レンダリングをトリガー）
+    const loaded = loadDemoDbFromStorageMeta()
+    if (loaded?.snapshot) {
+      // 必要に応じて state を更新
+    }
+  }, [])
+
   const generateProjectNumber = useCallback((existingProjects: Array<{ projectNumber?: string }>) => {
     let maxNumber = 0
     existingProjects.forEach((p) => {
@@ -3664,6 +3707,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         notifications,
         addNotification,
         resetDemoData,
+        refreshFromStorage,
+        projects,
         getProjects,
         getProjectByProjectNumber,
         getProducts,
@@ -3688,6 +3733,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         getEmployeeByName,
         searchEmployees,
         // 合同抽選会：デザイン依頼
+        designRequests,
         getDesignRequests,
         getDesignRequestById,
         getDesignRequestsByVendorId,
