@@ -47,6 +47,7 @@ type ProjectContextType = {
   refreshFromStorage: () => void
   // ベンダー画面用（合同抽選会プロジェクト一覧）
   projects: VendorProject[]
+  getProjectById: (id: number | string) => VendorProject | null
   // 案件(Project)操作関数（正規化）
   getProjects: () => DemoProjectEntity[]
   getProjectByProjectNumber: (projectNumber: string) => DemoProjectEntity | null
@@ -3369,6 +3370,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       }))
   }, [denormalizedProducts])
 
+  const getProjectById = useCallback(
+    (id: number | string): VendorProject | null => {
+      return projects.find((p) => p.id === id) ?? null
+    },
+    [projects]
+  )
+
   const refreshFromStorage = useCallback(() => {
     // ストレージから再読み込み（デモ用：既にreactiveなので実質不要だが、明示的に再レンダリングをトリガー）
     const loaded = loadDemoDbFromStorageMeta()
@@ -3709,6 +3717,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         resetDemoData,
         refreshFromStorage,
         projects,
+        getProjectById,
         getProjects,
         getProjectByProjectNumber,
         getProducts,

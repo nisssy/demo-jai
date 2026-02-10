@@ -8,9 +8,6 @@ import { RoleSelection } from "@/components/screens/role-selection"
 import { EventTeamDashboard } from "@/components/screens/event-team-dashboard"
 import { ProductManagementDashboard } from "@/components/screens/product-management-dashboard"
 import { OutsourcingVendorDashboard } from "@/components/screens/outsourcing-vendor-dashboard"
-import { LotteryAdminDashboard } from "@/components/screens/lottery-admin-dashboard"
-import { DesignVendorDashboard } from "@/components/screens/design-vendor-dashboard"
-import { PrizeVendorDashboard } from "@/components/screens/prize-vendor-dashboard"
 import { useProject } from "@/contexts/project-context"
 import { Suspense } from "react"
 import type { Role } from "@/types/project"
@@ -38,7 +35,19 @@ function HomePageContent() {
     ]
 
     if (roleFromQuery && validRoles.includes(roleFromQuery)) {
-      // URLにロールパラメータがある場合、contextのロールと同期
+      // 専用ページがあるロールの場合は専用ページにリダイレクト
+      if (roleFromQuery === "LotteryAdmin") {
+        router.push("/admin")
+        return
+      } else if (roleFromQuery === "DesignVendor") {
+        router.push("/vendor")
+        return
+      } else if (roleFromQuery === "PrizeVendor") {
+        router.push("/prize-vendor")
+        return
+      }
+
+      // その他のロールの場合はcontextのロールと同期
       if (currentRole !== roleFromQuery) {
         setCurrentRole(roleFromQuery)
       }
@@ -46,7 +55,18 @@ function HomePageContent() {
       // URLにロールパラメータがない場合、contextのロールをクリア
       setCurrentRole(null)
     }
-  }, [roleFromQuery, currentRole, setCurrentRole])
+  }, [roleFromQuery, currentRole, setCurrentRole, router])
+
+  // 専用ページがあるロールの場合はリダイレクト
+  useEffect(() => {
+    if (currentRole === "LotteryAdmin") {
+      router.push("/admin")
+    } else if (currentRole === "DesignVendor") {
+      router.push("/vendor")
+    } else if (currentRole === "PrizeVendor") {
+      router.push("/prize-vendor")
+    }
+  }, [currentRole, router])
 
   // ロールが選択されていない場合はロール選択画面を表示
   if (currentRole === null) {
@@ -55,10 +75,19 @@ function HomePageContent() {
         <RoleSelection
           onSelectRole={(role) => {
             setCurrentRole(role)
-            // ロール選択時にURLパラメータを追加
-            const params = new URLSearchParams(searchParams?.toString() || "")
-            params.set("role", role)
-            router.replace(`?${params.toString()}`, { scroll: false })
+            // 専用ページがあるロールは専用ページに遷移
+            if (role === "LotteryAdmin") {
+              router.push("/admin")
+            } else if (role === "DesignVendor") {
+              router.push("/vendor")
+            } else if (role === "PrizeVendor") {
+              router.push("/prize-vendor")
+            } else {
+              // その他のロールはURLパラメータを使用（履歴に残す）
+              const params = new URLSearchParams(searchParams?.toString() || "")
+              params.set("role", role)
+              router.push(`?${params.toString()}`)
+            }
           }}
         />
       </main>
@@ -104,29 +133,13 @@ function HomePageContent() {
     )
   }
 
-  // 事務管理課（抽選）の場合は専用ダッシュボードを表示
-  if (currentRole === "LotteryAdmin") {
+  // 専用ページへのリダイレクト中はローディング表示
+  if (currentRole === "LotteryAdmin" || currentRole === "DesignVendor" || currentRole === "PrizeVendor") {
     return (
       <main className="px-8 py-8 max-w-7xl mx-auto">
-        <LotteryAdminDashboard addNotification={addNotification} />
-      </main>
-    )
-  }
-
-  // デザイン業者の場合は専用ダッシュボードを表示
-  if (currentRole === "DesignVendor") {
-    return (
-      <main className="px-8 py-8 max-w-7xl mx-auto">
-        <DesignVendorDashboard addNotification={addNotification} />
-      </main>
-    )
-  }
-
-  // 景品業者の場合は専用ダッシュボードを表示
-  if (currentRole === "PrizeVendor") {
-    return (
-      <main className="px-8 py-8 max-w-7xl mx-auto">
-        <PrizeVendorDashboard addNotification={addNotification} />
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
       </main>
     )
   }

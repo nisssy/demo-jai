@@ -1,4 +1,4 @@
-import { LogOut, Briefcase, Users, RotateCcw } from "lucide-react"
+import { LogOut, Briefcase, Users, RotateCcw, Trophy, Package, Ticket } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -13,15 +13,18 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import type { Role } from "@/types/project"
+import type { GoudouRole } from "@/types"
 
 export type HeaderViewProps = {
   currentRole: Role | null
+  currentGoudouRole: GoudouRole | null
   onBackToRoleSelection: () => void
   onResetDemoData: () => void
 }
 
 export const HeaderView = ({
   currentRole,
+  currentGoudouRole,
   onBackToRoleSelection,
   onResetDemoData,
 }: HeaderViewProps) => {
@@ -65,7 +68,7 @@ export const HeaderView = ({
             </AlertDialog>
 
             {/* Current Role Display */}
-            {currentRole !== null && (
+            {(currentRole !== null || currentGoudouRole !== null) && (
               <div className="flex items-center gap-2">
                 {currentRole === "Sales" && (
                   <Badge variant="default" className="bg-blue-600 text-white px-3 py-1.5 gap-2">
@@ -91,11 +94,35 @@ export const HeaderView = ({
                     <span className="font-semibold">外注業者</span>
                   </Badge>
                 )}
+                {currentGoudouRole === "Admin" && (
+                  <Badge variant="default" className="bg-purple-600 text-white px-3 py-1.5 gap-2">
+                    <Ticket className="h-4 w-4" />
+                    <span className="font-semibold">事務管理課</span>
+                  </Badge>
+                )}
+                {currentGoudouRole === "DesignVendor" && (
+                  <Badge variant="default" className="bg-pink-600 text-white px-3 py-1.5 gap-2">
+                    <Trophy className="h-4 w-4" />
+                    <span className="font-semibold">デザイン業者</span>
+                  </Badge>
+                )}
+                {currentGoudouRole === "PrizeVendor" && (
+                  <Badge variant="default" className="bg-orange-600 text-white px-3 py-1.5 gap-2">
+                    <Package className="h-4 w-4" />
+                    <span className="font-semibold">景品業者</span>
+                  </Badge>
+                )}
+                {currentGoudouRole === "SalesInsight" && (
+                  <Badge variant="default" className="bg-indigo-600 text-white px-3 py-1.5 gap-2">
+                    <Briefcase className="h-4 w-4" />
+                    <span className="font-semibold">営業インサイト</span>
+                  </Badge>
+                )}
               </div>
             )}
 
             {/* Back to Role Selection */}
-            {currentRole !== null && (
+            {(currentRole !== null || currentGoudouRole !== null) && (
               <Button
                 variant="ghost"
                 size="sm"
