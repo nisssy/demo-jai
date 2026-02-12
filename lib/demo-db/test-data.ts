@@ -16,7 +16,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
   // トリニティガール商材 (id: 1-6)
   // ======================================
 
-  // id:1 - 見積中、キャスト未選択
+  // id:1 - 見積中、キャスト未選択、対象機種自動変換済み
   {
     id: 1,
     projectNumber: "TG-001",
@@ -44,9 +44,13 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
     selectedCompanions: [],
     selectedDirectors: [],
     selectedMcs: [],
+    // 対象機種: 顧客が入力した機種名（省略形）
+    targetMachineNames: ["北斗の拳", "エヴァ"],
+    // 自動変換されたパチタウン用機種名
+    pachitownMachineNames: ["北斗の拳 転生", "シン・エヴァンゲリオン"],
   },
 
-  // id:2 - 受注済み、キャスト選択済み、仮押さえ依頼中（pending）
+  // id:2 - 受注済み、キャスト選択済み、仮押さえ依頼中（pending）、パチタウン連携済み
   {
     id: 2,
     projectNumber: "TG-002",
@@ -81,9 +85,16 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
     directorBookingStatus: {
       "田中ディレクター": "pending",
     },
+    // 対象機種: 顧客が入力した機種名（省略形や通称）
+    targetMachineNames: ["ガンダム 哀・戦士編", "海物語"],
+    // 自動変換されたパチタウン用機種名
+    pachitownMachineNames: ["機動戦士ガンダム 哀・戦士編", "海物語 IN 沖縄2"],
+    // パチタウン連携済み
+    pachitownLinked: true,
+    pachitownLinkedDate: "2026-02-06",
   },
 
-  // id:3 - 受注済み、キャスト選択済み、仮押さえ済み（tentative）
+  // id:3 - 受注済み、キャスト選択済み、仮押さえ済み（tentative）、対象機種自動変換済み
   {
     id: 3,
     projectNumber: "TG-003",
@@ -121,6 +132,10 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
     mcBookingStatus: {
       "鈴木 一郎": "tentative",
     },
+    // 対象機種: 顧客が入力した機種名（正式名称とパチスロ付き）
+    targetMachineNames: ["真・三國無双", "パチスロ シン・エヴァンゲリオン"],
+    // 自動変換されたパチタウン用機種名
+    pachitownMachineNames: ["真・三國無双", "シン・エヴァンゲリオン"],
   },
 
   // id:4 - 受注済み、キャスト選択済み、本押さえ済み（confirmed）
@@ -534,12 +549,11 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
         vendorId: "1",
         vendorName: "景品卸売センター",
         requestedAt: "2026-02-20T10:00:00Z",
-        document: {
-          projectName: "GW特別合同抽選会",
-          hallNames: "ダイナム新宿店",
-          prizeNames: "液晶テレビ 50インチ (2個)、ノートパソコン (5個)、クオカード 5000円分 (30個)",
-          totalQuantity: 37,
-        },
+        prizeItems: [
+          { rank: "特賞", name: "液晶テレビ 50インチ", quantity: "2", prizeId: "1", vendorId: "1", vendorName: "景品卸売センター" },
+          { rank: "A賞", name: "ノートパソコン", quantity: "5", prizeId: "2", vendorId: "1", vendorName: "景品卸売センター" },
+          { rank: "B賞", name: "クオカード 5000円分", quantity: "30", prizeId: "7", vendorId: "1", vendorName: "景品卸売センター" },
+        ],
       },
     ],
   },
@@ -582,23 +596,18 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
         vendorId: "2",
         vendorName: "プライズワールド",
         requestedAt: "2026-02-22T10:00:00Z",
-        document: {
-          projectName: "夏の大感謝抽選会",
-          hallNames: "ガイア池袋店、ガイア新宿店",
-          prizeNames: "電動自転車 (3個)",
-          totalQuantity: 3,
-        },
+        prizeItems: [
+          { rank: "特賞", name: "電動自転車", quantity: "3", prizeId: "4", vendorId: "2", vendorName: "プライズワールド" },
+        ],
       },
       {
         vendorId: "3",
         vendorName: "ギフトサプライ",
         requestedAt: "2026-02-22T10:00:00Z",
-        document: {
-          projectName: "夏の大感謝抽選会",
-          hallNames: "ガイア池袋店、ガイア新宿店",
-          prizeNames: "高級炊飯器 (10個)、コーヒーメーカー (20個)",
-          totalQuantity: 30,
-        },
+        prizeItems: [
+          { rank: "A賞", name: "高級炊飯器", quantity: "10", prizeId: "5", vendorId: "3", vendorName: "ギフトサプライ" },
+          { rank: "B賞", name: "コーヒーメーカー", quantity: "20", prizeId: "6", vendorId: "3", vendorName: "ギフトサプライ" },
+        ],
       },
     ],
   },
@@ -640,23 +649,17 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
         vendorId: "2",
         vendorName: "プライズワールド",
         requestedAt: "2026-02-25T10:00:00Z",
-        document: {
-          projectName: "お盆特別抽選会",
-          hallNames: "エース上野店",
-          prizeNames: "掃除機ロボット (5個)",
-          totalQuantity: 5,
-        },
+        prizeItems: [
+          { rank: "A賞", name: "掃除機ロボット", quantity: "5", prizeId: "3", vendorId: "2", vendorName: "プライズワールド" },
+        ],
       },
       {
         vendorId: "1",
         vendorName: "景品卸売センター",
         requestedAt: "2026-02-25T10:00:00Z",
-        document: {
-          projectName: "お盆特別抽選会",
-          hallNames: "エース上野店",
-          prizeNames: "クオカード 5000円分 (50個)",
-          totalQuantity: 50,
-        },
+        prizeItems: [
+          { rank: "B賞", name: "クオカード 5000円分", quantity: "50", prizeId: "7", vendorId: "1", vendorName: "景品卸売センター" },
+        ],
       },
     ],
   },
@@ -700,23 +703,19 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
         vendorId: "1",
         vendorName: "景品卸売センター",
         requestedAt: "2026-03-01T10:00:00Z",
-        document: {
-          projectName: "秋の合同大抽選会",
-          hallNames: "サンライズ錦糸町店、サンライズ新橋店",
-          prizeNames: "液晶テレビ 50インチ (2個)、ノートパソコン (8個)、クオカード 5000円分 (100個)",
-          totalQuantity: 110,
-        },
+        prizeItems: [
+          { rank: "特賞", name: "液晶テレビ 50インチ", quantity: "2", prizeId: "1", vendorId: "1", vendorName: "景品卸売センター" },
+          { rank: "A賞", name: "ノートパソコン", quantity: "8", prizeId: "2", vendorId: "1", vendorName: "景品卸売センター" },
+          { rank: "C賞", name: "クオカード 5000円分", quantity: "100", prizeId: "7", vendorId: "1", vendorName: "景品卸売センター" },
+        ],
       },
       {
         vendorId: "3",
         vendorName: "ギフトサプライ",
         requestedAt: "2026-03-01T10:00:00Z",
-        document: {
-          projectName: "秋の合同大抽選会",
-          hallNames: "サンライズ錦糸町店、サンライズ新橋店",
-          prizeNames: "高級炊飯器 (15個)",
-          totalQuantity: 15,
-        },
+        prizeItems: [
+          { rank: "B賞", name: "高級炊飯器", quantity: "15", prizeId: "5", vendorId: "3", vendorName: "ギフトサプライ" },
+        ],
       },
     ],
     // ポスター依頼済み（dr-1で参照）
@@ -764,23 +763,20 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
         vendorId: "1",
         vendorName: "景品卸売センター",
         requestedAt: "2026-02-12T10:00:00Z",
-        document: {
-          projectName: "年末ジャンボ抽選会",
-          hallNames: "ビッグエース新橋店、ビッグエース横浜店、ビッグエース川崎店",
-          prizeNames: "液晶テレビ 50インチ (3個)、ノートパソコン (10個)、クオカード 10000円分 (50個)、クオカード 5000円分 (200個)",
-          totalQuantity: 263,
-        },
+        prizeItems: [
+          { rank: "特賞", name: "液晶テレビ 50インチ", quantity: "3", prizeId: "1", vendorId: "1", vendorName: "景品卸売センター" },
+          { rank: "A賞", name: "ノートパソコン", quantity: "10", prizeId: "2", vendorId: "1", vendorName: "景品卸売センター" },
+          { rank: "C賞", name: "クオカード 10000円分", quantity: "50", prizeId: "8", vendorId: "1", vendorName: "景品卸売センター" },
+          { rank: "D賞", name: "クオカード 5000円分", quantity: "200", prizeId: "7", vendorId: "1", vendorName: "景品卸売センター" },
+        ],
       },
       {
         vendorId: "2",
         vendorName: "プライズワールド",
         requestedAt: "2026-02-12T10:00:00Z",
-        document: {
-          projectName: "年末ジャンボ抽選会",
-          hallNames: "ビッグエース新橋店、ビッグエース横浜店、ビッグエース川崎店",
-          prizeNames: "掃除機ロボット (20個)",
-          totalQuantity: 20,
-        },
+        prizeItems: [
+          { rank: "B賞", name: "掃除機ロボット", quantity: "20", prizeId: "3", vendorId: "2", vendorName: "プライズワールド" },
+        ],
       },
     ],
     // ポスター依頼済み（dr-2）、DM依頼済み（dr-3）、当選通知書依頼済み（dr-4）
@@ -825,34 +821,26 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
         vendorId: "1",
         vendorName: "景品卸売センター",
         requestedAt: "2025-12-15T10:00:00Z",
-        document: {
-          projectName: "新春特別抽選会",
-          hallNames: "パチンコランド横浜店、パチンコランド川崎店",
-          prizeNames: "クオカード 5000円分 (100個)",
-          totalQuantity: 100,
-        },
+        prizeItems: [
+          { rank: "C賞", name: "クオカード 5000円分", quantity: "100", prizeId: "7", vendorId: "1", vendorName: "景品卸売センター" },
+        ],
       },
       {
         vendorId: "2",
         vendorName: "プライズワールド",
         requestedAt: "2025-12-15T10:00:00Z",
-        document: {
-          projectName: "新春特別抽選会",
-          hallNames: "パチンコランド横浜店、パチンコランド川崎店",
-          prizeNames: "電動自転車 (2個)",
-          totalQuantity: 2,
-        },
+        prizeItems: [
+          { rank: "特賞", name: "電動自転車", quantity: "2", prizeId: "4", vendorId: "2", vendorName: "プライズワールド" },
+        ],
       },
       {
         vendorId: "3",
         vendorName: "ギフトサプライ",
         requestedAt: "2025-12-15T10:00:00Z",
-        document: {
-          projectName: "新春特別抽選会",
-          hallNames: "パチンコランド横浜店、パチンコランド川崎店",
-          prizeNames: "高級炊飯器 (10個)、コーヒーメーカー (30個)",
-          totalQuantity: 40,
-        },
+        prizeItems: [
+          { rank: "A賞", name: "高級炊飯器", quantity: "10", prizeId: "5", vendorId: "3", vendorName: "ギフトサプライ" },
+          { rank: "B賞", name: "コーヒーメーカー", quantity: "30", prizeId: "6", vendorId: "3", vendorName: "ギフトサプライ" },
+        ],
       },
     ],
     winnerListUploadedAt: "2026-01-12T14:00:00Z",
@@ -899,34 +887,25 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
         vendorId: "1",
         vendorName: "景品卸売センター",
         requestedAt: "2025-11-20T10:00:00Z",
-        document: {
-          projectName: "冬の大感謝祭（終了）",
-          hallNames: "エースパチンコ川崎店",
-          prizeNames: "クオカード 5000円分 (80個)",
-          totalQuantity: 80,
-        },
+        prizeItems: [
+          { rank: "C賞", name: "クオカード 5000円分", quantity: "80", prizeId: "7", vendorId: "1", vendorName: "景品卸売センター" },
+        ],
       },
       {
         vendorId: "2",
         vendorName: "プライズワールド",
         requestedAt: "2025-11-20T10:00:00Z",
-        document: {
-          projectName: "冬の大感謝祭（終了）",
-          hallNames: "エースパチンコ川崎店",
-          prizeNames: "掃除機ロボット (5個)",
-          totalQuantity: 5,
-        },
+        prizeItems: [
+          { rank: "A賞", name: "掃除機ロボット", quantity: "5", prizeId: "3", vendorId: "2", vendorName: "プライズワールド" },
+        ],
       },
       {
         vendorId: "3",
         vendorName: "ギフトサプライ",
         requestedAt: "2025-11-20T10:00:00Z",
-        document: {
-          projectName: "冬の大感謝祭（終了）",
-          hallNames: "エースパチンコ川崎店",
-          prizeNames: "コーヒーメーカー (15個)",
-          totalQuantity: 15,
-        },
+        prizeItems: [
+          { rank: "B賞", name: "コーヒーメーカー", quantity: "15", prizeId: "6", vendorId: "3", vendorName: "ギフトサプライ" },
+        ],
       },
     ],
     winnerListUploadedAt: "2025-12-18T14:00:00Z",

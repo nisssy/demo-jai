@@ -43,14 +43,16 @@ export function useLotteryAdminDashboard({ addNotification }: UseLotteryAdminDas
   // 景品発注モーダル
   const [showPrizeOrderModal, setShowPrizeOrderModal] = useState(false)
 
-  // 合同抽選会の商材のみを取得（category === "ポイント" && eventType === "合同抽選会"）
+  // 合同抽選会の商材のみを取得（category === "ポイント" && eventType === "合同抽選会" && prizeInfo あり）
   const lotteryProducts = useMemo(() => {
     const products = getProducts()
     return products
       .filter((p) => {
         const category = (p as any).category
         const eventType = (p as any).eventType
-        return category === "ポイント" && eventType === "合同抽選会"
+        const prizeInfo = (p as any).prizeInfo
+        // 景品情報が入力されている案件のみ
+        return category === "ポイント" && eventType === "合同抽選会" && prizeInfo && prizeInfo.length > 0
       })
       .map((p) => ({
         id: p.id,
