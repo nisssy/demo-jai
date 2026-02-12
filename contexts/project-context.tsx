@@ -315,7 +315,7 @@ const initialProjects: Product[] = [
   // 包括的テストデータを読み込んで、各項目にcompanyName, companyId, hallIdを追加
   ...comprehensiveTestProjects.map(project => ({
     ...project,
-    ...getCompanyAndHallInfo(project.hallName || project.hallNames?.[0] || ""),
+    ...getCompanyAndHallInfo(project.hallName || (project as any).hallNames?.[0] || ""),
   })),
 ]
 
@@ -842,7 +842,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   // ベンダー画面用: 合同抽選会プロジェクトをProject型に変換
   const projects = useMemo((): VendorProject[] => {
     return denormalizedProducts
-      .filter((p) => p.category === "Point") // 合同抽選会のみ
+      .filter((p) => p.category === "ポイント") // 合同抽選会のみ
       .map((p) => ({
         id: p.id,
         projectNumber: p.projectNumber,
@@ -852,7 +852,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         eventStartDate: (p as any).eventStartDate || p.date || "",
         eventEndDate: (p as any).eventEndDate || p.date || "",
         area: (p as any).area,
-        status: (p.projectStatus === "受注" ? "order-received" : p.projectStatus === "提案中" ? "proposing" : "before-proposal") as "before-proposal" | "proposing" | "order-received",
+        status: ((p as any).proposalStatus || (p.projectStatus === "受注" ? "order-received" : p.projectStatus === "提案中" ? "proposing" : "before-proposal")) as "before-proposal" | "proposing" | "order-received",
         readingCertainty: (p as any).readingCertainty,
         dmMailing: (p as any).dmMailing,
         budget: (p as any).budget || p.estimateAmount || "",
@@ -867,6 +867,16 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         orderFileName: (p as any).orderFileName,
         prizeOrderedAt: (p as any).prizeOrderedAt,
         deliveryInfos: (p as any).deliveryInfos,
+        // 景品業者画面用フィールド
+        prizeOrdersByVendor: (p as any).prizeOrdersByVendor,
+        prizeOrderDocument: (p as any).prizeOrderDocument,
+        prizeOrderRequestedAt: (p as any).prizeOrderRequestedAt,
+        prizeDeliveryInfoByVendor: (p as any).prizeDeliveryInfoByVendor,
+        winnerList: (p as any).winnerList,
+        winnerListUploadedAt: (p as any).winnerListUploadedAt,
+        // 事務管理課画面用フィールド
+        executionStatus: (p as any).executionStatus,
+        proposalStatus: (p as any).proposalStatus,
       }))
   }, [denormalizedProducts])
 
