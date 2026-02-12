@@ -852,7 +852,7 @@ export function ProjectRegistrationImpl({
       
       createProduct(newProductProject)
       addNotification("商材を追加しました")
-      router.push("/")
+      router.push("/project-registration")
     } else if (isProductEditMode && projectId) {
       // 商材編集モード: 既存商材を更新
       // 各商材情報ごとの請求予定金額を計算
@@ -1013,7 +1013,7 @@ export function ProjectRegistrationImpl({
       
       updateProduct(projectId, updatedProject)
       addNotification("商材を更新しました")
-      router.push("/")
+      router.push("/project-registration")
     } else if (isEditMode && projectId) {
       // 編集モード: 既存案件を更新
       // 各商材情報ごとの請求予定金額を計算
@@ -1168,7 +1168,7 @@ export function ProjectRegistrationImpl({
           })
       }
       addNotification("案件を更新しました")
-      router.push("/")
+      router.push("/project-registration")
     } else {
       // 新規作成モード: 同じ基本情報を持つ商材には同じ案件Noを付与
       // まず、案件Noを1つ生成（同じ基本情報なので1つの案件として扱う）
@@ -1319,7 +1319,7 @@ export function ProjectRegistrationImpl({
       // 仮想DBに案件を作成
       createProducts(newProjectsData)
       addNotification(`案件No ${newProjectNumber} で ${newProjectsData.length}件の商材を作成しました`)
-      router.push("/")
+      router.push("/project-registration")
     }
   }
 

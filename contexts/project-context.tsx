@@ -449,9 +449,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       })
 
       for (const row of rows) {
-        const newId = nextProductId++
+        // 元のIDを保持（テストデータのID整合性を維持）
+        const productId = row.id || nextProductId++
+        if (row.id) {
+          // 元のIDがある場合は nextProductId を更新して衝突を避ける
+          nextProductId = Math.max(nextProductId, row.id + 1)
+        }
         products.push({
-          id: newId,
+          id: productId,
           projectId,
           // それ以外 = 商材属性
           clientName: row.clientName,
@@ -747,9 +752,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       })
 
       for (const row of rows) {
-        const newId = nextProductId++
+        // 元のIDを保持（テストデータのID整合性を維持）
+        const productId = row.id || nextProductId++
+        if (row.id) {
+          // 元のIDがある場合は nextProductId を更新して衝突を避ける
+          nextProductId = Math.max(nextProductId, row.id + 1)
+        }
         productsV3.push({
-          id: newId,
+          id: productId,
           projectId,
           clientName: row.clientName,
           date: row.date,

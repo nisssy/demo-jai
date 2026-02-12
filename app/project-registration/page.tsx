@@ -17,7 +17,7 @@ export default function ProjectRegistrationPage() {
           router.push("/quote-creation")
           addNotification("案件登録が完了しました。見積作成に進みます。")
         }}
-        onBack={() => router.push("/")}
+        onBack={() => router.push("/?role=Sales")}
         addNotification={addNotification}
       />
     </main>
