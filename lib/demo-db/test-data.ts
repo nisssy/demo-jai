@@ -489,6 +489,11 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
     proposalStatus: "before-proposal",
     dmMailing: "no",
     budget: "¥800,000",
+    prizeInfo: [
+      { rank: "特賞", name: "液晶テレビ 50インチ", quantity: "1", prizeId: "1", vendorId: "1", vendorName: "景品卸売センター" },
+      { rank: "A賞", name: "ノートパソコン", quantity: "3", prizeId: "2", vendorId: "1", vendorName: "景品卸売センター" },
+      { rank: "B賞", name: "クオカード 5000円分", quantity: "20", prizeId: "7", vendorId: "1", vendorName: "景品卸売センター" },
+    ],
   },
 
   // id:22 - 提案中（proposing）、ヨミA、景品情報あり
@@ -522,6 +527,20 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
       { rank: "特賞", name: "液晶テレビ 50インチ", quantity: "2", prizeId: "1", vendorId: "1", vendorName: "景品卸売センター" },
       { rank: "A賞", name: "ノートパソコン", quantity: "5", prizeId: "2", vendorId: "1", vendorName: "景品卸売センター" },
       { rank: "B賞", name: "クオカード 5000円分", quantity: "30", prizeId: "7", vendorId: "1", vendorName: "景品卸売センター" },
+    ],
+    prizeOrderedAt: "2026-02-20T10:00:00Z",
+    prizeOrdersByVendor: [
+      {
+        vendorId: "1",
+        vendorName: "景品卸売センター",
+        requestedAt: "2026-02-20T10:00:00Z",
+        document: {
+          projectName: "GW特別合同抽選会",
+          hallNames: "ダイナム新宿店",
+          prizeNames: "液晶テレビ 50インチ (2個)、ノートパソコン (5個)、クオカード 5000円分 (30個)",
+          totalQuantity: 37,
+        },
+      },
     ],
   },
 
@@ -557,6 +576,31 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
       { rank: "A賞", name: "高級炊飯器", quantity: "10", prizeId: "5", vendorId: "3", vendorName: "ギフトサプライ" },
       { rank: "B賞", name: "コーヒーメーカー", quantity: "20", prizeId: "6", vendorId: "3", vendorName: "ギフトサプライ" },
     ],
+    prizeOrderedAt: "2026-02-22T10:00:00Z",
+    prizeOrdersByVendor: [
+      {
+        vendorId: "2",
+        vendorName: "プライズワールド",
+        requestedAt: "2026-02-22T10:00:00Z",
+        document: {
+          projectName: "夏の大感謝抽選会",
+          hallNames: "ガイア池袋店、ガイア新宿店",
+          prizeNames: "電動自転車 (3個)",
+          totalQuantity: 3,
+        },
+      },
+      {
+        vendorId: "3",
+        vendorName: "ギフトサプライ",
+        requestedAt: "2026-02-22T10:00:00Z",
+        document: {
+          projectName: "夏の大感謝抽選会",
+          hallNames: "ガイア池袋店、ガイア新宿店",
+          prizeNames: "高級炊飯器 (10個)、コーヒーメーカー (20個)",
+          totalQuantity: 30,
+        },
+      },
+    ],
   },
 
   // id:24 - 受注（order-received）、実施前、景品未発注、デザイン依頼なし
@@ -589,6 +633,31 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
     prizeInfo: [
       { rank: "A賞", name: "掃除機ロボット", quantity: "5", prizeId: "3", vendorId: "2", vendorName: "プライズワールド" },
       { rank: "B賞", name: "クオカード 5000円分", quantity: "50", prizeId: "7", vendorId: "1", vendorName: "景品卸売センター" },
+    ],
+    prizeOrderedAt: "2026-02-25T10:00:00Z",
+    prizeOrdersByVendor: [
+      {
+        vendorId: "2",
+        vendorName: "プライズワールド",
+        requestedAt: "2026-02-25T10:00:00Z",
+        document: {
+          projectName: "お盆特別抽選会",
+          hallNames: "エース上野店",
+          prizeNames: "掃除機ロボット (5個)",
+          totalQuantity: 5,
+        },
+      },
+      {
+        vendorId: "1",
+        vendorName: "景品卸売センター",
+        requestedAt: "2026-02-25T10:00:00Z",
+        document: {
+          projectName: "お盆特別抽選会",
+          hallNames: "エース上野店",
+          prizeNames: "クオカード 5000円分 (50個)",
+          totalQuantity: 50,
+        },
+      },
     ],
   },
 
@@ -624,6 +693,31 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
       { rank: "A賞", name: "ノートパソコン", quantity: "8", prizeId: "2", vendorId: "1", vendorName: "景品卸売センター" },
       { rank: "B賞", name: "高級炊飯器", quantity: "15", prizeId: "5", vendorId: "3", vendorName: "ギフトサプライ" },
       { rank: "C賞", name: "クオカード 5000円分", quantity: "100", prizeId: "7", vendorId: "1", vendorName: "景品卸売センター" },
+    ],
+    prizeOrderedAt: "2026-03-01T10:00:00Z",
+    prizeOrdersByVendor: [
+      {
+        vendorId: "1",
+        vendorName: "景品卸売センター",
+        requestedAt: "2026-03-01T10:00:00Z",
+        document: {
+          projectName: "秋の合同大抽選会",
+          hallNames: "サンライズ錦糸町店、サンライズ新橋店",
+          prizeNames: "液晶テレビ 50インチ (2個)、ノートパソコン (8個)、クオカード 5000円分 (100個)",
+          totalQuantity: 110,
+        },
+      },
+      {
+        vendorId: "3",
+        vendorName: "ギフトサプライ",
+        requestedAt: "2026-03-01T10:00:00Z",
+        document: {
+          projectName: "秋の合同大抽選会",
+          hallNames: "サンライズ錦糸町店、サンライズ新橋店",
+          prizeNames: "高級炊飯器 (15個)",
+          totalQuantity: 15,
+        },
+      },
     ],
     // ポスター依頼済み（dr-1で参照）
   },
@@ -662,6 +756,8 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
       { rank: "C賞", name: "クオカード 10000円分", quantity: "50", prizeId: "8", vendorId: "1", vendorName: "景品卸売センター" },
       { rank: "D賞", name: "クオカード 5000円分", quantity: "200", prizeId: "7", vendorId: "1", vendorName: "景品卸売センター" },
     ],
+    winnerListUploadedAt: "2026-02-10T10:00:00Z",
+    winnerListValidatedAt: "2026-02-10T10:30:00Z",
     prizeOrderedAt: "2026-02-12T10:00:00Z",
     prizeOrdersByVendor: [
       {

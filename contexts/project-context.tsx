@@ -519,6 +519,30 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           bannerGenerated: (row as any).bannerGenerated,
           bannerData: (row as any).bannerData,
           statusHistory: (row as any).statusHistory,
+          // 合同抽選会専用フィールド
+          hallNames: (row as any).hallNames,
+          eventStartDate: (row as any).eventStartDate,
+          eventEndDate: (row as any).eventEndDate,
+          dmMailing: (row as any).dmMailing,
+          prizeInfo: (row as any).prizeInfo,
+          hallQuotes: (row as any).hallQuotes,
+          salesPersonId: (row as any).salesPersonId,
+          insightPersonId: (row as any).insightPersonId,
+          proposalStatus: (row as any).proposalStatus,
+          readingCertainty: (row as any).readingCertainty,
+          executionStatus: (row as any).executionStatus,
+          posterCount: (row as any).posterCount,
+          target: (row as any).target,
+          deliveryVendor: (row as any).deliveryVendor,
+          orderFileName: (row as any).orderFileName,
+          prizeOrderedAt: (row as any).prizeOrderedAt,
+          deliveryInfos: (row as any).deliveryInfos,
+          winnerList: (row as any).winnerList,
+          winnerListUploadedAt: (row as any).winnerListUploadedAt,
+          winnerListValidatedAt: (row as any).winnerListValidatedAt,
+          prizeOrders: (row as any).prizeOrders,
+          prizeOrdersByVendor: (row as any).prizeOrdersByVendor,
+          prizeDeliveryInfoByVendor: (row as any).prizeDeliveryInfoByVendor,
         } as any)
       }
     }
@@ -874,9 +898,15 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         prizeDeliveryInfoByVendor: (p as any).prizeDeliveryInfoByVendor,
         winnerList: (p as any).winnerList,
         winnerListUploadedAt: (p as any).winnerListUploadedAt,
+        winnerListValidatedAt: (p as any).winnerListValidatedAt,
         // 事務管理課画面用フィールド
         executionStatus: (p as any).executionStatus,
         proposalStatus: (p as any).proposalStatus,
+        notificationOrderDesignVendorId: (p as any).notificationOrderDesignVendorId,
+        notificationOrderGeneratedAt: (p as any).notificationOrderGeneratedAt,
+        notificationOrderSentAt: (p as any).notificationOrderSentAt,
+        prizeOrderGeneratedAt: (p as any).prizeOrderGeneratedAt,
+        quoCardLetterCheckedAt: (p as any).quoCardLetterCheckedAt,
       }))
   }, [denormalizedProducts])
 
