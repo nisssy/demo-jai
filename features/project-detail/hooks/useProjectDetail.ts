@@ -58,12 +58,12 @@ export function useProjectDetail({ projectNumber, addNotification }: ProjectDeta
 
   // 商材追加
   const handleAddProduct = useCallback(() => {
-    router.push(`/project-registration?projectNumber=${projectNumber}&mode=add`)
+    router.replace(`/project-registration?projectNumber=${projectNumber}&mode=add`)
   }, [router, projectNumber])
 
   // 商材編集
   const handleEditProduct = useCallback((productId: number) => {
-    router.push(`/project/${productId}`)
+    router.replace(`/project/${productId}`)
   }, [router])
 
   // 戻る

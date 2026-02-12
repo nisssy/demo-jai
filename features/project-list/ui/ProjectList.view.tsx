@@ -244,6 +244,7 @@ export type ProjectListViewProps = ProjectListProps & {
 
   onClickEditProject: (projectNumber: string) => void
   onClickAddProduct: (firstProductId: number) => void
+  onClickOpenProduct: (productId: number, isCorrection: boolean) => void
 }
 
 export const ProjectListView = ({
@@ -361,6 +362,7 @@ export const ProjectListView = ({
 
   onClickEditProject,
   onClickAddProduct,
+  onClickOpenProduct,
 }: ProjectListViewProps) => {
   return (
     <div className="max-w-7xl mx-auto space-y-6 px-4 sm:px-6 lg:px-8">
@@ -587,7 +589,8 @@ export const ProjectListView = ({
                                 projectItem={projectItem}
                                 statusBadge={renderStatusBadge(projectItem.projectStatus)}
                                 onClick={() => {
-                                  onClickEditProject(projectItem.projectNumber ?? "")
+                                  const isCorrection = projectItem.projectStatus === "営業修正中"
+                                  onClickOpenProduct((project as any).id, isCorrection)
                                 }}
                               />
                             )
@@ -782,7 +785,7 @@ export const ProjectListView = ({
                                 alertTitle="修正依頼内容"
                                 alertText={correctionRequest}
                                 actionLabel="修正"
-                                onAction={() => onClickEditProject(projectItem.projectNumber ?? "")}
+                                onAction={() => onClickOpenProduct((project as any).id, true)}
                               />
                             )
                           })}
@@ -926,7 +929,7 @@ export const ProjectListView = ({
                                 alertText={temporaryHoldFailureComment}
                                 actionLabel="編集"
                                 actionIcon={<Edit2 className="h-4 w-4" />}
-                                onAction={() => onClickEditProject(projectItem.projectNumber ?? "")}
+                                onAction={() => onClickOpenProduct((project as any).id, false)}
                               />
                             )
                           })}

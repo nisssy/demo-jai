@@ -152,6 +152,9 @@ export const ProjectListContainer = (props: ProjectListProps) => {
       updateProduct={state.updateProduct as any}
       onClickEditProject={(projectNumber) => state.router.push(`/project-number/${projectNumber}`)}
       onClickAddProduct={(firstProductId) => state.router.push(`/project/${firstProductId}?addProduct=true`)}
+      onClickOpenProduct={(productId, isCorrection) =>
+        state.router.push(isCorrection ? `/project/${productId}/correction` : `/project/${productId}`)
+      }
       addNotification={addNotification as any}
     />
   )
