@@ -44,7 +44,7 @@ export type ProjectDetailViewProps = {
   isLoading: boolean
 
   // 案件情報編集
-  onUpdateProjectInfo: (updates: Partial<ProjectInfo>) => void
+  onUpdateProjectInfo: () => void
 
   // 商材追加
   onAddProduct: () => void

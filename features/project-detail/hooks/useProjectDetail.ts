@@ -50,11 +50,13 @@ export function useProjectDetail({ projectNumber, addNotification }: ProjectDeta
     setIsLoading(false)
   }, [])
 
-  // 案件情報更新
-  const handleUpdateProjectInfo = useCallback((updates: Partial<ProjectInfo>) => {
-    // TODO: 案件情報の更新処理を実装
-    addNotification?.("案件情報を更新しました")
-  }, [addNotification])
+  // 案件情報編集
+  const handleEditProjectInfo = useCallback(() => {
+    const url = currentRole
+      ? `/project-number/${projectNumber}/edit?role=${currentRole}`
+      : `/project-number/${projectNumber}/edit`
+    router.push(url)
+  }, [router, projectNumber, currentRole])
 
   // 商材追加
   const handleAddProduct = useCallback(() => {
@@ -79,7 +81,7 @@ export function useProjectDetail({ projectNumber, addNotification }: ProjectDeta
     projectInfo,
     products,
     isLoading,
-    onUpdateProjectInfo: handleUpdateProjectInfo,
+    onUpdateProjectInfo: handleEditProjectInfo,
     onAddProduct: handleAddProduct,
     onEditProduct: handleEditProduct,
     onBack: handleBack,

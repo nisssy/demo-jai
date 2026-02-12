@@ -11,7 +11,7 @@ export default function ProjectNumberEditPage() {
   const params = useParams()
   const projectNumber = typeof params?.projectNumber === "string" ? params.projectNumber : null
 
-  const { getProducts, projectData, setProjectData, addNotification } = useProject()
+  const { getProducts, projectData, setProjectData, addNotification, currentRole } = useProject()
   const all = useMemo(() => getProducts(), [getProducts])
 
   const representativeProjectId = useMemo(() => {
@@ -30,14 +30,21 @@ export default function ProjectNumberEditPage() {
     return null
   }
 
+  const backUrl = currentRole
+    ? `/project-number/${projectNumber}?role=${currentRole}`
+    : `/project-number/${projectNumber}`
+
   return (
     <main className="px-8 py-8 max-w-7xl mx-auto">
       <ProjectRegistration
         projectData={projectData}
         setProjectData={setProjectData}
         projectId={representativeProjectId}
-        onNext={() => router.push("/")}
-        onBack={() => router.push("/")}
+        onNext={() => {
+          addNotification("案件情報を更新しました")
+          router.push(backUrl)
+        }}
+        onBack={() => router.push(backUrl)}
         addNotification={addNotification}
       />
     </main>

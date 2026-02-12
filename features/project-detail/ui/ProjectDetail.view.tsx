@@ -113,7 +113,7 @@ export const ProjectDetailView = ({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>案件情報</CardTitle>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={onUpdateProjectInfo}>
             <Edit2 className="h-4 w-4 mr-2" />
             編集
           </Button>
