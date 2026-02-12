@@ -19,7 +19,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
   // id:1 - 見積中、キャスト未選択、対象機種自動変換済み
   {
     id: 1,
-    projectNumber: "TG-001",
+    projectNumber: "1",
     projectName: "新台入替イベント",
     clientName: "マルハン渋谷店",
     date: "2026/03/15",
@@ -53,7 +53,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
   // id:2 - 受注済み、キャスト選択済み、仮押さえ依頼中（pending）、パチタウン連携済み
   {
     id: 2,
-    projectNumber: "TG-002",
+    projectNumber: "2",
     projectName: "春の大感謝祭",
     clientName: "ダイナム新宿店",
     date: "2026/03/20",
@@ -97,7 +97,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
   // id:3 - 受注済み、キャスト選択済み、仮押さえ済み（tentative）、対象機種自動変換済み
   {
     id: 3,
-    projectNumber: "TG-003",
+    projectNumber: "3",
     projectName: "GW特別企画",
     clientName: "ガイア池袋店",
     date: "2026/04/29",
@@ -141,7 +141,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
   // id:4 - 受注済み、キャスト選択済み、本押さえ済み（confirmed）
   {
     id: 4,
-    projectNumber: "TG-004",
+    projectNumber: "4",
     projectName: "夏の大抽選会",
     clientName: "エース上野店",
     date: "2026/07/15",
@@ -185,7 +185,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
   // id:5 - 見積中、キャスト一部選択、一部仮押さえ不可
   {
     id: 5,
-    projectNumber: "TG-005",
+    projectNumber: "5",
     projectName: "秋の収穫祭",
     clientName: "サンライズ錦糸町店",
     date: "2026/09/20",
@@ -225,7 +225,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
   // id:6 - 受注済み、キャスト選択済み、本押さえ依頼中（confirmed_request）
   {
     id: 6,
-    projectNumber: "TG-006",
+    projectNumber: "6",
     projectName: "冬のボーナスキャンペーン",
     clientName: "ビッグエース新橋店",
     date: "2026/12/10",
@@ -271,7 +271,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
   // id:7 - 見積中、キャスト未選択
   {
     id: 7,
-    projectNumber: "SS-001",
+    projectNumber: "7",
     projectName: "新機種導入イベント",
     clientName: "パチンコランド横浜店",
     date: "2026/03/25",
@@ -301,7 +301,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
   // id:8 - 受注済み、MC選択済み、仮押さえ中
   {
     id: 8,
-    projectNumber: "SS-002",
+    projectNumber: "8",
     projectName: "春のスロットフェア",
     clientName: "エースパチンコ川崎店",
     date: "2026/04/10",
@@ -334,7 +334,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
   // id:9 - 受注済み、MC+ディレクター選択済み、本押さえ済み
   {
     id: 9,
-    projectNumber: "SS-003",
+    projectNumber: "9",
     projectName: "GW大型イベント",
     clientName: "パチンコワールド大宮店",
     date: "2026/05/03",
@@ -370,7 +370,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
   // id:10 - 見積中、MC選択済み、仮押さえ不可あり
   {
     id: 10,
-    projectNumber: "SS-004",
+    projectNumber: "10",
     projectName: "夏の大抽選会",
     clientName: "ビッグパチンコ千葉店",
     date: "2026/08/15",
@@ -406,7 +406,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
   // id:11 - 受注済み、MC選択済み、仮押さえ済み
   {
     id: 11,
-    projectNumber: "SS-005",
+    projectNumber: "11",
     projectName: "秋の新台入替",
     clientName: "マルハン船橋店",
     date: "2026/10/05",
@@ -439,7 +439,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
   // id:12 - 受注済み、フルキャスト、全て本押さえ済み
   {
     id: 12,
-    projectNumber: "SS-006",
+    projectNumber: "12",
     projectName: "年末ビッグイベント",
     clientName: "ダイナム柏店",
     date: "2026/12/28",
@@ -481,7 +481,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
   // id:21 - 提案前（before-proposal）、基本情報のみ
   {
     id: 21,
-    projectNumber: "GL-001",
+    projectNumber: "13",
     projectName: "春の合同大抽選会（提案前）",
     clientName: "マルハン本店",
     date: "2026/03/30",
@@ -514,7 +514,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
   // id:22 - 提案中（proposing）、ヨミA、景品情報あり
   {
     id: 22,
-    projectNumber: "GL-002",
+    projectNumber: "14",
     projectName: "GW特別合同抽選会",
     clientName: "ダイナム",
     date: "2026/05/05",
@@ -561,7 +561,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
   // id:23 - 提案中（proposing）、ヨミB、DM発送あり
   {
     id: 23,
-    projectNumber: "GL-003",
+    projectNumber: "15",
     projectName: "夏の大感謝抽選会",
     clientName: "ガイア",
     date: "2026/07/20",
@@ -615,7 +615,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
   // id:24 - 受注（order-received）、実施前、景品未発注、デザイン依頼なし
   {
     id: 24,
-    projectNumber: "GL-004",
+    projectNumber: "16",
     projectName: "お盆特別抽選会",
     clientName: "エース",
     date: "2026/08/15",
@@ -667,7 +667,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
   // id:25 - 受注（order-received）、実施前、ポスター依頼済み（アップロード待ち）
   {
     id: 25,
-    projectNumber: "GL-005",
+    projectNumber: "17",
     projectName: "秋の合同大抽選会",
     clientName: "サンライズ",
     date: "2026/09/25",
@@ -724,7 +724,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
   // id:26 - 受注（order-received）、実施前、ポスター・DM・当選通知書全て依頼済み、景品発注済み
   {
     id: 26,
-    projectNumber: "GL-006",
+    projectNumber: "18",
     projectName: "年末ジャンボ抽選会",
     clientName: "ビッグエース",
     date: "2026/12/25",
@@ -785,7 +785,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
   // id:27 - 受注（order-received）、実施中、全て完了、配送情報入力中
   {
     id: 27,
-    projectNumber: "GL-007",
+    projectNumber: "19",
     projectName: "新春特別抽選会",
     clientName: "パチンコランド",
     date: "2026/01/15",
@@ -852,7 +852,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
   // id:28 - 受注（order-received）、終了、全て完了
   {
     id: 28,
-    projectNumber: "GL-008",
+    projectNumber: "20",
     projectName: "冬の大感謝祭（終了）",
     clientName: "エースパチンコ",
     date: "2025/12/20",
