@@ -8,7 +8,10 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Building2, Calendar, Edit2, MapPin, Plus, User, Download, FileText } from "lucide-react"
+import { Building2, Calendar, Edit2, MapPin, Plus, User, Download, FileText, Mail, FileCheck, Package, CheckCircle2, Play } from "lucide-react"
+import { useProject } from "@/contexts/project-context"
+import { useMemo } from "react"
+import { PROPOSAL_STATUS_LABELS } from "@/features/lottery-registration/constants"
 
 import { OrderConfirmDialog } from "@/features/project-list/ui/modals/order-confirm-dialog"
 import { ValidationDialog } from "@/features/project-list/ui/modals/validation-dialog"
@@ -23,6 +26,110 @@ import { ProjectAlertCard } from "@/features/project-list/ui/components/project-
 import { ProjectListFilters } from "@/features/project-list/ui/components/project-list-filters"
 
 type StatusBadgeRenderer = (status: string | undefined) => ReactNode
+
+// 合同抽選会のステータス表示コンポーネント
+function LotteryProjectStatus({
+  projectId,
+  dmMailing,
+  proposalStatus,
+  executionStatus,
+  prizeOrderedAt
+}: {
+  projectId: number
+  dmMailing?: string
+  proposalStatus?: string
+  executionStatus?: string | null
+  prizeOrderedAt?: string
+}) {
+  const { getDesignRequestsByProjectAndType } = useProject()
+
+  const getDesignStatus = useMemo(() => {
+    return (type: "poster" | "dm" | "winner-list"): { label: string; color: string } => {
+      const requests = getDesignRequestsByProjectAndType(projectId, type)
+      if (requests.length === 0) return { label: "未依頼", color: "bg-slate-100 text-slate-600" }
+
+      const latest = requests.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime())[0]
+      if (latest.status === "requested") return { label: "初稿待ち", color: "bg-yellow-100 text-yellow-800" }
+      if (latest.status === "uploaded") return { label: "アップロード済み", color: "bg-green-100 text-green-800" }
+      return { label: "完了", color: "bg-blue-100 text-blue-800" }
+    }
+  }, [getDesignRequestsByProjectAndType, projectId])
+
+  const posterStatus = getDesignStatus("poster")
+  const dmStatus = getDesignStatus("dm")
+  const winnerListStatus = getDesignStatus("winner-list")
+
+  // 受注ステータスの表示
+  const orderStatusLabel = proposalStatus ? (PROPOSAL_STATUS_LABELS as any)[proposalStatus] || proposalStatus : "未設定"
+  const orderStatusColor = proposalStatus === "order-received"
+    ? "bg-green-100 text-green-800"
+    : proposalStatus === "proposing"
+      ? "bg-blue-100 text-blue-800"
+      : "bg-slate-100 text-slate-600"
+
+  // 実施ステータスの表示
+  const execStatusLabel = executionStatus || "実施前"
+  const execStatusColor = executionStatus === "終了"
+    ? "bg-green-100 text-green-800"
+    : executionStatus === "実施中"
+      ? "bg-yellow-100 text-yellow-800"
+      : "bg-slate-100 text-slate-600"
+
+  // 景品発注ステータス
+  const prizeOrderStatus = prizeOrderedAt
+    ? { label: "発注済み", color: "bg-green-100 text-green-800" }
+    : { label: "未発注", color: "bg-slate-100 text-slate-600" }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs">
+      {/* 受注ステータス */}
+      <div className="flex items-center gap-1.5">
+        <CheckCircle2 className="h-3.5 w-3.5 text-slate-500" />
+        <span className="text-slate-600">受注:</span>
+        <Badge className={`${orderStatusColor} text-xs px-2 py-0.5`}>{orderStatusLabel}</Badge>
+      </div>
+
+      {/* 実施ステータス */}
+      {proposalStatus === "order-received" && (
+        <div className="flex items-center gap-1.5">
+          <Play className="h-3.5 w-3.5 text-slate-500" />
+          <span className="text-slate-600">実施:</span>
+          <Badge className={`${execStatusColor} text-xs px-2 py-0.5`}>{execStatusLabel}</Badge>
+        </div>
+      )}
+
+      {/* ポスター制作 */}
+      <div className="flex items-center gap-1.5">
+        <FileText className="h-3.5 w-3.5 text-slate-500" />
+        <span className="text-slate-600">ポスター:</span>
+        <Badge className={`${posterStatus.color} text-xs px-2 py-0.5`}>{posterStatus.label}</Badge>
+      </div>
+
+      {/* DM制作 */}
+      {dmMailing === "yes" && (
+        <div className="flex items-center gap-1.5">
+          <Mail className="h-3.5 w-3.5 text-slate-500" />
+          <span className="text-slate-600">DM:</span>
+          <Badge className={`${dmStatus.color} text-xs px-2 py-0.5`}>{dmStatus.label}</Badge>
+        </div>
+      )}
+
+      {/* 当選通知書 */}
+      <div className="flex items-center gap-1.5">
+        <FileCheck className="h-3.5 w-3.5 text-slate-500" />
+        <span className="text-slate-600">当選通知書:</span>
+        <Badge className={`${winnerListStatus.color} text-xs px-2 py-0.5`}>{winnerListStatus.label}</Badge>
+      </div>
+
+      {/* 景品発注 */}
+      <div className="flex items-center gap-1.5">
+        <Package className="h-3.5 w-3.5 text-slate-500" />
+        <span className="text-slate-600">景品:</span>
+        <Badge className={`${prizeOrderStatus.color} text-xs px-2 py-0.5`}>{prizeOrderStatus.label}</Badge>
+      </div>
+    </div>
+  )
+}
 
 export type ProjectListViewProps = ProjectListProps & {
   activeTab: ProjectListTab
@@ -600,6 +707,18 @@ export const ProjectListView = ({
                                     {projectProducts.length}件の修正対象商材
                                   </Badge>
                                 </div>
+                                {/* 合同抽選会の場合はステータス表示 */}
+                                {((firstProduct as any)?.category === "ポイント" || (firstProduct as any)?.category === "Point") && (
+                                  <div className="mt-2">
+                                    <LotteryProjectStatus
+                                      projectId={(firstProduct as any)?.id}
+                                      dmMailing={(firstProduct as any)?.dmMailing}
+                                      proposalStatus={(firstProduct as any)?.proposalStatus}
+                                      executionStatus={(firstProduct as any)?.executionStatus}
+                                      prizeOrderedAt={(firstProduct as any)?.prizeOrderedAt}
+                                    />
+                                  </div>
+                                )}
                               </div>
                             </div>
 
@@ -731,6 +850,18 @@ export const ProjectListView = ({
                                     {projectProducts.length}件の仮押さえ不可商材
                                   </Badge>
                                 </div>
+                                {/* 合同抽選会の場合はステータス表示 */}
+                                {((firstProduct as any)?.category === "ポイント" || (firstProduct as any)?.category === "Point") && (
+                                  <div className="mt-2">
+                                    <LotteryProjectStatus
+                                      projectId={(firstProduct as any)?.id}
+                                      dmMailing={(firstProduct as any)?.dmMailing}
+                                      proposalStatus={(firstProduct as any)?.proposalStatus}
+                                      executionStatus={(firstProduct as any)?.executionStatus}
+                                      prizeOrderedAt={(firstProduct as any)?.prizeOrderedAt}
+                                    />
+                                  </div>
+                                )}
                               </div>
                             </div>
 

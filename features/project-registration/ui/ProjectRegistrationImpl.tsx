@@ -2719,7 +2719,7 @@ export function ProjectRegistrationImpl({
                       )}
                     </div>
                   </div>
-                  {productInfo.eventType?.trim() && (
+                  {productInfo.eventType?.trim() && productInfo.category !== "ポイント" && (
                     <>
                   <div className="space-y-4">
                     <div>
@@ -3494,84 +3494,6 @@ export function ProjectRegistrationImpl({
         </Card>
         )
       })}
-
-      {/* 合計金額 */}
-      {productInfos.length > 0 && (() => {
-        // 全商材の合計金額を計算
-        const totalAmount = productInfos.reduce((sum, productInfo) => {
-          const durationHours = getDurationInHoursForProduct(productInfo.startTime, productInfo.endTime)
-          
-          // コンパニオンのコスト計算
-          const companionCost = (() => {
-            const selectedWithoutUndecided = Array.from(productInfo.selectedCompanions).filter(n => n !== "未定")
-            const count = Number(productInfo.companionCount) || 0
-            let cost = selectedWithoutUndecided.reduce((total, name) => {
-              const hourlyRate = companionHourlyRates[name] || 0
-              return total + (hourlyRate * durationHours)
-            }, 0)
-            if (count > 0) {
-              const selectedCount = selectedWithoutUndecided.length
-              const undecidedCount = count - selectedCount
-              if (undecidedCount > 0) {
-                cost += averageCompanionRate * durationHours * undecidedCount
-              }
-            }
-            return Math.round(cost)
-          })()
-          
-          // ディレクターのコスト計算
-          const directorCost = (() => {
-            const selectedWithoutUndecided = Array.from(productInfo.selectedDirectors).filter(n => n !== "未定")
-            const count = Number(productInfo.directorCount) || 0
-            let cost = selectedWithoutUndecided.reduce((total, name) => {
-              const hourlyRate = directorHourlyRates[name] || 0
-              return total + (hourlyRate * durationHours)
-            }, 0)
-            if (count > 0) {
-              const selectedCount = selectedWithoutUndecided.length
-              const undecidedCount = count - selectedCount
-              if (undecidedCount > 0) {
-                cost += averageDirectorRate * durationHours * undecidedCount
-              }
-            }
-            return Math.round(cost)
-          })()
-          
-          const totalCost = Math.round(companionCost + directorCost)
-          const totalCastCount = 
-            (Number(productInfo.companionCount) || 0) +
-            (Number(productInfo.directorCount) || 0)
-          const performanceFeeDiscountValue = Number(productInfo.performanceFeeDiscount) || 0
-          const performanceFeeAfterDiscount = Math.round(Math.max(0, totalCost - performanceFeeDiscountValue))
-          const totalTransportationFee = Math.round(Number(productInfo.transportationFeeTotal) || 0)
-          const accommodationFeePerPersonValue = Number(productInfo.accommodationFeePerPerson) || 0
-          const totalAccommodationFee = Math.round(accommodationFeePerPersonValue * totalCastCount)
-          const eventBaseFeeValue = getEventBaseFee(productInfo.eventType)
-          const hall = hallName ? getHallByName(hallName) : null
-          const hallDiscountAmount = hall?.discountAmount || 0
-          const manualDiscountValue = Number(productInfo.eventBaseFeeDiscount) || 0
-          const eventBaseFeeDiscountValue = hallDiscountAmount + manualDiscountValue
-          const eventBaseFeeAfterDiscount = Math.round(Math.max(0, eventBaseFeeValue - eventBaseFeeDiscountValue))
-          const totalBillingAmount = Math.round(performanceFeeAfterDiscount + totalTransportationFee + totalAccommodationFee + eventBaseFeeAfterDiscount)
-          
-          return sum + totalBillingAmount
-        }, 0)
-        
-        return (
-          <div className="mt-6 mb-4">
-            <Card className="border-2 border-blue-300 bg-blue-50/50">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xl font-bold text-slate-900">合計金額</Label>
-                  <div className="text-3xl font-bold text-blue-600">
-                    ¥{totalAmount.toLocaleString()}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )
-      })()}
 
       {/* 商材を追加ボタンと案件を作成ボタン */}
       <div className="flex justify-center gap-4 mt-4">

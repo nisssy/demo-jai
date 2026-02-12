@@ -249,7 +249,18 @@ export function ProjectListFilters(props: ProjectListFiltersProps) {
             </Label>
             <Select
               value={searchCategory || undefined}
-              onValueChange={(value: string) => onSearchCategoryChange(value === "all" ? null : value)}
+              onValueChange={(value: string) => {
+                const newCategory = value === "all" ? null : value
+                onSearchCategoryChange(newCategory)
+                // カテゴリ変更時に、選択中のイベント区分が新しいカテゴリで有効でない場合はクリア
+                if (searchEventType) {
+                  if (newCategory === "イベント" && searchEventType === "合同抽選会") {
+                    onSearchEventTypeChange(null)
+                  } else if (newCategory === "ポイント" && (searchEventType === "トリニティガール" || searchEventType === "スロセレ")) {
+                    onSearchEventTypeChange(null)
+                  }
+                }
+              }}
             >
               <SelectTrigger id="search-category" className="bg-white">
                 <SelectValue placeholder="すべて" />
@@ -257,6 +268,7 @@ export function ProjectListFilters(props: ProjectListFiltersProps) {
               <SelectContent>
                 <SelectItem value="all">すべて</SelectItem>
                 <SelectItem value="イベント">イベント</SelectItem>
+                <SelectItem value="ポイント">ポイント</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -292,24 +304,36 @@ export function ProjectListFilters(props: ProjectListFiltersProps) {
                         <Check className={`mr-2 h-4 w-4 ${searchEventType === null ? "opacity-100" : "opacity-0"}`} />
                         すべて
                       </CommandItem>
-                      {["トリニティガール", "スロセレ"]
-                        .filter((eventType) =>
-                          eventType.toLowerCase().includes(eventTypeSearchQuery.toLowerCase())
-                        )
-                        .map((eventType) => (
-                          <CommandItem
-                            key={eventType}
-                            value={eventType}
-                            onSelect={() => {
-                              onSearchEventTypeChange(eventType)
-                              onEventTypeSearchOpenChange(false)
-                              onEventTypeSearchQueryChange("")
-                            }}
-                          >
-                            <Check className={`mr-2 h-4 w-4 ${searchEventType === eventType ? "opacity-100" : "opacity-0"}`} />
-                            {eventType}
-                          </CommandItem>
-                        ))}
+                      {(() => {
+                        // カテゴリに応じてイベント区分の選択肢を変更
+                        let eventTypes: string[] = []
+                        if (searchCategory === "イベント") {
+                          eventTypes = ["トリニティガール", "スロセレ"]
+                        } else if (searchCategory === "ポイント") {
+                          eventTypes = ["合同抽選会"]
+                        } else {
+                          // カテゴリが未選択の場合は全て表示
+                          eventTypes = ["トリニティガール", "スロセレ", "合同抽選会"]
+                        }
+                        return eventTypes
+                          .filter((eventType) =>
+                            eventType.toLowerCase().includes(eventTypeSearchQuery.toLowerCase())
+                          )
+                          .map((eventType) => (
+                            <CommandItem
+                              key={eventType}
+                              value={eventType}
+                              onSelect={() => {
+                                onSearchEventTypeChange(eventType)
+                                onEventTypeSearchOpenChange(false)
+                                onEventTypeSearchQueryChange("")
+                              }}
+                            >
+                              <Check className={`mr-2 h-4 w-4 ${searchEventType === eventType ? "opacity-100" : "opacity-0"}`} />
+                              {eventType}
+                            </CommandItem>
+                          ))
+                      })()}
                     </CommandGroup>
                   </CommandList>
                 </Command>

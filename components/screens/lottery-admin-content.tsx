@@ -52,39 +52,61 @@ const DEMO_PEOPLE = [
 
 /** デザイン業者（取引先マスタの industry: design） */
 function useDesignVendors() {
-  const { tradingPartners } = useProject()
+  const { getTradingPartnersByIndustry } = useProject()
   return useMemo(
-    () => (tradingPartners ?? []).filter((t) => t.industry === "design"),
-    [tradingPartners]
+    () => getTradingPartnersByIndustry("design"),
+    [getTradingPartnersByIndustry]
   )
 }
 
-export function LotteryAdminContent({ project }: LotteryAdminContentProps) {
+/** 景品業者一覧 */
+function usePrizeVendors() {
+  const { getPrizeVendors } = useProject()
+  return useMemo(() => getPrizeVendors(), [getPrizeVendors])
+}
+
+/** 景品マスタ一覧 */
+function usePrizes() {
+  const { getPrizes } = useProject()
+  return useMemo(() => getPrizes(), [getPrizes])
+}
+
+export function LotteryAdminContent({ project: initialProject }: LotteryAdminContentProps) {
   const { toast } = useToast()
   const {
     updateProject,
-    prizes,
-    prizeVendors,
-    addDesignRequest,
+    createDesignRequest: addDesignRequest,
     getDesignRequestsByProjectAndType,
     getDesignRequestById,
     addDesignRequestComment,
+    projects,
   } = useProject()
+
+  const prizes = usePrizes()
+  const prizeVendors = usePrizeVendors()
+
+  // updateProject後に常に最新のデータを使用するため、projects配列から再取得
+  const project = (projects.find((p) => p.id === initialProject.id) ?? initialProject) as Project
+
+  // デザイン業者選択のローカルステート（projectより前に宣言が必要）
+  // 空文字で初期化してSSRハイドレーションエラーを回避（useEffectで復元）
+  const [selectedVendorId, setSelectedVendorId] = useState("")
+
   const prizeInfo = project.prizeInfo ?? []
   const designVendors = useDesignVendors()
-  /** 当選通知書の依頼先デザイン業者（1社。プロジェクトに保存） */
+  /** 当選通知書の依頼先デザイン業者（1社。ローカルステートから取得） */
   const selectedDesignVendorForNotification = useMemo(
-    () => designVendors.find((dv) => dv.id === project.notificationOrderDesignVendorId) ?? null,
-    [designVendors, project.notificationOrderDesignVendorId]
+    () => selectedVendorId ? designVendors.find((dv) => String(dv.id) === selectedVendorId) ?? null : null,
+    [designVendors, selectedVendorId]
   )
 
   /** 景品情報を業者ごとにグループ化（景品マスタの vendorId で紐づく） */
   const vendorOrders = useMemo(() => {
     const map = new Map<string, { vendorId: string; vendorName: string; prizeItems: { name: string; quantity: number }[]; totalQuantity: number }>()
     prizeInfo.forEach((item) => {
-      const prize = item.prizeId ? prizes.find((p) => p.id === item.prizeId) : null
-      const vendorId = prize?.vendorId ?? "unknown"
-      const vendor = prizeVendors.find((v) => v.id === vendorId)
+      const prize = item.prizeId ? prizes.find((p) => String(p.id) === String(item.prizeId)) : null
+      const vendorId = prize?.vendorId ? String(prize.vendorId) : "unknown"
+      const vendor = prizeVendors.find((v) => String(v.id) === vendorId)
       const vendorName = vendor?.name ?? vendorId
       const name = item.name?.trim() || "（景品名未設定）"
       const qty = Math.max(0, parseInt(item.quantity, 10) || 0)
@@ -101,11 +123,11 @@ export function LotteryAdminContent({ project }: LotteryAdminContentProps) {
   /** この業者へすでに発注済みか */
   const isVendorOrderSent = useCallback(
     (vendorId: string, vendorName: string) => {
-      if (project.prizeOrdersByVendor?.some((o) => o.vendorId === vendorId)) return true
+      if (project.prizeOrdersByVendor?.some((o: any) => o.vendorId === vendorId)) return true
       if (project.prizeOrderRequestedAt && project.prizeOrderDocument?.vendorName) {
         if (project.prizeOrderDocument.vendorName === vendorName) return true
         const docVendor = prizeVendors.find((v) => v.name === project.prizeOrderDocument!.vendorName)
-        if (docVendor?.id === vendorId) return true
+        if (docVendor && String(docVendor.id) === vendorId) return true
       }
       return false
     },
@@ -117,17 +139,20 @@ export function LotteryAdminContent({ project }: LotteryAdminContentProps) {
     const rows: { id: number; name: string; address: string; phone: string; prize: string }[] = []
     let id = 1
     if (prizeInfo.length === 0) {
-      DEMO_PEOPLE.slice(0, 3).forEach((p, i) => {
+      DEMO_PEOPLE.slice(0, 3).forEach((p) => {
         rows.push({ id: id++, ...p, prize: "（景品未設定）" })
       })
       return rows
     }
+    // 景品ごとに当選者を生成（景品の数量分だけ当選者を作成）
+    let personIndex = 0
     prizeInfo.forEach((prize) => {
       const qty = Math.max(0, parseInt(prize.quantity, 10) || 0)
       const prizeName = prize.name?.trim() || "（景品名未設定）"
       for (let i = 0; i < qty; i++) {
-        const p = DEMO_PEOPLE[i % DEMO_PEOPLE.length]
+        const p = DEMO_PEOPLE[personIndex % DEMO_PEOPLE.length]
         rows.push({ id: id++, name: p.name, address: p.address, phone: p.phone, prize: prizeName })
+        personIndex++
       }
     })
     return rows.length > 0 ? rows : [{ id: 1, ...DEMO_PEOPLE[0], prize: "（景品未設定）" }]
@@ -147,6 +172,7 @@ export function LotteryAdminContent({ project }: LotteryAdminContentProps) {
   /** 画面を開き直したときにプロジェクトに保存済みの状態を復元 */
   useEffect(() => {
     const at = (s?: string) => !!s
+    setSelectedVendorId(String(project.notificationOrderDesignVendorId ?? ""))
     setFileUploaded(at(project.winnerListUploadedAt))
     setWinnerListValidated(at(project.winnerListValidatedAt))
     setNotificationOrderGenerated(at(project.notificationOrderGeneratedAt))
@@ -195,7 +221,7 @@ export function LotteryAdminContent({ project }: LotteryAdminContentProps) {
     setShowNotificationOrderModal(false)
     setNotificationOrderGenerated(true)
     updateProject(project.id, { notificationOrderGeneratedAt: new Date().toISOString() })
-    toast({ title: "当選通知書を生成しました", description: "発注書の内容をプレビューで確認できます" })
+    toast({ title: "当選通知書発注書を生成しました", description: "発注書の内容をプレビューで確認できます" })
   }
 
   const handleSendNotificationToDesignVendor = (vendor: (typeof designVendors)[number]) => {
@@ -207,16 +233,19 @@ export function LotteryAdminContent({ project }: LotteryAdminContentProps) {
     setShowSendNotificationToDesignModal(false)
     addDesignRequest({
       requestType: "winner-list",
-      projectId: project.id,
+      projectId: Number(project.id),
       projectName: project.projectName,
       companyName: project.companyName ?? "",
       hallNames: Array.isArray(project.hallNames) ? project.hallNames : [],
       eventStartDate: project.eventStartDate,
       eventEndDate: project.eventEndDate,
+      requestedAt: new Date().toISOString(),
       requestedBy: "admin",
       requestedByName: "事務管理課",
-      vendorId: selectedDesignVendorForSend.id,
+      status: "requested",
+      vendorId: String(selectedDesignVendorForSend.id),
       vendorName: selectedDesignVendorForSend.name,
+      comments: [],
     })
     updateProject(project.id, { notificationOrderSentAt: new Date().toISOString() })
     setNotificationOrderSent(true)
@@ -444,7 +473,7 @@ export function LotteryAdminContent({ project }: LotteryAdminContentProps) {
             当選通知書発注処理
           </CardTitle>
           <CardDescription>
-            1. 依頼するデザイン業者を選択（1社） → 2. 当選通知書の生成・プレビュー → 3. 発注依頼メールを送信 → 4. デザイン業者とのやり取りの確認
+            1. 依頼するデザイン業者を選択（1社） → 2. 当選通知書発注書の生成・プレビュー → 3. 発注依頼メールを送信 → 4. デザイン業者とのやり取りの確認
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -463,11 +492,14 @@ export function LotteryAdminContent({ project }: LotteryAdminContentProps) {
                 <Label className="text-muted-foreground">デザイン業者（1社）</Label>
                 <select
                   className="flex h-9 w-full max-w-md rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  value={project.notificationOrderDesignVendorId ?? ""}
+                  value={selectedVendorId}
                   disabled={notificationRequestByVendor.length > 0}
                   onChange={(e) => {
                     const id = e.target.value
-                    const vendor = designVendors.find((dv) => dv.id === id)
+                    const vendor = designVendors.find((dv) => String(dv.id) === id)
+                    // ローカルステートを即座に更新
+                    setSelectedVendorId(id)
+                    // プロジェクトデータも更新
                     updateProject(project.id, {
                       notificationOrderDesignVendorId: id || undefined,
                       notificationOrderDesignVendorName: vendor?.name,
@@ -476,12 +508,9 @@ export function LotteryAdminContent({ project }: LotteryAdminContentProps) {
                 >
                   <option value="">選択してください</option>
                   {designVendors.map((dv) => (
-                    <option key={dv.id} value={dv.id}>{dv.name}</option>
+                    <option key={dv.id} value={String(dv.id)}>{dv.name}</option>
                   ))}
                 </select>
-                {selectedDesignVendorForNotification && (
-                  <p className="text-sm text-primary font-medium">選択中: {selectedDesignVendorForNotification.name}</p>
-                )}
                 {notificationRequestByVendor.length > 0 && (
                   <p className="text-xs text-muted-foreground">発注依頼送信済みのため、依頼先の変更はできません。</p>
                 )}
@@ -490,14 +519,14 @@ export function LotteryAdminContent({ project }: LotteryAdminContentProps) {
           </div>
           <div className="h-px w-full bg-border shrink-0" role="separator" />
 
-          {/* 2. 当選通知書の生成・プレビュー */}
+          {/* 2. 当選通知書発注書の生成・プレビュー */}
           <div className="space-y-3">
             <h4 className="text-sm font-semibold flex items-center gap-2">
               <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs">2</span>
               <FileText className="w-4 h-4" />
-              当選通知書の生成・プレビュー
+              当選通知書発注書の生成・プレビュー
             </h4>
-            <p className="text-sm text-muted-foreground">当選者リストを元に当選通知書（はがき・DM用データ）を生成し、プレビューで内容を確認できます。</p>
+            <p className="text-sm text-muted-foreground">当選者リストを元に当選通知書発注書（デザイン業者へ送付）を生成し、プレビューで内容を確認できます。</p>
             {!selectedDesignVendorForNotification ? (
               <p className="text-sm text-muted-foreground">Step 1 でデザイン業者を選択すると、発注書の生成が可能になります。</p>
             ) : !notificationOrderGenerated ? (
@@ -507,14 +536,14 @@ export function LotteryAdminContent({ project }: LotteryAdminContentProps) {
                 disabled={!winnerListValidated}
               >
                 <FileText className="w-4 h-4" />
-                当選通知書を生成
+                当選通知書発注書を生成
               </Button>
             ) : (
               <div className="space-y-3">
                 <Alert className="border-primary bg-primary/10">
                   <CheckCircle2 className="h-4 w-4 text-primary" />
                   <AlertDescription>
-                    <strong>当選通知書を生成しました</strong>
+                    <strong>当選通知書発注書を生成しました</strong>
                     <br />
                     <span className="text-sm">依頼先: {selectedDesignVendorForNotification.name} ／ 当選者数: {demoWinnerData.length}名 ／ 出力形式: はがき印刷用・DM発送用</span>
                   </AlertDescription>
@@ -555,7 +584,7 @@ export function LotteryAdminContent({ project }: LotteryAdminContentProps) {
               )}
               {!selectedDesignVendorForNotification ? (
                 <p className="text-sm text-muted-foreground">Step 1 でデザイン業者を選択してください。</p>
-              ) : isNotificationSentToDesignVendor(selectedDesignVendorForNotification.id) ? (
+              ) : isNotificationSentToDesignVendor(String(selectedDesignVendorForNotification.id)) ? (
                 <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                   <p className="text-sm font-medium">送信日時</p>
                   {notificationRequestByVendor.map((r) => (
@@ -597,31 +626,101 @@ export function LotteryAdminContent({ project }: LotteryAdminContentProps) {
                 <p className="text-xs text-muted-foreground">Step 3 で発注依頼メールを送信すると、デザイン業者画面に依頼が表示され、アップロード・コメントでやり取りできます。</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {notificationRequestByVendor.map((r) => (
-                  <div key={r.id} className="bg-muted/50 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-medium">{r.vendorName ?? r.vendorId}</p>
-                      <p className="text-sm text-muted-foreground">
-                        送信日時: {new Date(r.requestedAt).toLocaleString("ja")}
-                        {r.uploadedFileName && ` ／ アップロード済み: ${r.uploadedFileName}`}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                  <div key={r.id} className="border rounded-lg p-4 space-y-4 bg-background">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b">
+                      <div className="min-w-0">
+                        <p className="font-medium">{r.vendorName ?? r.vendorId}</p>
+                        <p className="text-sm text-muted-foreground">
+                          送信日時: {new Date(r.requestedAt).toLocaleString("ja")}
+                        </p>
+                      </div>
                       <Badge variant={r.status === "uploaded" ? "default" : "secondary"}>
                         {r.status === "uploaded" ? "アップロード済み" : "依頼受付中"}
                       </Badge>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
-                        onClick={() => {
+                    </div>
+
+                    {/* アップロードファイルプレビュー */}
+                    {r.uploadedFileName && (
+                      <div className="bg-muted/30 rounded-lg p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <FileCheck className="w-4 h-4 text-primary" />
+                            <span className="text-sm font-medium">アップロード済み: {r.uploadedFileName}</span>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              toast({ title: "プレビュー", description: `${r.uploadedFileName} を表示します` })
+                            }}
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            プレビュー
+                          </Button>
+                        </div>
+                        {r.uploadedAt && (
+                          <p className="text-xs text-muted-foreground">アップロード日時: {new Date(r.uploadedAt).toLocaleString("ja")}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* コメント履歴 */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">やり取り履歴</Label>
+                      <div className="max-h-48 overflow-y-auto rounded border p-3 bg-muted/10 space-y-3">
+                        {r.comments.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">まだコメントはありません</p>
+                        ) : (
+                          r.comments.map((c) => (
+                            <div key={c.id} className="text-sm pb-2 border-b last:border-0 last:pb-0">
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <span className="font-medium text-muted-foreground">
+                                  {c.role === "Sales" ? "事務管理課" : "デザイン業者"}
+                                  {c.authorName && `（${c.authorName}）`}
+                                </span>
+                                <span className="text-xs text-muted-foreground shrink-0">
+                                  {new Date(c.createdAt).toLocaleString("ja")}
+                                </span>
+                              </div>
+                              <p className="text-foreground whitespace-pre-wrap">{c.text}</p>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {/* コメント入力 */}
+                    <div className="space-y-2 pt-2 border-t">
+                      <Label className="text-sm font-semibold">コメントを送信（事務管理課）</Label>
+                      <Textarea
+                        placeholder="デザイン業者へ返信や確認メッセージを入力"
+                        value={selectedNotificationRequestIdForComment === r.id ? notificationCommentText : ""}
+                        onChange={(e) => {
                           setSelectedNotificationRequestIdForComment(r.id)
-                          setNotificationCommentText("")
+                          setNotificationCommentText(e.target.value)
                         }}
+                        rows={3}
+                        className="resize-none"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          if (!notificationCommentText.trim()) return
+                          addDesignRequestComment(r.id, {
+                            role: "Sales",
+                            authorName: "事務管理課",
+                            text: notificationCommentText.trim(),
+                            createdAt: new Date().toISOString(),
+                          })
+                          setNotificationCommentText("")
+                          setSelectedNotificationRequestIdForComment(null)
+                          toast({ title: "コメントを送信しました" })
+                        }}
+                        disabled={!notificationCommentText.trim() || selectedNotificationRequestIdForComment !== r.id}
                       >
-                        <MessageSquare className="w-4 h-4" />
-                        コメントのやり取り
+                        <Send className="w-4 h-4 mr-2" /> 送信
                       </Button>
                     </div>
                   </div>
@@ -955,8 +1054,8 @@ export function LotteryAdminContent({ project }: LotteryAdminContentProps) {
       <Dialog open={showNotificationOrderModal} onOpenChange={setShowNotificationOrderModal}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>当選通知書の生成</DialogTitle>
-            <DialogDescription>当選者リストから当選通知用発注データ（はがき・DM等）を自動生成します</DialogDescription>
+            <DialogTitle>当選通知書発注書の生成</DialogTitle>
+            <DialogDescription>当選者リストから当選通知書発注データ（デザイン業者へ送付する発注書）を自動生成します</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="rounded-lg border p-4 space-y-3">
@@ -971,7 +1070,7 @@ export function LotteryAdminContent({ project }: LotteryAdminContentProps) {
             </div>
             <Alert>
               <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>当選通知書を生成すると、デザイン業者へ発注依頼メールを送信できるようになります。</AlertDescription>
+              <AlertDescription>当選通知書発注書を生成すると、デザイン業者へ発注依頼メールを送信できるようになります。</AlertDescription>
             </Alert>
           </div>
           <DialogFooter>
@@ -995,13 +1094,13 @@ export function LotteryAdminContent({ project }: LotteryAdminContentProps) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5" />
-              当選通知書プレビュー
+              当選通知書発注書プレビュー
               {selectedDesignVendorForPreview ? `（${selectedDesignVendorForPreview.name} 宛）` : ""}
             </DialogTitle>
             <DialogDescription>
               {selectedDesignVendorForPreview
-                ? `${selectedDesignVendorForPreview.name} 向けに作成した当選通知発注書の内容です`
-                : "当選者リストを元に作成した当選通知発注書の内容です"}
+                ? `${selectedDesignVendorForPreview.name} 向けに作成した当選通知書発注書の内容です`
+                : "当選者リストを元に作成した当選通知書発注書の内容です"}
             </DialogDescription>
           </DialogHeader>
           <div className="rounded-lg border bg-white p-6 text-black space-y-4">
@@ -1114,7 +1213,7 @@ export function LotteryAdminContent({ project }: LotteryAdminContentProps) {
                       pr.comments.map((c) => (
                         <div key={c.id} className="text-sm">
                           <span className="font-medium text-muted-foreground">
-                            {c.role === "SalesInsight" ? "事務管理課" : "デザイン業者"}
+                            {c.role === "Sales" ? "事務管理課" : "デザイン業者"}
                             {c.authorName && `（${c.authorName}）`}:
                           </span>{" "}
                           {c.text}
@@ -1140,9 +1239,10 @@ export function LotteryAdminContent({ project }: LotteryAdminContentProps) {
                     onClick={() => {
                       if (!notificationCommentText.trim()) return
                       addDesignRequestComment(pr.id, {
-                        role: "SalesInsight",
+                        role: "Sales",
                         authorName: "事務管理課",
                         text: notificationCommentText.trim(),
+                        createdAt: new Date().toISOString(),
                       })
                       setNotificationCommentText("")
                       toast({ title: "コメントを送信しました" })

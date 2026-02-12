@@ -170,7 +170,7 @@ export function DesignVendorScreen() {
                   <CardTitle className="flex items-center gap-2">{DESIGN_REQUEST_UPLOAD_LABELS[pr.requestType]}</CardTitle>
                   <CardDescription>アップロードすると営業側で確認できます</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   <div
                     className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-center hover:bg-muted/50 transition-colors cursor-pointer"
                     onClick={() => posterRequestFileInputRef.current?.click()}
@@ -198,6 +198,33 @@ export function DesignVendorScreen() {
                       {pr.requestType === "winner-list" ? "CSV・Excel形式（.csv, .xlsx, .xls）" : "画像・PDF・AI形式"}
                     </p>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 border-t" />
+                    <span className="text-xs text-muted-foreground">または</span>
+                    <div className="flex-1 border-t" />
+                  </div>
+                  <Button
+                    onClick={() => {
+                      const demoFileName =
+                        pr.requestType === "poster" ? "poster_demo.pdf" :
+                        pr.requestType === "dm" ? "dm_demo.pdf" :
+                        "winner_list_demo.xlsx"
+                      updateDesignRequest(pr.id, {
+                        status: "uploaded",
+                        uploadedFileName: demoFileName,
+                        uploadedAt: new Date().toISOString(),
+                      })
+                      toast({
+                        title: "デモファイルをアップロード完了",
+                        description: `デモファイル「${demoFileName}」をアップロードしました。営業側で確認できます。`
+                      })
+                    }}
+                    className="w-full"
+                    variant="outline"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    デモファイルをアップロード
+                  </Button>
                 </CardContent>
               </Card>
             )}
@@ -225,7 +252,7 @@ export function DesignVendorScreen() {
                     pr.comments.map((c) => (
                       <div key={c.id} className="text-sm">
                         <span className="font-medium text-muted-foreground">
-                          {c.role === "SalesInsight" ? "営業・事務管理課" : "デザイン業者"}
+                          {c.role === "Sales" ? "営業・事務管理課" : "デザイン業者"}
                           {c.authorName && `（${c.authorName}）`}:
                         </span>{" "}
                         {c.text}

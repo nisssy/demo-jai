@@ -56,6 +56,7 @@ type ProjectContextType = {
   createProduct: (product: Omit<Product, "id">) => Product
   createProducts: (products: Omit<Product, "id">[]) => Product[]
   updateProduct: (id: number, updates: Partial<Product>) => Product | null
+  updateProject: (id: number, updates: Partial<Product>) => Product | null
   deleteProduct: (id: number) => boolean
   getProductById: (id: number) => Product | null
   generateProjectNumber: (existingProjects: Array<{ projectNumber?: string }>) => string
@@ -3392,7 +3393,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   const getProjectById = useCallback(
     (id: number | string): VendorProject | null => {
-      return projects.find((p) => p.id === id) ?? null
+      return projects.find((p) => String(p.id) === String(id)) ?? null
     },
     [projects]
   )
@@ -3586,6 +3587,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     return updated
   }, [companies, halls, productEntities, projectEntities])
 
+  // Alias for updateProduct (for backward compatibility and semantic clarity in lottery admin context)
+  const updateProject = updateProduct
+
   const deleteProduct = useCallback((id: number): boolean => {
     const product = productEntities.find((p) => p.id === id)
     if (!product) return false
@@ -3653,7 +3657,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }, [designRequests])
 
   const getDesignRequestsByProjectAndType = useCallback((projectId: number, type: string): DesignRequest[] => {
-    return designRequests.filter((r) => r.projectId === projectId && r.type === type)
+    return designRequests.filter((r) => r.projectId === projectId && r.requestType === type)
   }, [designRequests])
 
   const createDesignRequest = useCallback((request: Omit<DesignRequest, "id">): DesignRequest => {
@@ -3744,6 +3748,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         createProduct,
         createProducts,
         updateProduct,
+        updateProject,
         deleteProduct,
         getProductById,
         generateProjectNumber,

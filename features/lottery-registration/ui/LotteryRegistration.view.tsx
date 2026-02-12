@@ -696,14 +696,10 @@ export function LotteryRegistrationView({ state, onSave }: LotteryRegistrationVi
             proposalStatus={state.proposalStatus}
             readingCertainty={state.readingCertainty}
             executionStatus={state.executionStatus}
-            castAssignments={state.castAssignments}
             onStatusChange={state.handleStatusChange}
             onReadingCertaintyChange={state.setReadingCertainty}
             onExecutionStatusChange={state.setExecutionStatus}
             onConfirmOrder={state.handleConfirmOrder}
-            onAddCast={state.addCast}
-            onRemoveCast={state.removeCast}
-            onUpdateCast={state.updateCast}
           />
         </TabsContent>
       </Tabs>
