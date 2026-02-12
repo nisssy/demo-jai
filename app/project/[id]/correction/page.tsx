@@ -14,7 +14,7 @@ function ProjectCorrectionPageContent() {
   const params = useParams()
   const searchParams = useSearchParams()
   const projectId = params?.id ? Number(params.id) : null
-  const { projectData, setProjectData, addNotification, getProductById, updateProduct } = useProject()
+  const { projectData, setProjectData, addNotification, getProductById, updateProduct, currentRole } = useProject()
   const [isLoading, setIsLoading] = useState(true)
   const [correctionComment, setCorrectionComment] = useState("")
   const [correctionRequest, setCorrectionRequest] = useState("")
@@ -50,7 +50,8 @@ function ProjectCorrectionPageContent() {
 
   const handleBack = () => {
     if (tab === "corrections") {
-      router.push("/?tab=corrections")
+      const url = currentRole ? `/?tab=corrections&role=${currentRole}` : "/?tab=corrections"
+      router.push(url)
       return
     }
 
@@ -58,13 +59,17 @@ function ProjectCorrectionPageContent() {
     if (projectId && getProductById) {
       const product = getProductById(projectId)
       if (product && product.projectNumber) {
-        router.push(`/project-number/${product.projectNumber}`)
+        const url = currentRole
+          ? `/project-number/${product.projectNumber}?role=${currentRole}`
+          : `/project-number/${product.projectNumber}`
+        router.push(url)
         return
       }
     }
 
     // フォールバック: 案件一覧に戻る
-    router.push("/")
+    const url = currentRole ? `/?role=${currentRole}` : "/"
+    router.push(url)
   }
 
   const handleSave = () => {
@@ -79,18 +84,24 @@ function ProjectCorrectionPageContent() {
     addNotification("修正を完了しました")
 
     if (tab === "corrections") {
-      router.push("/?tab=corrections")
+      const url = currentRole ? `/?tab=corrections&role=${currentRole}` : "/?tab=corrections"
+      router.push(url)
     } else {
       // 商材から案件番号を取得して案件詳細に遷移
       if (projectId && getProductById) {
         const product = getProductById(projectId)
         if (product && product.projectNumber) {
-          router.push(`/project-number/${product.projectNumber}`)
+          const url = currentRole
+            ? `/project-number/${product.projectNumber}?role=${currentRole}`
+            : `/project-number/${product.projectNumber}`
+          router.push(url)
         } else {
-          router.push("/")
+          const url = currentRole ? `/?role=${currentRole}` : "/"
+          router.push(url)
         }
       } else {
-        router.push("/")
+        const url = currentRole ? `/?role=${currentRole}` : "/"
+        router.push(url)
       }
     }
   }

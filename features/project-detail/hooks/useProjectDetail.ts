@@ -7,7 +7,7 @@ import type { ProjectInfo, ProductSummary, ProjectDetailContainerProps } from ".
 
 export function useProjectDetail({ projectNumber, addNotification }: ProjectDetailContainerProps) {
   const router = useAppRouter()
-  const { getProjects, getProducts, updateProject } = useProject()
+  const { getProjects, getProducts, updateProject, currentRole } = useProject()
 
   const [isLoading, setIsLoading] = useState(true)
 
@@ -68,8 +68,12 @@ export function useProjectDetail({ projectNumber, addNotification }: ProjectDeta
 
   // 戻る
   const handleBack = useCallback(() => {
-    router.push("/")
-  }, [router])
+    if (currentRole) {
+      router.push(`/?role=${currentRole}`)
+    } else {
+      router.push("/")
+    }
+  }, [router, currentRole])
 
   return {
     projectInfo,

@@ -11,7 +11,7 @@ export default function ProjectEditPage() {
   const params = useParams()
   const searchParams = useSearchParams()
   const projectId = params?.id ? Number(params.id) : null
-  const { projectData, setProjectData, addNotification, getProductById } = useProject()
+  const { projectData, setProjectData, addNotification, getProductById, currentRole } = useProject()
   const [isLoading, setIsLoading] = useState(true)
   const tab = searchParams?.get("tab")
   const addProduct = searchParams?.get("addProduct") === "true"
@@ -59,7 +59,8 @@ export default function ProjectEditPage() {
 
   const handleBack = () => {
     if (tab === "corrections") {
-      router.push("/?tab=corrections")
+      const url = currentRole ? `/?tab=corrections&role=${currentRole}` : "/?tab=corrections"
+      router.push(url)
       return
     }
 
@@ -67,13 +68,17 @@ export default function ProjectEditPage() {
     if (projectId && getProductById) {
       const product = getProductById(projectId)
       if (product && product.projectNumber) {
-        router.push(`/project-number/${product.projectNumber}`)
+        const url = currentRole
+          ? `/project-number/${product.projectNumber}?role=${currentRole}`
+          : `/project-number/${product.projectNumber}`
+        router.push(url)
         return
       }
     }
 
     // フォールバック: 案件一覧に戻る
-    router.push("/")
+    const url = currentRole ? `/?role=${currentRole}` : "/"
+    router.push(url)
   }
 
   return (
@@ -84,18 +89,24 @@ export default function ProjectEditPage() {
         projectId={projectId}
         onNext={() => {
           if (tab === "corrections") {
-            router.push("/?tab=corrections")
+            const url = currentRole ? `/?tab=corrections&role=${currentRole}` : "/?tab=corrections"
+            router.push(url)
           } else {
             // 商材から案件番号を取得して案件詳細に遷移
             if (projectId && getProductById) {
               const product = getProductById(projectId)
               if (product && product.projectNumber) {
-                router.push(`/project-number/${product.projectNumber}`)
+                const url = currentRole
+                  ? `/project-number/${product.projectNumber}?role=${currentRole}`
+                  : `/project-number/${product.projectNumber}`
+                router.push(url)
               } else {
-                router.push("/")
+                const url = currentRole ? `/?role=${currentRole}` : "/"
+                router.push(url)
               }
             } else {
-              router.push("/")
+              const url = currentRole ? `/?role=${currentRole}` : "/"
+              router.push(url)
             }
           }
           addNotification(addProduct ? "商材を追加しました" : "商材を更新しました")

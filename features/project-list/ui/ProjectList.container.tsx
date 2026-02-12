@@ -150,11 +150,19 @@ export const ProjectListContainer = (props: ProjectListProps) => {
       onDownloadQuotePdf={state.handlers.handleDownloadQuotePdf}
       renderStatusBadge={renderStatusBadge}
       updateProduct={state.updateProduct as any}
-      onClickEditProject={(projectNumber) => state.router.push(`/project-number/${projectNumber}`)}
-      onClickAddProduct={(firstProductId) => state.router.push(`/project/${firstProductId}?addProduct=true`)}
-      onClickOpenProduct={(productId, isCorrection) =>
-        state.router.push(isCorrection ? `/project/${productId}/correction` : `/project/${productId}`)
-      }
+      onClickEditProject={(projectNumber) => {
+        const url = props.role ? `/project-number/${projectNumber}?role=${props.role}` : `/project-number/${projectNumber}`
+        state.router.push(url)
+      }}
+      onClickAddProduct={(firstProductId) => {
+        const url = props.role ? `/project/${firstProductId}?addProduct=true&role=${props.role}` : `/project/${firstProductId}?addProduct=true`
+        state.router.push(url)
+      }}
+      onClickOpenProduct={(productId, isCorrection) => {
+        const baseUrl = isCorrection ? `/project/${productId}/correction` : `/project/${productId}`
+        const url = props.role ? `${baseUrl}?role=${props.role}` : baseUrl
+        state.router.push(url)
+      }}
       addNotification={addNotification as any}
     />
   )
