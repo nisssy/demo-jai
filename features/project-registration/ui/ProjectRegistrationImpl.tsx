@@ -29,6 +29,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Check, ChevronsUpDown } from "lucide-react"
 import { TimePicker } from "@/components/ui/time-picker"
 import { LotteryRegistrationContainer } from "@/features/lottery-registration/ui/LotteryRegistration.container"
+import { getEventTypesByCategory, getCategoryByEventType } from "@/features/shared/hooks/useEventTypeCategory"
 
 export function ProjectRegistrationImpl({
   projectData,
@@ -2450,7 +2451,17 @@ export function ProjectRegistrationImpl({
                         <Select
                           value={productInfo.category || undefined}
                           onValueChange={(value) => {
+                            // カテゴリを更新
                             updateProductInfo(index, { category: value })
+
+                            // 現在のイベント区分が新しいカテゴリに対応していない場合、イベント区分をリセット
+                            if (productInfo.eventType) {
+                              const validEventTypes = getEventTypesByCategory(value)
+                              if (!validEventTypes.includes(productInfo.eventType)) {
+                                updateProductInfo(index, { eventType: "" })
+                              }
+                            }
+
                             if (index === 0) {
                               setErrors((prev) => {
                                 if (prev.category) {
@@ -2507,9 +2518,7 @@ export function ProjectRegistrationImpl({
                               <CommandList>
                                 <CommandEmpty>イベント区分が見つかりませんでした</CommandEmpty>
                                 <CommandGroup>
-                                  {(productInfo.category === "ポイント"
-                                    ? ["合同抽選会"]
-                                    : ["トリニティガール", "スロセレ"])
+                                  {getEventTypesByCategory(productInfo.category || "イベント")
                                     .filter((eventType) =>
                                       eventType.toLowerCase().includes((eventTypeSearchQuery[productInfo.id] || "").toLowerCase())
                                     )
@@ -2518,7 +2527,17 @@ export function ProjectRegistrationImpl({
                                         key={eventType}
                                         value={eventType}
                                         onSelect={() => {
+                                          // イベント区分を設定
                                           updateProductInfo(index, { eventType })
+
+                                          // カテゴリが未選択の場合、イベント区分から自動設定
+                                          if (!productInfo.category) {
+                                            const category = getCategoryByEventType(eventType)
+                                            if (category) {
+                                              updateProductInfo(index, { category })
+                                            }
+                                          }
+
                                           const errorKey = `eventType-${index}`
                                           setErrors((prev) => {
                                             if (prev[errorKey]) {

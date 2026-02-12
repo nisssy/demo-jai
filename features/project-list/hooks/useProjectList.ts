@@ -8,6 +8,7 @@ import { useAppRouter } from "@/hooks/use-app-router"
 import type { ProjectItem, ValidationResult } from "@/features/project-list/model/types"
 import type { DemoProject } from "@/lib/demo-db/types"
 import { generateQuotePDF } from "@/features/project-list/lib/quote"
+import { getCategoryByEventType } from "@/features/shared/hooks/useEventTypeCategory"
 
 export type ProjectListTab = "projects" | "corrections" | "temporaryHoldFailure"
 
@@ -84,19 +85,15 @@ export function useProjectList({
   const [eventTypeSearchOpen, setEventTypeSearchOpen] = useState(false)
   const [eventTypeSearchQuery, setEventTypeSearchQuery] = useState("")
 
-  // イベント区分とカテゴリのマッピング
-  const EVENT_TYPE_TO_CATEGORY: Record<string, string> = {
-    "トリニティガール": "イベント",
-    "スロセレ": "イベント",
-    "合同抽選会": "ポイント",
-  }
-
   // イベント区分選択時にカテゴリを自動選択するハンドラ
   const handleEventTypeChange = useCallback((eventType: string | null) => {
     setSearchEventType(eventType)
     // カテゴリが未選択で、イベント区分が選択された場合、対応するカテゴリを自動選択
-    if (eventType && !searchCategory && EVENT_TYPE_TO_CATEGORY[eventType]) {
-      setSearchCategory(EVENT_TYPE_TO_CATEGORY[eventType])
+    if (eventType && !searchCategory) {
+      const category = getCategoryByEventType(eventType)
+      if (category) {
+        setSearchCategory(category)
+      }
     }
   }, [searchCategory])
 
