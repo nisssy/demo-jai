@@ -760,6 +760,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
       },
     ],
     winnerListUploadedAt: "2026-01-12T14:00:00Z",
+    winnerListValidatedAt: "2026-01-12T14:30:00Z",
     notificationOrderSentAt: "2026-01-13T09:00:00Z",
     // ポスター・DM・当選通知書全てアップロード済み（dr-5, dr-6, dr-7）
   },
@@ -833,6 +834,7 @@ export const comprehensiveTestProjects: Omit<DemoProject, "companyName" | "compa
       },
     ],
     winnerListUploadedAt: "2025-12-18T14:00:00Z",
+    winnerListValidatedAt: "2025-12-18T14:30:00Z",
     notificationOrderSentAt: "2025-12-19T09:00:00Z",
     prizeDeliveryInfoByVendor: [
       {
