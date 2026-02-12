@@ -284,20 +284,6 @@ export function useProjectList({
   const [showDataCollectionModal, setShowDataCollectionModal] = useState(false)
   const [showDataExportModal, setShowDataExportModal] = useState(false)
 
-  const handleStatusToggle = useCallback(
-    (project: ProjectItem, checked: boolean) => {
-      if (checked) {
-        setSelectedProject(project)
-        setIsModalOpen(true)
-        return
-      }
-      if (typeof project.id === "number") {
-        updateProduct(project.id, { status: "proposed" } as any)
-      }
-    },
-    [updateProduct],
-  )
-
   const handleGenerateCorrection = useCallback(() => {
     if (!validationResult) return
     const message = `お疲れ様です。以下の項目について修正をお願いします。
@@ -528,7 +514,6 @@ Co・Dir担当`
     setCurrentScreen,
 
     handlers: {
-      handleStatusToggle,
       handleGenerateCorrection,
       handleSubmitCorrection,
       handleNotifyInternal,

@@ -150,12 +150,8 @@ export const ProjectListContainer = (props: ProjectListProps) => {
       onDownloadQuotePdf={state.handlers.handleDownloadQuotePdf}
       renderStatusBadge={renderStatusBadge}
       updateProduct={state.updateProduct as any}
-      onToggleStatus={state.handlers.handleStatusToggle as (project: ProjectItem, checked: boolean) => void}
-      onClickEditProject={(projectNumber) => state.router.push(`/project-number/${projectNumber}/edit`)}
+      onClickEditProject={(projectNumber) => state.router.push(`/project-number/${projectNumber}`)}
       onClickAddProduct={(firstProductId) => state.router.push(`/project/${firstProductId}?addProduct=true`)}
-      onClickOpenProduct={(productId, isCorrection) =>
-        state.router.push(isCorrection ? `/project/${productId}/correction` : `/project/${productId}`)
-      }
       addNotification={addNotification as any}
     />
   )

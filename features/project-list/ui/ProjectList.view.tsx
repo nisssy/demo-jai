@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Building2, Calendar, Edit2, MapPin, Plus, User, Download, FileText, Mail, FileCheck, Package, CheckCircle2, Play } from "lucide-react"
+import { Building2, Calendar, MapPin, User, ArrowRight, CheckCircle2, Play, FileText, Mail, FileCheck, Package, Plus, Edit2 } from "lucide-react"
 import { useProject } from "@/contexts/project-context"
 import { useMemo } from "react"
 import { PROPOSAL_STATUS_LABELS } from "@/features/lottery-registration/constants"
@@ -241,11 +241,9 @@ export type ProjectListViewProps = ProjectListProps & {
   renderStatusBadge: StatusBadgeRenderer
 
   updateProduct: (id: number, updates: Partial<DemoProject>) => DemoProject | null
-  onToggleStatus: (project: ProjectItem, checked: boolean) => void
 
   onClickEditProject: (projectNumber: string) => void
   onClickAddProduct: (firstProductId: number) => void
-  onClickOpenProduct: (productId: number, isCorrection: boolean) => void
 }
 
 export const ProjectListView = ({
@@ -360,11 +358,9 @@ export const ProjectListView = ({
 
   renderStatusBadge,
   updateProduct,
-  onToggleStatus,
 
   onClickEditProject,
   onClickAddProduct,
-  onClickOpenProduct,
 }: ProjectListViewProps) => {
   return (
     <div className="max-w-7xl mx-auto space-y-6 px-4 sm:px-6 lg:px-8">
@@ -551,24 +547,10 @@ export const ProjectListView = ({
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
-                              <Button onClick={() => onClickEditProject(projectNumber)} variant="outline" className="gap-2">
-                                <Edit2 className="h-4 w-4" />
-                                案件を編集
-                              </Button>
-                              <Button onClick={() => onOpenQuoteModal(projectNumber, projectProducts)} variant="outline" className="gap-2">
-                                <FileText className="h-4 w-4" />
-                                見積書作成
-                              </Button>
-                              {projectProducts.some((p) => (p as any).quoteGenerated) && (
-                                <Button onClick={() => onDownloadQuotePdf(projectNumber, projectProducts)} variant="outline" className="gap-2">
-                                  <Download className="h-4 w-4" />
-                                  見積書ダウンロード
-                                </Button>
-                              )}
-                              <Button onClick={() => onClickAddProduct((firstProduct as any).id)} variant="outline" className="gap-2">
-                                <Plus className="h-4 w-4" />
-                                商材を追加
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <Button onClick={() => onClickEditProject(projectNumber)} className="gap-2">
+                                <ArrowRight className="h-4 w-4" />
+                                案件詳細を見る
                               </Button>
                             </div>
                           </div>
@@ -605,10 +587,8 @@ export const ProjectListView = ({
                                 projectItem={projectItem}
                                 statusBadge={renderStatusBadge(projectItem.projectStatus)}
                                 onClick={() => {
-                                  const isCorrection = projectItem.projectStatus === "営業修正中"
-                                  onClickOpenProduct((project as any).id, isCorrection)
+                                  onClickEditProject(projectItem.projectNumber ?? "")
                                 }}
-                                onToggleStatus={(checked) => onToggleStatus(projectItem, checked)}
                               />
                             )
                           })}
@@ -802,7 +782,7 @@ export const ProjectListView = ({
                                 alertTitle="修正依頼内容"
                                 alertText={correctionRequest}
                                 actionLabel="修正"
-                                onAction={() => onClickOpenProduct((project as any).id, true)}
+                                onAction={() => onClickEditProject(projectItem.projectNumber ?? "")}
                               />
                             )
                           })}
@@ -946,7 +926,7 @@ export const ProjectListView = ({
                                 alertText={temporaryHoldFailureComment}
                                 actionLabel="編集"
                                 actionIcon={<Edit2 className="h-4 w-4" />}
-                                onAction={() => onClickOpenProduct((project as any).id, false)}
+                                onAction={() => onClickEditProject(projectItem.projectNumber ?? "")}
                               />
                             )
                           })}

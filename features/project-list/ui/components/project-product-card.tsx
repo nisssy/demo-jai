@@ -5,8 +5,6 @@ import { useMemo } from "react"
 import { Calendar, FileText, Mail, FileCheck, Package, CheckCircle2, Play, Users } from "lucide-react"
 import type { DemoProject } from "@/lib/demo-db/types"
 import type { ProjectItem } from "@/features/project-list/model/types"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { useProject } from "@/contexts/project-context"
 import { PROPOSAL_STATUS_LABELS } from "@/features/lottery-registration/constants"
@@ -18,10 +16,9 @@ export type ProjectProductCardProps = {
   projectItem: ProjectItem
   statusBadge: React.ReactNode
   onClick: () => void
-  onToggleStatus: (checked: boolean) => void
 }
 
-export function ProjectProductCard({ project, projectItem, statusBadge, onClick, onToggleStatus }: ProjectProductCardProps) {
+export function ProjectProductCard({ project, projectItem, statusBadge, onClick }: ProjectProductCardProps) {
   const { getDesignRequestsByProjectAndType } = useProject()
 
   // 合同抽選会のステータス計算
@@ -160,19 +157,6 @@ export function ProjectProductCard({ project, projectItem, statusBadge, onClick,
                   <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">案件No: {projectItem.projectNumber ?? "-"}</span>
                 </div>
                 <p className="text-sm text-slate-600">{project.clientName}</p>
-              </div>
-              <div className="flex flex-col items-end" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center gap-2">
-                  <Label htmlFor={`status-${String(project.id)}`} className="text-xs text-slate-600">
-                    {project.status === "ordered" ? "受注済み" : "見積中"}
-                  </Label>
-                  <Switch
-                    id={`status-${String(project.id)}`}
-                    checked={project.status === "ordered"}
-                    onCheckedChange={onToggleStatus}
-                    className="scale-75"
-                  />
-                </div>
               </div>
             </div>
 
