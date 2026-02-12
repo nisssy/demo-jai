@@ -68,7 +68,7 @@ export function useProjectDetail({ projectNumber, addNotification }: ProjectDeta
 
   // 戻る
   const handleBack = useCallback(() => {
-    router.back()
+    router.push("/")
   }, [router])
 
   return {
