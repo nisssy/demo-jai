@@ -28,6 +28,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Check, ChevronsUpDown } from "lucide-react"
 import { TimePicker } from "@/components/ui/time-picker"
+import { LotteryRegistrationContainer } from "@/features/lottery-registration/ui/LotteryRegistration.container"
 
 export function ProjectRegistrationImpl({
   projectData,
@@ -1431,7 +1432,41 @@ export function ProjectRegistrationImpl({
         }
         
         // 商材情報を読み込み
-        if (project.category && project.eventType && project.eventProductName && project.eventDate) {
+        // 合同抽選会（category: "Point"）の場合は別処理
+        if (project.category === "Point") {
+          // 合同抽選会の場合はLotteryRegistrationContainerで処理するため、
+          // categoryとeventTypeのみ設定して、フォームを表示できるようにする
+          setProductInfos([{
+            id: 1,
+            category: "ポイント",
+            eventType: "合同抽選会",
+            eventProductName: "",
+            eventDate: "",
+            mustSeeFlag: "0",
+            mustSeePublication: "不要",
+            publicationDate: "",
+            publicationTime: "",
+            reportRequired: "不要",
+            startTime: "08:00",
+            endTime: "15:00",
+            status: "仮押さえ済み",
+            companionCount: "",
+            directorCount: "",
+            mcCount: "",
+            selectedCompanions: new Set<string>(),
+            selectedDirectors: new Set<string>(),
+            selectedMcs: new Set<string>(),
+            nominatedCompanions: {},
+            nominatedDirectors: {},
+            nominatedMcs: {},
+            transportationFeeTotal: "",
+            accommodationFeePerPerson: "",
+            performanceFeeDiscount: "",
+            eventBaseFee: "0",
+            eventBaseFeeDiscount: "",
+            isOpen: true,
+          }])
+        } else if (project.category && project.eventType && project.eventProductName && project.eventDate) {
           const eventDateStr = project.eventDate.replace(/\//g, "-")
           // キャスティング情報を読み込み（配列からSetに変換）
           const selectedCompanions = project.selectedCompanions && Array.isArray(project.selectedCompanions)
@@ -1443,7 +1478,7 @@ export function ProjectRegistrationImpl({
           const selectedMcs = project.selectedMcs && Array.isArray(project.selectedMcs)
             ? new Set<string>(project.selectedMcs)
             : new Set<string>(["未定"])
-          
+
           setProductInfos([{
             id: 1,
             category: project.category,
@@ -2472,7 +2507,9 @@ export function ProjectRegistrationImpl({
                               <CommandList>
                                 <CommandEmpty>イベント区分が見つかりませんでした</CommandEmpty>
                                 <CommandGroup>
-                                  {["トリニティガール", "スロセレ"]
+                                  {(productInfo.category === "ポイント"
+                                    ? ["合同抽選会"]
+                                    : ["トリニティガール", "スロセレ"])
                                     .filter((eventType) =>
                                       eventType.toLowerCase().includes((eventTypeSearchQuery[productInfo.id] || "").toLowerCase())
                                     )
@@ -2511,6 +2548,13 @@ export function ProjectRegistrationImpl({
                       {!productInfo.eventType?.trim() ? (
                         <div className="col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
                           まず「イベント区分」を選択してください。選択後に、実施日・時間・キャスティング・請求予定金額などの入力項目が表示されます。
+                        </div>
+                      ) : productInfo.category === "ポイント" ? (
+                        <div className="col-span-2">
+                          <LotteryRegistrationContainer
+                            productId={projectId}
+                            addNotification={addNotification}
+                          />
                         </div>
                       ) : (
                         <>
