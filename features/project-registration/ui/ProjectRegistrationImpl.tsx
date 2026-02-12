@@ -1432,8 +1432,8 @@ export function ProjectRegistrationImpl({
         }
         
         // 商材情報を読み込み
-        // 合同抽選会（category: "Point"）の場合は別処理
-        if (project.category === "Point") {
+        // 合同抽選会（category: "ポイント"）の場合は別処理
+        if (project.category === "ポイント") {
           // 合同抽選会の場合はLotteryRegistrationContainerで処理するため、
           // categoryとeventTypeのみ設定して、フォームを表示できるようにする
           setProductInfos([{

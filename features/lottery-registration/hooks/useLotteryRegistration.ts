@@ -113,7 +113,7 @@ export function useLotteryRegistration({ productId, addNotification }: UseLotter
   useEffect(() => {
     if (!productId) return
     const product = getProductById(productId)
-    if (!product || product.category !== "Point") return
+    if (!product || product.category !== "ポイント") return
 
     // セクション1
     const productHallNames = (product as any).hallNames as string[] | undefined
@@ -665,7 +665,7 @@ export function useLotteryRegistration({ productId, addNotification }: UseLotter
       : quoteCalc.totalAmount
 
     const lotteryData = {
-      category: "Point",
+      category: "ポイント",
       eventType: "合同抽選会",
       eventProductName: eventName,
       eventStartDate: startDate,
