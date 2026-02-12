@@ -51,9 +51,20 @@ function ProjectCorrectionPageContent() {
   const handleBack = () => {
     if (tab === "corrections") {
       router.push("/?tab=corrections")
-    } else {
-      router.push("/")
+      return
     }
+
+    // 商材から案件番号を取得して案件詳細に遷移
+    if (projectId && getProductById) {
+      const product = getProductById(projectId)
+      if (product && product.projectNumber) {
+        router.push(`/project-number/${product.projectNumber}`)
+        return
+      }
+    }
+
+    // フォールバック: 案件一覧に戻る
+    router.push("/")
   }
 
   const handleSave = () => {
@@ -66,11 +77,21 @@ function ProjectCorrectionPageContent() {
     })
 
     addNotification("修正を完了しました")
-    
+
     if (tab === "corrections") {
       router.push("/?tab=corrections")
     } else {
-      router.push("/")
+      // 商材から案件番号を取得して案件詳細に遷移
+      if (projectId && getProductById) {
+        const product = getProductById(projectId)
+        if (product && product.projectNumber) {
+          router.push(`/project-number/${product.projectNumber}`)
+        } else {
+          router.push("/")
+        }
+      } else {
+        router.push("/")
+      }
     }
   }
 
