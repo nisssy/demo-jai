@@ -18,6 +18,17 @@ export const ProjectListContainer = () => {
     holdFailureCount,
     filters,
     setFilters,
+    companyHallSearchOpen,
+    setCompanyHallSearchOpen,
+    companyHallSearchType,
+    companyHallSearchQuery,
+    setCompanyHallSearchQuery,
+    filteredCompanies,
+    filteredHalls,
+    getCompanyByCompanyId,
+    handleSelectHall,
+    handleSelectCompany,
+    handleCompanyHallSearchTypeChange,
     handleCreateNewProject,
     handleClickDetail,
     handleClickProduct,
@@ -36,6 +47,17 @@ export const ProjectListContainer = () => {
       holdFailureCount={holdFailureCount}
       filters={filters}
       onFiltersChange={setFilters}
+      companyHallSearchOpen={companyHallSearchOpen}
+      onCompanyHallSearchOpenChange={setCompanyHallSearchOpen}
+      companyHallSearchType={companyHallSearchType}
+      onCompanyHallSearchTypeChange={handleCompanyHallSearchTypeChange}
+      companyHallSearchQuery={companyHallSearchQuery}
+      onCompanyHallSearchQueryChange={setCompanyHallSearchQuery}
+      filteredCompanies={filteredCompanies}
+      filteredHalls={filteredHalls}
+      getCompanyByCompanyId={getCompanyByCompanyId}
+      onSelectHall={handleSelectHall}
+      onSelectCompany={handleSelectCompany}
       onCreateNewProject={handleCreateNewProject}
       onClickDetail={handleClickDetail}
       onClickProduct={handleClickProduct}

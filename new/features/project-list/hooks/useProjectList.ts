@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from "react"
 import { useAppRouter } from "@/hooks/use-app-router"
 import type { ProjectRepository } from "@/new/api/project-repository"
-import type { Project, Product, BookingStatus, ProposalStatus, ExecutionStatus, DesignRequest } from "@/new/api/types"
+import type { Project, Product, Company, Hall, BookingStatus, ProposalStatus, ExecutionStatus, DesignRequest } from "@/new/api/types"
 import type { ProjectListTab, FilterState } from "@/new/features/project-list/model/types"
 
 /** Viewに渡す案件グループ表示用の型 */
@@ -105,6 +105,52 @@ export function useProjectList({ repository }: UseProjectListArgs) {
   const router = useAppRouter()
   const [activeTab, setActiveTab] = useState<ProjectListTab>("projects")
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS)
+
+  // 法人/ホール検索のUI状態
+  const [companyHallSearchOpen, setCompanyHallSearchOpen] = useState(false)
+  const [companyHallSearchType, setCompanyHallSearchType] = useState<"hall" | "company">("company")
+  const [companyHallSearchQuery, setCompanyHallSearchQuery] = useState("")
+
+  // マスタデータ
+  const allCompanies = useMemo(() => repository.getCompanies(), [repository])
+  const allHalls = useMemo(() => repository.getHalls(), [repository])
+
+  // 法人/ホール検索のフィルタ済みリスト
+  const filteredCompanies = useMemo(() => {
+    if (!companyHallSearchQuery) return allCompanies
+    const q = companyHallSearchQuery.toLowerCase()
+    return allCompanies.filter((c) => c.name.toLowerCase().includes(q))
+  }, [allCompanies, companyHallSearchQuery])
+
+  const filteredHalls = useMemo(() => {
+    if (!companyHallSearchQuery) return allHalls
+    const q = companyHallSearchQuery.toLowerCase()
+    return allHalls.filter((h) => h.name.toLowerCase().includes(q))
+  }, [allHalls, companyHallSearchQuery])
+
+  const getCompanyByCompanyId = useCallback(
+    (companyId: string): Company | undefined => allCompanies.find((c) => c.companyId === companyId),
+    [allCompanies],
+  )
+
+  // 法人/ホール選択ハンドラ
+  const handleSelectHall = useCallback((hallName: string) => {
+    setFilters((prev) => ({ ...prev, hallName, companyId: "" }))
+    setCompanyHallSearchOpen(false)
+    setCompanyHallSearchQuery("")
+  }, [])
+
+  const handleSelectCompany = useCallback((companyId: string) => {
+    setFilters((prev) => ({ ...prev, companyId, hallName: "" }))
+    setCompanyHallSearchOpen(false)
+    setCompanyHallSearchQuery("")
+  }, [])
+
+  const handleCompanyHallSearchTypeChange = useCallback((type: "hall" | "company") => {
+    setCompanyHallSearchType(type)
+    setFilters((prev) => ({ ...prev, hallName: "", companyId: "" }))
+    setCompanyHallSearchQuery("")
+  }, [])
 
   // リポジトリからデータ取得 + ViewModel変換
   const { projectsTabGroups, correctionsTabGroups, holdFailureTabGroups } = useMemo(() => {
@@ -216,6 +262,19 @@ export function useProjectList({ repository }: UseProjectListArgs) {
     holdFailureCount,
     filters,
     setFilters,
+    // 法人/ホール検索
+    companyHallSearchOpen,
+    setCompanyHallSearchOpen,
+    companyHallSearchType,
+    companyHallSearchQuery,
+    setCompanyHallSearchQuery,
+    filteredCompanies,
+    filteredHalls,
+    getCompanyByCompanyId,
+    handleSelectHall,
+    handleSelectCompany,
+    handleCompanyHallSearchTypeChange,
+    // ナビゲーション
     handleCreateNewProject,
     handleClickDetail,
     handleClickProduct,

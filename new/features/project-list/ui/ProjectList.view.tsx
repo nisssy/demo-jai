@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus } from "lucide-react"
 import type { ProjectListTab, FilterState } from "@/new/features/project-list/model/types"
 import type { ProjectGroupViewModel } from "@/new/features/project-list/hooks/useProjectList"
+import type { Company, Hall } from "@/new/api/types"
 import { ProjectCard } from "./components/ProjectCard"
 import { ProductCard } from "./components/ProductCard"
 import { ProductAlertCard } from "./components/ProductAlertCard"
@@ -22,6 +23,18 @@ export type ProjectListViewProps = {
   // フィルタ
   filters: FilterState
   onFiltersChange: (filters: FilterState) => void
+  // 法人/ホール検索
+  companyHallSearchOpen: boolean
+  onCompanyHallSearchOpenChange: (open: boolean) => void
+  companyHallSearchType: "hall" | "company"
+  onCompanyHallSearchTypeChange: (type: "hall" | "company") => void
+  companyHallSearchQuery: string
+  onCompanyHallSearchQueryChange: (query: string) => void
+  filteredCompanies: Company[]
+  filteredHalls: Hall[]
+  getCompanyByCompanyId: (companyId: string) => Company | undefined
+  onSelectHall: (hallName: string) => void
+  onSelectCompany: (companyId: string) => void
   // ナビゲーション
   onCreateNewProject: () => void
   onClickDetail: (projectNumber: string) => void
@@ -40,6 +53,17 @@ export const ProjectListView = ({
   holdFailureCount,
   filters,
   onFiltersChange,
+  companyHallSearchOpen,
+  onCompanyHallSearchOpenChange,
+  companyHallSearchType,
+  onCompanyHallSearchTypeChange,
+  companyHallSearchQuery,
+  onCompanyHallSearchQueryChange,
+  filteredCompanies,
+  filteredHalls,
+  getCompanyByCompanyId,
+  onSelectHall,
+  onSelectCompany,
   onCreateNewProject,
   onClickDetail,
   onClickProduct,
@@ -81,7 +105,21 @@ export const ProjectListView = ({
 
         {/* 案件一覧タブ */}
         <TabsContent value="projects" className="space-y-4">
-          <ProjectListFilters filters={filters} onFiltersChange={onFiltersChange} />
+          <ProjectListFilters
+            filters={filters}
+            onFiltersChange={onFiltersChange}
+            companyHallSearchOpen={companyHallSearchOpen}
+            onCompanyHallSearchOpenChange={onCompanyHallSearchOpenChange}
+            companyHallSearchType={companyHallSearchType}
+            onCompanyHallSearchTypeChange={onCompanyHallSearchTypeChange}
+            companyHallSearchQuery={companyHallSearchQuery}
+            onCompanyHallSearchQueryChange={onCompanyHallSearchQueryChange}
+            filteredCompanies={filteredCompanies}
+            filteredHalls={filteredHalls}
+            getCompanyByCompanyId={getCompanyByCompanyId}
+            onSelectHall={onSelectHall}
+            onSelectCompany={onSelectCompany}
+          />
 
           {projectsTabGroups.length === 0 ? (
             <div className="text-center py-12 text-slate-500">案件がありません</div>
