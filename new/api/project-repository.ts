@@ -13,6 +13,15 @@ export interface ProjectRepository {
 
   // デザイン依頼
   getDesignRequestsByProjectId(projectId: number): DesignRequest[]
+  createDesignRequest(request: Omit<DesignRequest, "id">): DesignRequest
+  addDesignRequestComment(requestId: string, comment: string, role: string, authorName?: string): void
+
+  // 書き込み
+  createProject(project: Omit<Project, "id">): Project
+  createProduct(product: Omit<Product, "id">): Product
+  updateProject(projectNumber: string, updates: Partial<Project>): Project | undefined
+  updateProduct(id: number, updates: Partial<Product>): Product | undefined
+  generateProjectNumber(): string
 
   // マスタ
   getCompanies(): Company[]

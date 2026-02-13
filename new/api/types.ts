@@ -51,6 +51,14 @@ export type Product = {
   companionBookingStatus: Record<string, BookingStatus>
   directorBookingStatus: Record<string, BookingStatus>
   mcBookingStatus: Record<string, BookingStatus>
+  // 時間・表示設定
+  startTime?: string
+  endTime?: string
+  mustSeeFlag?: string
+  mustSeePublication?: string
+  publicationDate?: string
+  publicationTime?: string
+  reportRequired?: string
   // 実施ステータス（全商材共通）
   executionStatus?: ExecutionStatus
   // 修正・コメント
@@ -101,6 +109,14 @@ export type HallQuote = {
 
 // ─── デザイン依頼 ───
 
+export type DesignRequestComment = {
+  id: string
+  text: string
+  role: string
+  authorName?: string
+  createdAt: string
+}
+
 export type DesignRequest = {
   id: string
   requestType: "poster" | "dm" | "winner-list"
@@ -112,6 +128,7 @@ export type DesignRequest = {
   requestedAt: string
   uploadedAt?: string
   uploadedFileName?: string
+  comments?: DesignRequestComment[]
 }
 
 // ─── マスタデータ ───

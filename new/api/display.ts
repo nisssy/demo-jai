@@ -57,3 +57,24 @@ export const DESIGN_REQUEST_STATUS_LABELS: Record<string, string> = {
   "requested": "初稿待ち",
   "uploaded": "アップロード済み",
 }
+
+// ─── カテゴリ・イベント区分マッピング ───
+
+export const EVENT_TYPE_TO_CATEGORY: Record<string, string> = {
+  "トリニティガール": "イベント",
+  "スロセレ": "イベント",
+  "合同抽選会": "ポイント",
+}
+
+export const CATEGORY_TO_EVENT_TYPES: Record<string, string[]> = {
+  "イベント": ["トリニティガール", "スロセレ"],
+  "ポイント": ["合同抽選会"],
+}
+
+export function getCategoryByEventType(eventType: string): string | undefined {
+  return EVENT_TYPE_TO_CATEGORY[eventType]
+}
+
+export function getEventTypesByCategory(category: string): string[] {
+  return CATEGORY_TO_EVENT_TYPES[category] || []
+}
