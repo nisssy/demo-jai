@@ -7,7 +7,7 @@
 import type { Project, Product, DesignRequest, Company, Hall, Employee } from "./types"
 
 /** シードデータのスキーマバージョン。型定義やシードデータを変更したらインクリメントする */
-export const SEED_VERSION = 3
+export const SEED_VERSION = 6
 
 // ─── Projects ───
 
@@ -145,6 +145,52 @@ export const SEED_PRODUCTS: Product[] = [
     mcBookingStatus: {},
     executionStatus: "実施前",
     dmMailing: "yes",
+    hallNames: ["グランドホール渋谷", "パチンコキング新宿店"],
+    eventStartDate: "2026/03/15",
+    eventEndDate: "2026/03/25",
+    salesPersonId: 1,
+    insightPersonId: 2,
+    readingCertainty: "A" as const,
+    prizeInfo: [
+      { rank: "特賞", name: "液晶テレビ 50インチ", quantity: "2", prizeId: "1", vendorId: "1", vendorName: "景品卸売センター" },
+      { rank: "1等", name: "ダイソン掃除機", quantity: "5", prizeId: "2", vendorId: "1", vendorName: "景品卸売センター" },
+      { rank: "2等", name: "任天堂Switch", quantity: "10", prizeId: "3", vendorId: "2", vendorName: "プレミアム景品" },
+      { rank: "3等", name: "商品券 5000円分", quantity: "50", prizeId: "4", vendorId: "3", vendorName: "ギフトプラザ" },
+      { rank: "参加賞", name: "ティッシュBOX", quantity: "500", prizeId: "5", vendorId: "1", vendorName: "景品卸売センター" },
+    ],
+    quoteConfig: {
+      totalQuoteItems: { 1: "50000", 3: "80000", 4: "65000" },
+      posterPrintQuantity: "50",
+      posterPrintUnitPrice: "2000",
+      dmOrderCount: "1000",
+      proportionMode: "hall" as const,
+      hallPercentages: { "グランドホール渋谷": 60, "パチンコキング新宿店": 40 },
+      companyPercentages: {},
+    },
+    hallQuotes: [
+      {
+        hallName: "グランドホール渋谷",
+        quoteItems: [
+          { id: 1, name: "ポスターデザイン", quantity: 1, unitPrice: 25000, included: true },
+          { id: 2, name: "ポスター印刷", quantity: 30, unitPrice: 2000, included: true },
+          { id: 3, name: "DM発送代行", quantity: 1, unitPrice: 50000, included: true },
+          { id: 4, name: "抽選システム利用料", quantity: 1, unitPrice: 40000, included: true },
+        ],
+        percentage: 60,
+        calculatedAmount: 175000,
+      },
+      {
+        hallName: "パチンコキング新宿店",
+        quoteItems: [
+          { id: 1, name: "ポスターデザイン", quantity: 1, unitPrice: 16667, included: true },
+          { id: 2, name: "ポスター印刷", quantity: 20, unitPrice: 2000, included: true },
+          { id: 3, name: "DM発送代行", quantity: 1, unitPrice: 33333, included: true },
+          { id: 4, name: "抽選システム利用料", quantity: 1, unitPrice: 26667, included: true },
+        ],
+        percentage: 40,
+        calculatedAmount: 116667,
+      },
+    ],
     prizeOrderedAt: undefined,
     winnerListUploadedAt: undefined,
     winnerListValidatedAt: undefined,
@@ -256,11 +302,11 @@ export const SEED_COMPANIES: Company[] = [
 // ─── Halls ───
 
 export const SEED_HALLS: Hall[] = [
-  { id: 1, hallId: "HALL-001", name: "パチンコキング新宿店", salesPersonName: "山田 太郎", companyId: 1 },
-  { id: 2, hallId: "HALL-005", name: "グランドホール渋谷", salesPersonName: "山田 太郎", companyId: 2 },
-  { id: 3, hallId: "HALL-010", name: "エスパス日拓高田馬場", salesPersonName: "山田 太郎", companyId: 3 },
-  { id: 4, hallId: "HALL-020", name: "パチンコパーラー池袋", salesPersonName: "山田 太郎", companyId: 4 },
-  { id: 5, hallId: "HALL-030", name: "メガガイア品川", salesPersonName: "山田 太郎", companyId: 5 },
+  { id: 1, hallId: "HALL-001", name: "パチンコキング新宿店", salesPersonName: "山田 太郎", companyId: 1, address: "東京都新宿区01-1-1" },
+  { id: 2, hallId: "HALL-005", name: "グランドホール渋谷", salesPersonName: "山田 太郎", companyId: 2, address: "東京都渋谷区05-1-1" },
+  { id: 3, hallId: "HALL-010", name: "エスパス日拓高田馬場", salesPersonName: "山田 太郎", companyId: 3, address: "東京都豊島区10-1-1" },
+  { id: 4, hallId: "HALL-020", name: "パチンコパーラー池袋", salesPersonName: "山田 太郎", companyId: 4, address: "東京都豊島区20-1-1" },
+  { id: 5, hallId: "HALL-030", name: "メガガイア品川", salesPersonName: "山田 太郎", companyId: 5, address: "東京都港区30-1-1" },
 ]
 
 // ─── Employees ───
@@ -271,6 +317,20 @@ export const SEED_EMPLOYEES: Employee[] = [
   { id: 3, name: "田中 三郎", department: "管理部" },
 ]
 
+// ─── Productions (プロダクション/所属事務所) ───
+
+export type SeedProduction = {
+  id: number
+  name: string
+  address: string
+}
+
+export const SEED_PRODUCTIONS: SeedProduction[] = [
+  { id: 1, name: "プロダクションA", address: "東京都渋谷区1-1-1" },
+  { id: 2, name: "プロダクションB", address: "東京都新宿区2-2-2" },
+  { id: 3, name: "プロダクションC", address: "東京都豊島区3-3-3" },
+]
+
 // ─── Cast Members (Companions) ───
 
 export type SeedCastMember = {
@@ -278,17 +338,18 @@ export type SeedCastMember = {
   name: string
   isExclusive: boolean
   hourlyRate: number
+  productionId?: number
 }
 
 export const SEED_COMPANIONS: SeedCastMember[] = [
-  { id: 1, name: "Rio", isExclusive: true, hourlyRate: 5000 },
-  { id: 2, name: "Ayaka", isExclusive: true, hourlyRate: 5500 },
-  { id: 3, name: "Nanaka", isExclusive: true, hourlyRate: 5200 },
-  { id: 4, name: "山田 花子", isExclusive: false, hourlyRate: 6000 },
-  { id: 5, name: "佐藤 美咲", isExclusive: false, hourlyRate: 5800 },
-  { id: 6, name: "鈴木 さくら", isExclusive: false, hourlyRate: 6200 },
-  { id: 7, name: "高橋 みゆき", isExclusive: false, hourlyRate: 5900 },
-  { id: 8, name: "伊藤 あかり", isExclusive: false, hourlyRate: 6100 },
+  { id: 1, name: "Rio", isExclusive: true, hourlyRate: 5000, productionId: 1 },
+  { id: 2, name: "Ayaka", isExclusive: true, hourlyRate: 5500, productionId: 1 },
+  { id: 3, name: "Nanaka", isExclusive: true, hourlyRate: 5200, productionId: 2 },
+  { id: 4, name: "山田 花子", isExclusive: false, hourlyRate: 6000, productionId: 3 },
+  { id: 5, name: "佐藤 美咲", isExclusive: false, hourlyRate: 5800, productionId: 3 },
+  { id: 6, name: "鈴木 さくら", isExclusive: false, hourlyRate: 6200, productionId: 3 },
+  { id: 7, name: "高橋 みゆき", isExclusive: false, hourlyRate: 5900, productionId: 2 },
+  { id: 8, name: "伊藤 あかり", isExclusive: false, hourlyRate: 6100, productionId: 1 },
 ]
 
 // ─── Cast Members (Directors) ───

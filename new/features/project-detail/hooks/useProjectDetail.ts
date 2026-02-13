@@ -62,6 +62,11 @@ export function useProjectDetail({ repository, projectNumber }: UseProjectDetail
     router.push(`/new/project-registration?mode=product-edit&productId=${productId}`)
   }, [router])
 
+  // 見積作成
+  const handleCreateQuote = useCallback(() => {
+    router.push(`/new/project-number/${projectNumber}/quote`)
+  }, [router, projectNumber])
+
   // 戻る
   const handleBack = useCallback(() => {
     router.push("/new?role=Sales")
@@ -73,6 +78,7 @@ export function useProjectDetail({ repository, projectNumber }: UseProjectDetail
     onUpdateProjectInfo: handleEditProjectInfo,
     onAddProduct: handleAddProduct,
     onEditProduct: handleEditProduct,
+    onCreateQuote: handleCreateQuote,
     onBack: handleBack,
   }
 }

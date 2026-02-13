@@ -7,15 +7,17 @@ import {
   getAverageCompanionRate,
   getAverageDirectorRate,
   getEventBaseFee,
+  computeTransportFee,
 } from "@/new/api/cast-data"
 import type { ProductFormState } from "@/new/features/project-registration/model/types"
 
 type BillingSectionProps = {
   product: ProductFormState
+  hallAddress: string
   onFieldChange: (field: keyof ProductFormState, value: string) => void
 }
 
-export const BillingSection = ({ product, onFieldChange }: BillingSectionProps) => {
+export const BillingSection = ({ product, hallAddress, onFieldChange }: BillingSectionProps) => {
   const durationHours = getDurationInHours(product.startTime, product.endTime)
 
   // ─── コンパニオンコスト ───
@@ -49,11 +51,13 @@ export const BillingSection = ({ product, onFieldChange }: BillingSectionProps) 
   const accommodationPerPerson = parseInt(product.accommodationFeePerPerson, 10) || 0
   const totalAccommodation = Math.round(accommodationPerPerson * totalCastCount)
 
+  const transportFee = computeTransportFee(product.selectedCompanions, hallAddress)
+
   const eventBaseFee = getEventBaseFee(product.eventType)
   const eventDiscount = parseInt(product.eventBaseFeeDiscount, 10) || 0
   const eventFeeAfterDiscount = Math.round(Math.max(0, eventBaseFee - eventDiscount))
 
-  const totalBilling = performanceAfterDiscount + totalAccommodation + eventFeeAfterDiscount
+  const totalBilling = performanceAfterDiscount + transportFee + totalAccommodation + eventFeeAfterDiscount
 
   return (
     <div className="space-y-4 pt-2">
@@ -142,8 +146,12 @@ export const BillingSection = ({ product, onFieldChange }: BillingSectionProps) 
         <div className="flex items-center justify-between">
           <Label className="text-base font-semibold text-slate-900">交通費（合計）</Label>
           <div className="text-right">
-            <div className="text-xl font-bold text-slate-900">¥0</div>
-            <div className="text-xs text-slate-500 mt-1">（自動計算は今後対応）</div>
+            <div className="text-xl font-bold text-slate-900">¥{transportFee.toLocaleString()}</div>
+            {companionSelectedNames.length > 0 && (
+              <div className="text-xs text-slate-500 mt-1">
+                （所属→ホール間の距離で自動計算 × {companionSelectedNames.length}名）
+              </div>
+            )}
           </div>
         </div>
       </div>

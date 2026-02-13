@@ -48,6 +48,8 @@ export type ProjectRegistrationViewProps = {
   handleRemoveProduct: (index: number) => void
   handleToggleProductOpen: (index: number) => void
   calculateDuration: (startTime: string, endTime: string) => string
+  // 請求予定金額
+  hallAddress: string
   // キャスティング
   handleCastCountChange: (index: number, role: "companion" | "director", count: string) => void
   handleToggleCast: (index: number, role: "companion" | "director", name: string) => void
@@ -88,6 +90,7 @@ export const ProjectRegistrationView = ({
   handleRemoveProduct,
   handleToggleProductOpen,
   calculateDuration,
+  hallAddress,
   handleCastCountChange,
   handleToggleCast,
   handleToggleNomination,
@@ -166,6 +169,7 @@ export const ProjectRegistrationView = ({
           onCategoryChange={(category) => handleCategoryChange(index, category)}
           onFieldChange={(field, value) => updateProduct(index, field, value)}
           calculateDuration={calculateDuration}
+          hallAddress={hallAddress}
           onCastCountChange={(role, count) => handleCastCountChange(index, role, count)}
           onToggleCast={(role, name) => handleToggleCast(index, role, name)}
           onToggleNomination={(role, name) => handleToggleNomination(index, role, name)}

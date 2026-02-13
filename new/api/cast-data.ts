@@ -1,6 +1,7 @@
 import {
   SEED_COMPANIONS,
   SEED_DIRECTORS,
+  SEED_PRODUCTIONS,
   SEED_EVENT_BASE_FEES,
 } from "./seed-data"
 import type { SeedCastMember } from "./seed-data"
@@ -57,4 +58,52 @@ export function getAverageDirectorRate(): number {
 
 export function getEventBaseFee(eventType: string): number {
   return SEED_EVENT_BASE_FEES[eventType] ?? 0
+}
+
+// ─── 交通費自動計算 ───
+
+const ZONES = [
+  "千代田区", "渋谷区", "新宿区", "豊島区", "台東区", "墨田区", "港区",
+  "横浜", "川崎", "大宮", "千葉", "船橋", "柏",
+  "立川", "八王子", "町田", "相模原", "厚木", "藤沢", "鎌倉",
+]
+
+const TOKYO_ZONES = [
+  "千代田区", "渋谷区", "新宿区", "豊島区", "台東区", "墨田区", "港区",
+  "立川", "八王子", "町田",
+]
+
+function pickZone(addr: string): string {
+  return ZONES.find((z) => addr.includes(z)) ?? "その他"
+}
+
+function isTokyo(zone: string): boolean {
+  return TOKYO_ZONES.some((t) => zone.includes(t))
+}
+
+/** 所属住所→ホール住所のゾーン距離に基づく交通費（1人分） */
+export function estimateTravelFee(fromAddr: string, toAddr: string): number {
+  const a = pickZone(fromAddr)
+  const b = pickZone(toAddr)
+  if (a === b) return 2000
+  if (isTokyo(a) && isTokyo(b)) return 4000
+  if (!isTokyo(a) && !isTokyo(b)) return 6000
+  return 8000
+}
+
+const productionById = new Map(SEED_PRODUCTIONS.map((p) => [p.id, p]))
+const companionByName = new Map(SEED_COMPANIONS.map((c) => [c.name, c]))
+
+/** 選択済みコンパニオンの交通費合計を算出 */
+export function computeTransportFee(selectedCompanions: string[], hallAddress: string): number {
+  let total = 0
+  for (const name of selectedCompanions) {
+    if (!name || name === "未定") continue
+    const companion = companionByName.get(name)
+    if (!companion?.productionId) continue
+    const production = productionById.get(companion.productionId)
+    const fromAddr = production?.address || "東京都"
+    total += estimateTravelFee(fromAddr, hallAddress)
+  }
+  return Math.round(total)
 }

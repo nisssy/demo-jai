@@ -519,6 +519,9 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
     if (product.prizeInfo?.length) setPrizeInfo(product.prizeInfo)
 
     // 見積
+    if (product.quoteConfig) {
+      setQuoteConfig(product.quoteConfig)
+    }
     if (product.hallQuotes?.length) {
       setHallQuotes(product.hallQuotes)
       setQuoteGenerated(true)

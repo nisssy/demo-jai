@@ -28,6 +28,8 @@ type ProductSectionProps = {
   // フィールド更新
   onFieldChange: (field: keyof ProductFormState, value: string) => void
   calculateDuration: (startTime: string, endTime: string) => string
+  // 請求予定金額
+  hallAddress: string
   // キャスティング
   onCastCountChange: (role: "companion" | "director", count: string) => void
   onToggleCast: (role: "companion" | "director", name: string) => void
@@ -50,6 +52,7 @@ export const ProductSection = ({
   onCategoryChange,
   onFieldChange,
   calculateDuration,
+  hallAddress,
   onCastCountChange,
   onToggleCast,
   onToggleNomination,
@@ -119,6 +122,7 @@ export const ProductSection = ({
                 <TabsContent value="billing" className="mt-4">
                   <BillingSection
                     product={product}
+                    hallAddress={hallAddress}
                     onFieldChange={onFieldChange}
                   />
                 </TabsContent>

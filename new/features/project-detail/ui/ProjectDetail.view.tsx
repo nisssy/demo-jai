@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ChevronLeft, Plus } from "lucide-react"
+import { ChevronLeft, Plus, FileText } from "lucide-react"
 import type { ProjectInfo, ProductSummary } from "@/new/features/project-detail/model/types"
 import { ProjectInfoCard } from "./components/ProjectInfoCard"
 import { ProductSummaryCard } from "./components/ProductSummaryCard"
@@ -12,6 +12,7 @@ export type ProjectDetailViewProps = {
   onUpdateProjectInfo: () => void
   onAddProduct: () => void
   onEditProduct: (productId: number) => void
+  onCreateQuote: () => void
   onBack: () => void
 }
 
@@ -21,6 +22,7 @@ export const ProjectDetailView = ({
   onUpdateProjectInfo,
   onAddProduct,
   onEditProduct,
+  onCreateQuote,
   onBack,
 }: ProjectDetailViewProps) => {
   if (!projectInfo) {
@@ -54,6 +56,24 @@ export const ProjectDetailView = ({
 
       {/* 案件情報カード */}
       <ProjectInfoCard projectInfo={projectInfo} onEdit={onUpdateProjectInfo} />
+
+      {/* 見積作成ボタン */}
+      {products.length > 0 && (
+        <Card className="border-blue-200 bg-blue-50/30">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-900">見積書</p>
+                <p className="text-xs text-slate-500">商材を選択して見積書を作成・送付します</p>
+              </div>
+              <Button onClick={onCreateQuote} variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-50">
+                <FileText className="h-4 w-4 mr-2" />
+                見積作成
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 商材一覧カード */}
       <Card>

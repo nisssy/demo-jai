@@ -76,6 +76,7 @@ export type Product = {
   posterCount?: number
   prizeInfo?: PrizeInfo[]
   hallQuotes?: HallQuote[]
+  quoteConfig?: QuoteConfig
   prizeOrderedAt?: string
   winnerListUploadedAt?: string
   winnerListValidatedAt?: string
@@ -105,6 +106,17 @@ export type HallQuote = {
   quoteItems: QuoteItem[]
   percentage?: number
   calculatedAmount?: number
+}
+
+/** 見積設定（割合・項目金額の入力値） */
+export type QuoteConfig = {
+  totalQuoteItems: Record<number, string>
+  posterPrintQuantity: string
+  posterPrintUnitPrice: string
+  dmOrderCount: string
+  proportionMode: "hall" | "company"
+  hallPercentages: Record<string, number>
+  companyPercentages: Record<string, number>
 }
 
 // ─── デザイン依頼 ───

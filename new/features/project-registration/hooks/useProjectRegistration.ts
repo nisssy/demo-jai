@@ -454,6 +454,7 @@ export function useProjectRegistration({ repository, mode, productId, correction
         executionStatus: lotteryData.executionStatus ?? undefined,
         prizeInfo: lotteryData.prizeInfo,
         hallQuotes: lotteryData.hallQuotes,
+        quoteConfig: lotteryData.quoteConfig,
       }
     }
 
@@ -654,6 +655,8 @@ export function useProjectRegistration({ repository, mode, productId, correction
     handleRemoveProduct,
     handleToggleProductOpen,
     calculateDuration,
+    // 請求予定金額
+    hallAddress: allHalls.find((h) => h.hallId === form.hallId)?.address ?? "",
     // キャスティング
     handleCastCountChange,
     handleToggleCast,
