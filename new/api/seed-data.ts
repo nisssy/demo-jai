@@ -4,10 +4,10 @@
  * ローカル開発・デモ用の初期データを一元管理する。
  * バージョンを変更するとクライアントの localStorage がリセットされる。
  */
-import type { Project, Product, DesignRequest, Company, Hall, Employee } from "./types"
+import type { Project, Product, DesignRequest, Company, Hall, Employee, CastSchedule } from "./types"
 
 /** シードデータのスキーマバージョン。型定義やシードデータを変更したらインクリメントする */
-export const SEED_VERSION = 6
+export const SEED_VERSION = 7
 
 // ─── Projects ───
 
@@ -371,3 +371,62 @@ export const SEED_EVENT_BASE_FEES: Record<string, number> = {
   "トリニティガール": 100000,
   "スロセレ": 70000,
 }
+
+// ─── Cast Schedules（キャスト予定データ） ───
+
+export const SEED_CAST_SCHEDULES: CastSchedule[] = [
+  // コンパニオン
+  {
+    castName: "Rio",
+    role: "companion",
+    items: [
+      { dayOfWeek: 1, startTime: "10:00", endTime: "13:00", holdType: "tentative", nominated: true },
+      { dayOfWeek: 3, startTime: "14:00", endTime: "17:00", holdType: "confirmed", nominated: false },
+      { dayOfWeek: 5, startTime: "15:00", endTime: "18:00", holdType: "confirmed", nominated: true },
+    ],
+  },
+  {
+    castName: "Ayaka",
+    role: "companion",
+    items: [
+      { dayOfWeek: 2, startTime: "11:00", endTime: "14:00", holdType: "tentative", nominated: false },
+      { dayOfWeek: 4, startTime: "13:00", endTime: "16:00", holdType: "confirmed", nominated: true },
+      { dayOfWeek: 6, startTime: "10:00", endTime: "13:00", holdType: "confirmed", nominated: false },
+    ],
+  },
+  {
+    castName: "Nanaka",
+    role: "companion",
+    items: [
+      { dayOfWeek: 1, startTime: "9:00", endTime: "12:00", holdType: "confirmed", nominated: false },
+      { dayOfWeek: 3, startTime: "13:00", endTime: "17:00", holdType: "tentative", nominated: true },
+      { dayOfWeek: 5, startTime: "14:00", endTime: "18:00", holdType: "confirmed", nominated: true },
+    ],
+  },
+  // ディレクター
+  {
+    castName: "Takeshi",
+    role: "director",
+    items: [
+      { dayOfWeek: 1, startTime: "9:00", endTime: "12:00", holdType: "confirmed", nominated: false },
+      { dayOfWeek: 2, startTime: "14:00", endTime: "17:00", holdType: "confirmed", nominated: true },
+      { dayOfWeek: 3, startTime: "10:00", endTime: "13:00", holdType: "tentative", nominated: false },
+    ],
+  },
+  {
+    castName: "Kenji",
+    role: "director",
+    items: [
+      { dayOfWeek: 4, startTime: "13:00", endTime: "16:00", holdType: "tentative", nominated: true },
+      { dayOfWeek: 6, startTime: "11:00", endTime: "14:00", holdType: "confirmed", nominated: true },
+    ],
+  },
+  {
+    castName: "Hiroshi",
+    role: "director",
+    items: [
+      { dayOfWeek: 2, startTime: "13:00", endTime: "16:00", holdType: "confirmed", nominated: false },
+      { dayOfWeek: 5, startTime: "14:00", endTime: "17:00", holdType: "tentative", nominated: false },
+    ],
+  },
+]

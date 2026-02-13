@@ -1,5 +1,5 @@
 import type { ProjectRepository } from "../project-repository"
-import type { Project, Product, DesignRequest, Company, Hall, Employee } from "../types"
+import type { Project, Product, DesignRequest, Company, Hall, Employee, CastSchedule } from "../types"
 import {
   SEED_VERSION,
   SEED_PROJECTS,
@@ -8,6 +8,7 @@ import {
   SEED_COMPANIES,
   SEED_HALLS,
   SEED_EMPLOYEES,
+  SEED_CAST_SCHEDULES,
 } from "../seed-data"
 
 const STORAGE_KEYS = {
@@ -137,6 +138,10 @@ export class LocalStorageProjectRepository implements ProjectRepository {
 
   getEmployees(): Employee[] {
     return getFromStorage<Employee>(STORAGE_KEYS.employees, SEED_EMPLOYEES)
+  }
+
+  getCastSchedules(): CastSchedule[] {
+    return SEED_CAST_SCHEDULES
   }
 
   // ─── 書き込み ───

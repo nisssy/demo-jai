@@ -165,3 +165,25 @@ export type Employee = {
   name: string
   department?: string
 }
+
+// ─── キャストスケジュール ───
+
+/** キャストの予定1件（曜日ベース） */
+export type CastScheduleItem = {
+  /** 0=日曜, 1=月曜, ..., 6=土曜 */
+  dayOfWeek: number
+  startTime: string
+  endTime: string
+  holdType: "confirmed" | "tentative"
+  nominated: boolean
+}
+
+/** キャスト種別 */
+export type CastRole = "companion" | "director"
+
+/** キャスト別スケジュールマスタ */
+export type CastSchedule = {
+  castName: string
+  role: CastRole
+  items: CastScheduleItem[]
+}

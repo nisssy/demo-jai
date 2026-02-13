@@ -1,4 +1,4 @@
-import type { Project, Product, DesignRequest, Company, Hall, Employee } from "./types"
+import type { Project, Product, DesignRequest, Company, Hall, Employee, CastSchedule } from "./types"
 
 /** 案件リポジトリのインターフェース */
 export interface ProjectRepository {
@@ -27,4 +27,5 @@ export interface ProjectRepository {
   getCompanies(): Company[]
   getHalls(): Hall[]
   getEmployees(): Employee[]
+  getCastSchedules(): CastSchedule[]
 }

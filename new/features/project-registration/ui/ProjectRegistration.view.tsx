@@ -4,9 +4,11 @@ import { ChevronLeft } from "lucide-react"
 import type { Company, Hall } from "@/new/api/types"
 import type { RegistrationMode, ProjectFormState, ProductFormState, FormErrors } from "@/new/features/project-registration/model/types"
 import type { UseLotteryFormReturn } from "@/new/features/project-registration/hooks/useLotteryForm"
+import type { UseCastCalendarReturn } from "@/new/features/project-registration/hooks/useCastCalendar"
 import { BasicInfoSection } from "./components/BasicInfoSection"
 import { ProductSection } from "./components/ProductSection"
 import { ActionButtons } from "./components/ActionButtons"
+import { CastCalendarModal } from "./components/CastCalendarModal"
 
 const MODE_TITLES: Record<RegistrationMode, string> = {
   new: "新規案件作成",
@@ -59,6 +61,8 @@ export type ProjectRegistrationViewProps = {
   handleBack: () => void
   // 合同抽選会
   lotteryForm: UseLotteryFormReturn
+  // キャストカレンダー
+  castCalendar: UseCastCalendarReturn
 }
 
 export const ProjectRegistrationView = ({
@@ -97,6 +101,7 @@ export const ProjectRegistrationView = ({
   handleSubmit,
   handleBack,
   lotteryForm,
+  castCalendar,
 }: ProjectRegistrationViewProps) => {
   const isProductMode = mode === "product-add" || mode === "product-edit"
 
@@ -173,6 +178,8 @@ export const ProjectRegistrationView = ({
           onCastCountChange={(role, count) => handleCastCountChange(index, role, count)}
           onToggleCast={(role, name) => handleToggleCast(index, role, name)}
           onToggleNomination={(role, name) => handleToggleNomination(index, role, name)}
+          checkAvailability={castCalendar.checkAvailability}
+          onOpenCalendar={(name, status, type) => castCalendar.openModal(name, status, type)}
           lotteryForm={product.category === "ポイント" ? lotteryForm : undefined}
         />
       ))}
@@ -183,6 +190,20 @@ export const ProjectRegistrationView = ({
         productCount={form.products.length}
         onAddProduct={handleAddProduct}
         onSubmit={handleSubmit}
+      />
+
+      {/* キャストカレンダーモーダル */}
+      <CastCalendarModal
+        isOpen={castCalendar.modal.isOpen}
+        personName={castCalendar.modal.personName}
+        personStatus={castCalendar.modal.personStatus}
+        weekDays={castCalendar.weekDays}
+        timeSlots={castCalendar.timeSlots}
+        weekRangeText={castCalendar.weekRangeText}
+        getCellInfo={castCalendar.getCellInfo}
+        onClose={castCalendar.closeModal}
+        onPreviousWeek={castCalendar.goToPreviousWeek}
+        onNextWeek={castCalendar.goToNextWeek}
       />
     </div>
   )

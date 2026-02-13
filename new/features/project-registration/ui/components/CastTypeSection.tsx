@@ -1,6 +1,7 @@
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import type { CastMember } from "@/new/api/cast-data"
+import type { AvailabilityStatus } from "@/new/features/project-registration/hooks/useCastCalendar"
 import { CastMemberCard } from "./CastMemberCard"
 
 type CastTypeSectionProps = {
@@ -11,9 +12,11 @@ type CastTypeSectionProps = {
   selectedNames: string[]
   nominations: Record<string, boolean>
   durationHours: number
+  checkAvailability?: (name: string) => AvailabilityStatus
   onCountChange: (count: string) => void
   onToggle: (name: string) => void
   onToggleNomination: (name: string) => void
+  onOpenCalendar?: (name: string, status: AvailabilityStatus) => void
 }
 
 export const CastTypeSection = ({
@@ -24,9 +27,11 @@ export const CastTypeSection = ({
   selectedNames,
   nominations,
   durationHours,
+  checkAvailability,
   onCountChange,
   onToggle,
   onToggleNomination,
+  onOpenCalendar,
 }: CastTypeSectionProps) => {
   const numCount = parseInt(count, 10) || 0
   const exclusiveMembers = castMembers.filter((m) => m.isExclusive)
@@ -75,6 +80,7 @@ export const CastTypeSection = ({
             <div className="grid grid-cols-3 gap-3">
               {exclusiveMembers.map((member) => {
                 const isSelected = selectedNames.includes(member.name)
+                const availability = checkAvailability?.(member.name)
                 return (
                   <CastMemberCard
                     key={member.name}
@@ -85,8 +91,10 @@ export const CastTypeSection = ({
                     showNomination={isSelected}
                     hourlyRate={member.hourlyRate}
                     durationHours={durationHours}
+                    availability={availability}
                     onToggle={() => onToggle(member.name)}
                     onToggleNomination={() => onToggleNomination(member.name)}
+                    onOpenCalendar={onOpenCalendar ? () => onOpenCalendar(member.name, availability ?? "available") : undefined}
                   />
                 )
               })}
@@ -99,6 +107,7 @@ export const CastTypeSection = ({
             <div className="grid grid-cols-3 gap-3">
               {externalMembers.map((member) => {
                 const isSelected = selectedNames.includes(member.name)
+                const availability = checkAvailability?.(member.name)
                 return (
                   <CastMemberCard
                     key={member.name}
@@ -109,8 +118,10 @@ export const CastTypeSection = ({
                     showNomination={isSelected}
                     hourlyRate={member.hourlyRate}
                     durationHours={durationHours}
+                    availability={availability}
                     onToggle={() => onToggle(member.name)}
                     onToggleNomination={() => onToggleNomination(member.name)}
+                    onOpenCalendar={onOpenCalendar ? () => onOpenCalendar(member.name, availability ?? "available") : undefined}
                   />
                 )
               })}

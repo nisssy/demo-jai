@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChevronDown, Trash2 } from "lucide-react"
 import type { ProductFormState, FormErrors } from "@/new/features/project-registration/model/types"
 import type { UseLotteryFormReturn } from "@/new/features/project-registration/hooks/useLotteryForm"
+import type { AvailabilityStatus } from "@/new/features/project-registration/hooks/useCastCalendar"
 import { ProductBasicFields } from "./ProductBasicFields"
 import { CastingSection } from "./CastingSection"
 import { BillingSection } from "./BillingSection"
@@ -34,6 +35,8 @@ type ProductSectionProps = {
   onCastCountChange: (role: "companion" | "director", count: string) => void
   onToggleCast: (role: "companion" | "director", name: string) => void
   onToggleNomination: (role: "companion" | "director", name: string) => void
+  checkAvailability?: (name: string, role: "companion" | "director") => AvailabilityStatus
+  onOpenCalendar?: (name: string, status: AvailabilityStatus, type: "companion" | "director") => void
   // 合同抽選会
   lotteryForm?: UseLotteryFormReturn
 }
@@ -56,6 +59,8 @@ export const ProductSection = ({
   onCastCountChange,
   onToggleCast,
   onToggleNomination,
+  checkAvailability,
+  onOpenCalendar,
   lotteryForm,
 }: ProductSectionProps) => {
   const isLottery = product.category === "ポイント" && !!product.eventType.trim()
@@ -114,9 +119,11 @@ export const ProductSection = ({
                 <TabsContent value="casting" className="mt-4">
                   <CastingSection
                     product={product}
+                    checkAvailability={checkAvailability}
                     onCastCountChange={onCastCountChange}
                     onToggleCast={onToggleCast}
                     onToggleNomination={onToggleNomination}
+                    onOpenCalendar={onOpenCalendar}
                   />
                 </TabsContent>
                 <TabsContent value="billing" className="mt-4">

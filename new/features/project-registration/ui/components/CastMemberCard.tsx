@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { CheckCircle2 } from "lucide-react"
+import { CheckCircle2, Calendar } from "lucide-react"
+import type { AvailabilityStatus } from "@/new/features/project-registration/hooks/useCastCalendar"
 
 type CastMemberCardProps = {
   name: string
@@ -10,8 +11,42 @@ type CastMemberCardProps = {
   showNomination: boolean
   hourlyRate: number
   durationHours: number
+  availability?: AvailabilityStatus
   onToggle: () => void
   onToggleNomination: () => void
+  onOpenCalendar?: () => void
+}
+
+function AvailabilityBadge({ availability, isExclusive }: { availability: AvailabilityStatus; isExclusive: boolean }) {
+  if (availability === "busy") {
+    return (
+      <Badge variant="destructive" className="mt-2">
+        埋まり
+      </Badge>
+    )
+  }
+  if (availability === "tentative") {
+    return (
+      <Badge className="mt-2 bg-yellow-100 text-yellow-900 border border-yellow-200">
+        仮押さえあり
+      </Badge>
+    )
+  }
+  // available
+  if (isExclusive) {
+    return (
+      <Badge className="mt-2">
+        <CheckCircle2 className="h-3 w-3 mr-1" />
+        空き（手配可）
+      </Badge>
+    )
+  }
+  return (
+    <div className="mt-2 flex items-center gap-2">
+      <Badge variant="outline">外部</Badge>
+      <Badge>空き</Badge>
+    </div>
+  )
 }
 
 export const CastMemberCard = ({
@@ -22,11 +57,14 @@ export const CastMemberCard = ({
   showNomination,
   hourlyRate,
   durationHours,
+  availability,
   onToggle,
   onToggleNomination,
+  onOpenCalendar,
 }: CastMemberCardProps) => {
   const estimatedFee = hourlyRate * durationHours
   const isUndecided = name === "未定"
+  const status = availability ?? "available"
 
   return (
     <div
@@ -52,17 +90,7 @@ export const CastMemberCard = ({
           </Badge>
         ) : (
           <>
-            {isExclusive ? (
-              <Badge className="mt-2">
-                <CheckCircle2 className="h-3 w-3 mr-1" />
-                空き（手配可）
-              </Badge>
-            ) : (
-              <div className="mt-2 flex items-center gap-2">
-                <Badge variant="outline">外部</Badge>
-                <Badge>空き</Badge>
-              </div>
-            )}
+            <AvailabilityBadge availability={status} isExclusive={isExclusive} />
 
             <div className="mt-2 text-sm text-slate-900">
               <span className="text-slate-600">予想金額: </span>
@@ -77,6 +105,19 @@ export const CastMemberCard = ({
                 <Checkbox checked={isNominated} onCheckedChange={onToggleNomination} />
                 <span className="text-xs text-slate-700">指名</span>
               </div>
+            )}
+
+            {onOpenCalendar && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onOpenCalendar()
+                }}
+                className="mt-2 text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+              >
+                <Calendar className="h-3 w-3" />
+                カレンダーで詳細を確認
+              </button>
             )}
           </>
         )}
