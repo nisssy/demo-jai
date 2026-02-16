@@ -7,7 +7,7 @@
 import type { Project, Product, DesignRequest, Company, Hall, Employee, CastSchedule, MachineMaster } from "./types"
 
 /** シードデータのスキーマバージョン。型定義やシードデータを変更したらインクリメントする */
-export const SEED_VERSION = 15
+export const SEED_VERSION = 16
 
 // ─── Projects ───
 
@@ -472,6 +472,38 @@ export const SEED_PRODUCTS: Product[] = [
     pachitownMachineNames: ["P北斗の拳10", "Pバジリスク絆2天膳"],
     pachitownLinked: false,
     bannerGenerated: false,
+  },
+  // Product 8: スロセレ（受注・実施前 - 各種手配タブ用）
+  {
+    id: 8,
+    projectId: 5,
+    projectNumber: "PJ-005",
+    category: "イベント",
+    eventType: "スロセレ",
+    eventProductName: "スロセレ 4月特別開催",
+    eventDate: "2026/04/20",
+    estimatedBillingAmount: 380000,
+    proposalStatus: "order-received",
+    managementConfirmationStatus: "approved",
+    executionStatus: "実施前",
+    companionCount: "0",
+    directorCount: "1",
+    mcCount: "1",
+    selectedCompanions: [],
+    selectedDirectors: ["Kenji"],
+    selectedMcs: ["山田太郎MC"],
+    companionBookingStatus: {},
+    directorBookingStatus: { "Kenji": "confirmed_completed" },
+    mcBookingStatus: { "山田太郎MC": "confirmed_completed" },
+    startTime: "12:00",
+    endTime: "18:00",
+    reportRequired: "要",
+    targetMachineFormSent: false,
+    statusHistory: [
+      { status: "受注", timestamp: "2026-03-01T09:00:00Z", changedBy: "佐藤 次郎" },
+      { status: "キャスト手配完了", timestamp: "2026-03-10T10:00:00Z", changedBy: "マネジメント部" },
+    ],
+    targetMachineNames: ["ジャグラー", "マイジャグラーV", "ハナハナ"],
   },
 ]
 

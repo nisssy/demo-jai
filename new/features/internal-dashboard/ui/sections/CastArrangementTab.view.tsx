@@ -64,6 +64,7 @@ function ProductionGroupList({
                         <TableHead>商材名</TableHead>
                         <TableHead>案件No</TableHead>
                         <TableHead>実施日</TableHead>
+                        <TableHead>イベント区分</TableHead>
                         <TableHead>押さえ状態</TableHead>
                         <TableHead>操作</TableHead>
                       </TableRow>
@@ -74,6 +75,7 @@ function ProductionGroupList({
                           <TableCell className="font-medium">{entry.product.eventProductName}</TableCell>
                           <TableCell>{entry.product.projectNumber}</TableCell>
                           <TableCell>{entry.product.eventDate || "未定"}</TableCell>
+                          <TableCell>{entry.product.eventType}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className={getStatusBadgeClass(entry.bookingStatus)}>
                               {BOOKING_STATUS_LABELS[entry.bookingStatus]}
@@ -192,6 +194,7 @@ export function CastArrangementTabView({
                   <TableHead>案件名</TableHead>
                   <TableHead>案件No</TableHead>
                   <TableHead>実施日</TableHead>
+                  <TableHead>イベント区分</TableHead>
                   <TableHead>手配依頼</TableHead>
                 </TableRow>
               </TableHeader>
@@ -202,6 +205,7 @@ export function CastArrangementTabView({
                     <TableCell>{req.projectName}</TableCell>
                     <TableCell>{req.product.projectNumber}</TableCell>
                     <TableCell>{req.product.eventDate || "未定"}</TableCell>
+                    <TableCell>{req.product.eventType}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-2">
                         {req.companionCount > 0 && (

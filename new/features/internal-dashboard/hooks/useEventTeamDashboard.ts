@@ -45,6 +45,7 @@ function productToFormState(product: Product): ProductFormState {
 
 export type EventTeamTab = "cast-arrangement" | "arrangement" | "post-event" | "product-confirmation"
 export type CastSubTab = "tentative" | "confirmed"
+export type ArrangementSubTab = "trinity-girl" | "slosele"
 
 /** 仮押さえ中（依頼中 or 不可） */
 function isTentativeArranging(status: BookingStatus): boolean {
@@ -156,6 +157,7 @@ export type CostExportStatuses = {
 export function useEventTeamDashboard({ repository }: { repository: ProjectRepository }) {
   const [activeTab, setActiveTab] = useState<EventTeamTab>("cast-arrangement")
   const [castSubTab, setCastSubTab] = useState<CastSubTab>("tentative")
+  const [arrangementSubTab, setArrangementSubTab] = useState<ArrangementSubTab>("trinity-girl")
 
   // ─── リフレッシュ（repository更新後にデータ再取得を強制する） ───
   const [refreshKey, setRefreshKey] = useState(0)
@@ -321,6 +323,14 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
       p.executionStatus === "実施前"
     )
   , [allProducts])
+
+  const trinityGirlArrangementProducts = useMemo(() =>
+    arrangementProducts.filter(p => p.eventType === "トリニティガール")
+  , [arrangementProducts])
+
+  const sloseleArrangementProducts = useMemo(() =>
+    arrangementProducts.filter(p => p.eventType === "スロセレ")
+  , [arrangementProducts])
 
   // ═══════════════════════════════════════════════════
   // タブ3: イベント終了処理
@@ -630,6 +640,24 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
     setTimeout(() => setAutoArrangementToast(null), 3000)
   }, [selectedProduct, arrangementChecks, repository, refresh])
 
+  /** スロセレ: 対象機種入力フォームを顧客に送信 */
+  const sendTargetMachineForm = useCallback((product: Product) => {
+    const now = new Date().toISOString()
+    repository.updateProduct(product.id, {
+      targetMachineFormSent: true,
+      targetMachineFormSentDate: now.split("T")[0],
+      statusHistory: [...(product.statusHistory ?? []), {
+        status: "対象機種入力フォーム送信",
+        timestamp: now,
+        changedBy: "マネジメント部",
+        note: "顧客へ対象機種入力フォームを送信",
+      }],
+    })
+    setAutoArrangementToast("対象機種入力フォームを送信しました")
+    refresh()
+    setTimeout(() => setAutoArrangementToast(null), 3000)
+  }, [repository, refresh])
+
   // ═══════════════════════════════════════════════════
   // ハンドラ: イベント終了処理
   // ═══════════════════════════════════════════════════
@@ -835,9 +863,12 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
     holdFailureProduct, holdFailureClientName,
     // 各種手配
     arrangementProducts,
+    trinityGirlArrangementProducts, sloseleArrangementProducts,
+    arrangementSubTab, setArrangementSubTab,
     showAutoArrangementModal, setShowAutoArrangementModal, openAutoArrangement,
     arrangementChecks, setArrangementChecks, executeAutoArrangement,
     autoArrangementToast,
+    sendTargetMachineForm,
     // 衣装手配
     showCostumeModal, setShowCostumeModal, openCostumeArrangement, saveCostumeArrangement,
     costumeDraft, setCostumeDraft, companionSizeMap,

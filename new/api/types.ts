@@ -93,6 +93,9 @@ export type Product = {
   reportNote?: string
   postEventTransactionResult?: string
   postEventMachineData?: string
+  // スロセレ: 対象機種入力フォーム送信
+  targetMachineFormSent?: boolean
+  targetMachineFormSentDate?: string
   // 商材管理課用
   targetMachineNames?: string[]
   pachitownMachineNames?: string[]

@@ -1,8 +1,18 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import type { ProjectRepository } from "@/new/api/project-repository";
 import type { Product, MachineMaster } from "@/new/api/types";
+import type { BannerEditState } from "@/features/product-management-dashboard/model/types";
 
 export type TabValue = "machineMaster" | "projectMachines";
+
+const DEFAULT_BANNER_EDIT: BannerEditState = {
+  productId: null,
+  date: "2/1",
+  dayOfWeek: "日曜日",
+  prefecture: "長野県",
+  storeName: "",
+  targetMachines: [""],
+};
 
 export interface BannerModalData {
   productId: number;
@@ -93,10 +103,14 @@ export function useProductManagementDashboard(repository: ProjectRepository) {
       const { date, dayOfWeek } = product.eventStartDate
         ? getDateAndDayOfWeek(product.eventStartDate)
         : { date: "", dayOfWeek: "" };
+      const project = repository.getProjectByProjectNumber(product.projectNumber);
+      const projectName = project?.projectName ?? product.eventProductName ?? "";
+      const prefecture = product.bannerData?.prefecture ?? "長野県";
+      const storeName = product.bannerData?.storeName ?? project?.hallName ?? "";
 
       return {
         productId: product.id,
-        productName: product.name,
+        productName: product.eventProductName,
         eventDate: product.eventStartDate ?? "",
         displayDate: date,
         displayDayOfWeek: dayOfWeek,
@@ -104,13 +118,13 @@ export function useProductManagementDashboard(repository: ProjectRepository) {
         pachitownMachineNames: pachitownNames,
         isMachineRegistered: targetMachines.length > 0,
         isPachitownLinked: product.pachitownLinked === true,
-        isBannerCreated: product.bannerCreated === true,
-        projectName: product.projectName ?? "",
-        prefecture: product.prefecture ?? "",
-        storeName: product.storeName ?? "",
+        isBannerCreated: product.bannerGenerated === true,
+        projectName,
+        prefecture,
+        storeName,
       };
     });
-  }, [slotSelectProducts]);
+  }, [slotSelectProducts, repository]);
 
   const addMachineMaster = useCallback(() => {
     if (!newMasterName.trim()) return;
@@ -180,25 +194,85 @@ export function useProductManagementDashboard(repository: ProjectRepository) {
 
   const handlePachitownLink = useCallback(
     (productId: number) => {
-      repository.updateProduct(productId, { pachitownLinked: true });
+      const linkedDate = new Date().toISOString().split("T")[0];
+      repository.updateProduct(productId, {
+        pachitownLinked: true,
+        pachitownLinkedDate: linkedDate,
+      });
       loadData();
     },
     [repository, loadData]
   );
 
+  // 機種名のインライン編集（旧 View 用）
+  const [editingProductId, setEditingProductId] = useState<number | null>(null);
+  const [editingMachineIndex, setEditingMachineIndex] = useState<number | null>(null);
+  const [editingMachineName, setEditingMachineName] = useState("");
+
+  const handleStartEditMachine = useCallback((productId: number, index: number, currentName: string) => {
+    setEditingProductId(productId);
+    setEditingMachineIndex(index);
+    setEditingMachineName(currentName);
+  }, []);
+
+  const handleEditMachineNameChange = useCallback((value: string) => {
+    setEditingMachineName(value);
+  }, []);
+
+  const handleSaveEditMachine = useCallback(
+    (productId: number, index: number) => {
+      const product = products.find((p) => p.id === productId);
+      if (!product) return;
+      const pachitownMachineNames = [...(product.pachitownMachineNames ?? [])];
+      pachitownMachineNames[index] = editingMachineName.trim();
+      repository.updateProduct(productId, { pachitownMachineNames });
+      setEditingProductId(null);
+      setEditingMachineIndex(null);
+      setEditingMachineName("");
+      loadData();
+    },
+    [products, editingMachineName, repository, loadData]
+  );
+
+  const handleCancelEditMachine = useCallback(() => {
+    setEditingProductId(null);
+    setEditingMachineIndex(null);
+    setEditingMachineName("");
+  }, []);
+
+  // バナー編集状態（旧 View の BannerCreateModal 用）
+  const [bannerEdit, setBannerEdit] = useState<BannerEditState>(DEFAULT_BANNER_EDIT);
+
+  const updateBannerEdit = useCallback((updates: Partial<BannerEditState>) => {
+    setBannerEdit((prev) => ({ ...prev, ...updates }));
+  }, []);
+
   const openBannerModal = useCallback(
     (productId: number) => {
       const vm = productViewModels.find((p) => p.productId === productId);
       if (!vm) return;
+      setBannerEdit({
+        ...DEFAULT_BANNER_EDIT,
+        productId,
+        date: vm.displayDate || "2/1",
+        dayOfWeek: vm.displayDayOfWeek || "日曜日",
+        prefecture: vm.prefecture || "長野県",
+        storeName: vm.storeName || "",
+        targetMachines:
+          vm.pachitownMachineNames.length > 0
+            ? [...vm.pachitownMachineNames]
+            : vm.targetMachineNames.length > 0
+              ? [...vm.targetMachineNames]
+              : [""],
+      });
       setBannerModalData({
         productId,
         date: vm.displayDate,
         dayOfWeek: vm.displayDayOfWeek,
         prefecture: vm.prefecture,
         storeName: vm.storeName,
-        targetMachines: vm.pachitownMachineNames.length > 0
-          ? vm.pachitownMachineNames
-          : vm.targetMachineNames,
+        targetMachines:
+          vm.pachitownMachineNames.length > 0 ? vm.pachitownMachineNames : vm.targetMachineNames,
       });
       setBannerModalOpen(true);
     },
@@ -206,18 +280,49 @@ export function useProductManagementDashboard(repository: ProjectRepository) {
   );
 
   const closeBannerModal = useCallback(() => {
+    if (bannerEdit.productId != null) {
+      const data = {
+        date: bannerEdit.date,
+        dayOfWeek: bannerEdit.dayOfWeek,
+        prefecture: bannerEdit.prefecture,
+        storeName: bannerEdit.storeName,
+        targetMachines: bannerEdit.targetMachines.filter((s) => s.trim()),
+      };
+      repository.updateProduct(bannerEdit.productId, {
+        bannerGenerated: true,
+        bannerData: data,
+      });
+    }
     setBannerModalOpen(false);
     setBannerModalData(null);
+    setBannerEdit(DEFAULT_BANNER_EDIT);
+    loadData();
+  }, [bannerEdit, repository, loadData]);
+
+  const onBannerModalOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      setBannerModalOpen(false);
+      setBannerModalData(null);
+      setBannerEdit(DEFAULT_BANNER_EDIT);
+    }
   }, []);
 
   const saveBanner = useCallback(
     (productId: number) => {
-      repository.updateProduct(productId, { bannerCreated: true });
+      const data = {
+        date: bannerEdit.date,
+        dayOfWeek: bannerEdit.dayOfWeek,
+        prefecture: bannerEdit.prefecture,
+        storeName: bannerEdit.storeName,
+        targetMachines: bannerEdit.targetMachines.filter((s) => s.trim()),
+      };
+      repository.updateProduct(productId, { bannerGenerated: true, bannerData: data });
       setBannerModalOpen(false);
       setBannerModalData(null);
+      setBannerEdit(DEFAULT_BANNER_EDIT);
       loadData();
     },
-    [repository, loadData]
+    [bannerEdit, repository, loadData]
   );
 
   return {
@@ -230,6 +335,7 @@ export function useProductManagementDashboard(repository: ProjectRepository) {
     setNewMasterPachitownName,
     addMachineMaster,
     deleteMachineMaster,
+    products: slotSelectProducts,
     productViewModels,
     autoConvertMachines,
     editingMachineNames,
@@ -237,10 +343,22 @@ export function useProductManagementDashboard(repository: ProjectRepository) {
     savePachitownMachineNames,
     handlePachitownLink,
     bannerModalOpen,
+    setBannerModalOpen,
+    onBannerModalOpenChange,
     bannerModalData,
+    bannerEdit,
+    updateBannerEdit,
     openBannerModal,
     closeBannerModal,
     saveBanner,
+    // 旧 View 用（インライン機種名編集）
+    editingProductId,
+    editingMachineIndex,
+    editingMachineName,
+    handleStartEditMachine,
+    handleEditMachineNameChange,
+    handleSaveEditMachine,
+    handleCancelEditMachine,
   };
 }
 

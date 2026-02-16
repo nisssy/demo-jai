@@ -49,6 +49,7 @@ export function PostEventTabView({
                   <TableHead className="sticky left-0 bg-white z-10">商材名</TableHead>
                   <TableHead>案件No</TableHead>
                   <TableHead>実施日</TableHead>
+                  <TableHead>イベント区分</TableHead>
                   <TableHead>アンケート状況</TableHead>
                   <TableHead className="sticky right-0 bg-white z-10">操作</TableHead>
                 </TableRow>
@@ -63,6 +64,7 @@ export function PostEventTabView({
                       <TableCell className="font-medium sticky left-0 bg-white z-10">{product.eventProductName}</TableCell>
                       <TableCell>{product.projectNumber}</TableCell>
                       <TableCell>{product.eventDate || "未定"}</TableCell>
+                      <TableCell>{product.eventType}</TableCell>
                       <TableCell>
                         <Badge
                           variant="outline"
