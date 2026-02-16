@@ -1,10 +1,49 @@
 "use client"
 import { useState, useMemo, useCallback } from "react"
 import type { ProjectRepository } from "@/new/api/project-repository"
-import type { Product, BookingStatus, StatusHistoryEntry } from "@/new/api/types"
+import type { Product, BookingStatus, StatusHistoryEntry, ChatMessage } from "@/new/api/types"
+import type { ProductFormState } from "@/new/features/project-registration/model/types"
+import type { CostItem } from "../ui/modals/CostInputModal.view"
 import { SEED_COMPANIONS, SEED_DIRECTORS, SEED_PRODUCTIONS } from "@/new/api/seed-data"
 
-export type EventTeamTab = "cast-arrangement" | "arrangement" | "post-event"
+/** Product エンティティ → ProductFormState への変換（読み取り専用表示用） */
+function productToFormState(product: Product): ProductFormState {
+  return {
+    id: product.id,
+    category: product.category,
+    eventType: product.eventType,
+    eventProductName: product.eventProductName,
+    eventDate: product.eventDate,
+    startTime: product.startTime ?? "08:00",
+    endTime: product.endTime ?? "15:00",
+    mustSeeFlag: product.mustSeeFlag ?? "0",
+    mustSeePublication: product.mustSeePublication ?? "不要",
+    publicationDate: product.publicationDate ?? "",
+    publicationTime: product.publicationTime ?? "",
+    reportRequired: product.reportRequired ?? "不要",
+    isOpen: true,
+    companionCount: product.companionCount ?? "",
+    directorCount: product.directorCount ?? "",
+    selectedCompanions: product.selectedCompanions?.length ? product.selectedCompanions : ["未定"],
+    selectedDirectors: product.selectedDirectors?.length ? product.selectedDirectors : ["未定"],
+    nominatedCompanions: {},
+    nominatedDirectors: {},
+    companionHoldTypes: Object.fromEntries(
+      Object.entries(product.companionBookingStatus ?? {}).map(([name, status]) => [name, status.startsWith("confirmed") ? "confirmed" as const : "tentative" as const])
+    ),
+    directorHoldTypes: Object.fromEntries(
+      Object.entries(product.directorBookingStatus ?? {}).map(([name, status]) => [name, status.startsWith("confirmed") ? "confirmed" as const : "tentative" as const])
+    ),
+    performanceFeeDiscount: "",
+    accommodationFeePerPerson: "",
+    eventBaseFeeDiscount: "",
+    proposalStatus: product.proposalStatus ?? "before-proposal",
+    readingCertainty: product.readingCertainty ?? "",
+    executionStatus: product.executionStatus ?? null,
+  }
+}
+
+export type EventTeamTab = "cast-arrangement" | "arrangement" | "post-event" | "product-confirmation"
 export type CastSubTab = "tentative" | "confirmed"
 
 /** 仮押さえ中（依頼中 or 不可） */
@@ -38,6 +77,14 @@ export type CastEntry = {
 export type ProductionGroup = {
   productionName: string
   casts: CastEntry[]
+}
+
+/** 未定キャスト手配依頼 */
+export type UndecidedCastRequest = {
+  product: Product
+  projectName: string
+  companionCount: number
+  directorCount: number
 }
 
 /** プロダクション→キャスト→案件 グルーピングを構築 */
@@ -142,6 +189,12 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
   // ─── イベント終了処理: アンケート結果モーダル ───
   const [showSurveyResultModal, setShowSurveyResultModal] = useState(false)
 
+  // ─── イベント終了処理: コスト入力モーダル ───
+  const [showCostInputModal, setShowCostInputModal] = useState(false)
+  const [costInputProduct, setCostInputProduct] = useState<Product | null>(null)
+  const [costInputItems, setCostInputItems] = useState<CostItem[]>([])
+  const [costInputAutoFilled, setCostInputAutoFilled] = useState(false)
+
   // ─── イベント終了処理: コストCSVモーダル ───
   const [showCostExportModal, setShowCostExportModal] = useState(false)
   const [costExportDateFrom, setCostExportDateFrom] = useState("")
@@ -151,6 +204,11 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
     inProgress: true,
     postEvent: true,
   })
+
+  // ─── 商材確認モーダル ───
+  const [showConfirmationDetailModal, setShowConfirmationDetailModal] = useState(false)
+  const [confirmationComment, setConfirmationComment] = useState("")
+  const [selectedConfirmationProduct, setSelectedConfirmationProduct] = useState<Product | null>(null)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const allProducts = useMemo(() => repository.getProducts(), [repository, refreshKey])
@@ -233,6 +291,25 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
     confirmedProductionGroups.reduce((sum, g) => sum + g.casts.reduce((s, c) => s + c.entries.length, 0), 0)
   , [confirmedProductionGroups])
 
+  /** 未定キャスト手配依頼（companionCount/directorCountと実名キャスト数の差分） */
+  const undecidedCastRequests = useMemo<UndecidedCastRequest[]>(() => {
+    const requests: UndecidedCastRequest[] = []
+    for (const product of allProducts) {
+      if (product.category !== "イベント") continue
+      const companionNeeded = parseInt(product.companionCount || "0") - product.selectedCompanions.length
+      const directorNeeded = parseInt(product.directorCount || "0") - product.selectedDirectors.length
+      if (companionNeeded > 0 || directorNeeded > 0) {
+        requests.push({
+          product,
+          projectName: getProjectName(product),
+          companionCount: Math.max(0, companionNeeded),
+          directorCount: Math.max(0, directorNeeded),
+        })
+      }
+    }
+    return requests
+  }, [allProducts, getProjectName])
+
   // ═══════════════════════════════════════════════════
   // タブ2: 各種手配 — 受注+実施前
   // ═══════════════════════════════════════════════════
@@ -256,13 +333,33 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
     )
   , [allProducts])
 
+  // ═══════════════════════════════════════════════════
+  // タブ4: 商材確認 — マネジメント部確認ステータスが「確認中」の商材
+  // ═══════════════════════════════════════════════════
+
+  const confirmationProducts = useMemo(() =>
+    allProducts.filter(p => p.managementConfirmationStatus === "under-review")
+  , [allProducts])
+
+  const selectedConfirmationClientName = useMemo(() => {
+    if (!selectedConfirmationProduct) return ""
+    const project = allProjects.find(pj => pj.id === selectedConfirmationProduct.projectId)
+    return project?.companyName ?? ""
+  }, [selectedConfirmationProduct, allProjects])
+
+  /** 確認モーダル表示用: Product → ProductFormState 変換 */
+  const confirmationProductForm = useMemo(() =>
+    selectedConfirmationProduct ? productToFormState(selectedConfirmationProduct) : null
+  , [selectedConfirmationProduct])
+
   // ─── サマリー ───
 
   const summaryCounts = useMemo(() => ({
-    castArrangement: tentativeEntryCount + confirmedEntryCount,
+    castArrangement: tentativeEntryCount + confirmedEntryCount + undecidedCastRequests.length,
     arrangement: arrangementProducts.length,
     postEvent: postEventProducts.length,
-  }), [tentativeEntryCount, confirmedEntryCount, arrangementProducts, postEventProducts])
+    productConfirmation: confirmationProducts.length,
+  }), [tentativeEntryCount, confirmedEntryCount, undecidedCastRequests, arrangementProducts, postEventProducts, confirmationProducts])
 
   // ═══════════════════════════════════════════════════
   // コスト出力: 対象商材の計算
@@ -574,9 +671,124 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
     URL.revokeObjectURL(url)
   }, [])
 
+  // ─── コスト入力 ───
+
+  const costInputProjectName = useMemo(() => {
+    if (!costInputProduct) return ""
+    return getProjectForProduct(costInputProduct)?.projectName ?? ""
+  }, [costInputProduct, getProjectForProduct])
+
+  const costInputClientName = useMemo(() => {
+    if (!costInputProduct) return ""
+    return getProjectForProduct(costInputProduct)?.clientName ?? ""
+  }, [costInputProduct, getProjectForProduct])
+
+  const costInputEstimatedAmount = useMemo(() => {
+    if (!costInputProduct) return 0
+    return costInputProduct.estimatedBillingAmount ?? 0
+  }, [costInputProduct])
+
+  const openCostInput = useCallback((product: Product) => {
+    setCostInputProduct(product)
+    setCostInputAutoFilled(false)
+    setCostInputItems([
+      { item: "キャスティング費用", amount: String(product.castingCost ?? 0) },
+      { item: "交通費", amount: String(product.transportationFee ?? 0) },
+      { item: "宿泊費", amount: String(product.accommodationFee ?? 0) },
+      { item: "PR費用", amount: String(product.postPRCost ?? 0) },
+    ])
+    setShowCostInputModal(true)
+  }, [])
+
+  const autoFillCostInput = useCallback(() => {
+    if (!costInputProduct) return
+    // マスタ参照: BillingSection と同じ計算ロジックを使って自動入力
+    const companionCount = parseInt(costInputProduct.companionCount || "0")
+    const directorCount = parseInt(costInputProduct.directorCount || "0")
+    const castCount = companionCount + directorCount
+    // 簡易的な自動入力（実際のキャスト時給×時間の概算）
+    const hours = 7 // デフォルト稼働時間
+    const castingCost = (companionCount * 3000 + directorCount * 4000) * hours
+    const transportFee = castCount * 5000
+    const accommodation = 0
+    const prCost = 0
+    setCostInputItems([
+      { item: "キャスティング費用", amount: String(castingCost) },
+      { item: "交通費", amount: String(transportFee) },
+      { item: "宿泊費", amount: String(accommodation) },
+      { item: "PR費用", amount: String(prCost) },
+    ])
+    setCostInputAutoFilled(true)
+  }, [costInputProduct])
+
+  const saveCostInput = useCallback(() => {
+    if (!costInputProduct) return
+    const findAmount = (label: string) =>
+      parseInt(costInputItems.find(c => c.item === label)?.amount || "0") || 0
+
+    repository.updateProduct(costInputProduct.id, {
+      castingCost: findAmount("キャスティング費用"),
+      transportationFee: findAmount("交通費"),
+      accommodationFee: findAmount("宿泊費"),
+      postPRCost: findAmount("PR費用"),
+    })
+    setShowCostInputModal(false)
+    refresh()
+  }, [costInputProduct, costInputItems, repository, refresh])
+
   const closeCostExportModal = useCallback(() => {
     setShowCostExportModal(false)
   }, [])
+
+  // ═══════════════════════════════════════════════════
+  // ハンドラ: 商材確認
+  // ═══════════════════════════════════════════════════
+
+  const openConfirmationDetail = useCallback((product: Product) => {
+    setSelectedConfirmationProduct(product)
+    setConfirmationComment("")
+    setShowConfirmationDetailModal(true)
+  }, [])
+
+  const handleApproveProduct = useCallback(() => {
+    if (!selectedConfirmationProduct) return
+    const now = new Date().toISOString()
+    const message: ChatMessage = {
+      channel: "マネジメント部",
+      author: "マネジメント部",
+      content: `商材情報を承認しました（商材名: ${selectedConfirmationProduct.eventProductName || selectedConfirmationProduct.eventType}）`,
+      timestamp: now,
+    }
+    repository.updateProduct(selectedConfirmationProduct.id, {
+      managementConfirmationStatus: "approved",
+      chatMessages: [...(selectedConfirmationProduct.chatMessages ?? []), message],
+    })
+    setShowConfirmationDetailModal(false)
+    refresh()
+  }, [selectedConfirmationProduct, repository, refresh])
+
+  const handleRequestRevision = useCallback(() => {
+    if (!selectedConfirmationProduct || !confirmationComment.trim()) return
+    const now = new Date().toISOString()
+    const chatMessage: ChatMessage = {
+      channel: "マネジメント部",
+      author: "マネジメント部",
+      content: `【修正依頼】${confirmationComment}`,
+      timestamp: now,
+    }
+    const comment = {
+      author: "マネジメント部",
+      content: confirmationComment,
+      timestamp: now,
+    }
+    repository.updateProduct(selectedConfirmationProduct.id, {
+      managementConfirmationStatus: "revision-requested",
+      chatMessages: [...(selectedConfirmationProduct.chatMessages ?? []), chatMessage],
+      comments: [...(selectedConfirmationProduct.comments ?? []), comment],
+    })
+    setShowConfirmationDetailModal(false)
+    refresh()
+  }, [selectedConfirmationProduct, confirmationComment, repository, refresh])
 
   // ═══════════════════════════════════════════════════
   // ハンドラ: 衣装手配
@@ -616,6 +828,7 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
     castSubTab, setCastSubTab,
     tentativeProductionGroups, confirmedProductionGroups,
     tentativeEntryCount, confirmedEntryCount,
+    undecidedCastRequests,
     completeCastHold, requestConfirmedHold,
     showHoldFailureModal, setShowHoldFailureModal, openHoldFailure, submitHoldFailure,
     holdFailureCastName, holdFailureComment, setHoldFailureComment,
@@ -632,11 +845,23 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
     postEventProducts,
     showSurveyResultModal, setShowSurveyResultModal, openSurveyResult,
     downloadSurveyCsv,
+    // コスト入力
+    showCostInputModal, setShowCostInputModal, openCostInput,
+    costInputProduct, costInputProjectName, costInputClientName, costInputEstimatedAmount,
+    costInputItems, setCostInputItems, costInputAutoFilled,
+    autoFillCostInput, saveCostInput,
     showCostExportModal, setShowCostExportModal, downloadCostCsv, closeCostExportModal,
     costExportDateFrom, setCostExportDateFrom, costExportDateTo, setCostExportDateTo,
     costExportFormat, setCostExportFormat,
     costExportStatuses, setCostExportStatuses,
     costExportTargetProducts, costExportTotalAmount,
+    // 商材確認
+    confirmationProducts,
+    showConfirmationDetailModal, setShowConfirmationDetailModal,
+    selectedConfirmationProduct, selectedConfirmationClientName,
+    confirmationProductForm,
+    confirmationComment, setConfirmationComment,
+    openConfirmationDetail, handleApproveProduct, handleRequestRevision,
     // 共通
     showStatusHistoryModal, setShowStatusHistoryModal, openStatusHistory,
   }

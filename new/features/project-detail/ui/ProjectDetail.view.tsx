@@ -3,24 +3,15 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ChevronLeft, Plus } from "lucide-react"
 import type { ProjectInfo, ProductSummary, DepartmentActivitySummary } from "@/new/features/project-detail/model/types"
-import type { TentativeCompletedCast } from "@/new/features/project-detail/hooks/useProjectDetail"
 import { ProjectInfoCard } from "./components/ProjectInfoCard"
 import { ProjectSummaryCard } from "./components/ProjectSummaryCard"
 import { ProductSummaryCard } from "./components/ProductSummaryCard"
 import { DepartmentActivityCard } from "./components/DepartmentActivityCard"
-import { OrderReceivedConfirmModal } from "./components/OrderReceivedConfirmModal"
 
 export type ProjectDetailViewProps = {
   projectInfo: ProjectInfo | null
   products: ProductSummary[]
   departmentActivity: DepartmentActivitySummary
-  // 受注確認
-  orderReceivedModalOpen: boolean
-  orderReceivedTargetProduct?: ProductSummary
-  tentativeCompletedCasts: TentativeCompletedCast[]
-  onRequestOrderReceived: (productId: number) => void
-  onConfirmOrderReceived: () => void
-  onCancelOrderReceived: () => void
   // ナビゲーション
   onUpdateProjectInfo: () => void
   onAddProduct: () => void
@@ -33,12 +24,6 @@ export const ProjectDetailView = ({
   projectInfo,
   products,
   departmentActivity,
-  orderReceivedModalOpen,
-  orderReceivedTargetProduct,
-  tentativeCompletedCasts,
-  onRequestOrderReceived,
-  onConfirmOrderReceived,
-  onCancelOrderReceived,
   onUpdateProjectInfo,
   onAddProduct,
   onEditProduct,
@@ -115,7 +100,6 @@ export const ProjectDetailView = ({
                       product={product}
                       salesPersonName={projectInfo.salesPersonName}
                       onEdit={() => onEditProduct(product.id)}
-                      onRequestOrderReceived={() => onRequestOrderReceived(product.id)}
                     />
                   ))}
                 </div>
@@ -125,14 +109,6 @@ export const ProjectDetailView = ({
         </div>
       </div>
 
-      {/* 受注確認モーダル */}
-      <OrderReceivedConfirmModal
-        open={orderReceivedModalOpen}
-        product={orderReceivedTargetProduct}
-        tentativeCompletedCasts={tentativeCompletedCasts}
-        onConfirm={onConfirmOrderReceived}
-        onCancel={onCancelOrderReceived}
-      />
     </div>
   )
 }

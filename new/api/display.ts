@@ -1,4 +1,4 @@
-import type { BookingStatus, ProposalStatus, ExecutionStatus, ProductProgressStatus } from "./types"
+import type { BookingStatus, ProposalStatus, ExecutionStatus, ProductProgressStatus, ManagementConfirmationStatus } from "./types"
 import type { Role } from "@/new/types/role"
 
 // ─── ロールラベル ───
@@ -114,4 +114,13 @@ export function getCategoryByEventType(eventType: string): string | undefined {
 
 export function getEventTypesByCategory(category: string): string[] {
   return CATEGORY_TO_EVENT_TYPES[category] || []
+}
+
+// ─── マネジメント部確認ステータス ───
+
+export const MANAGEMENT_CONFIRMATION_STATUS_LABELS: Record<ManagementConfirmationStatus, string> = {
+  "unconfirmed": "確認前",
+  "under-review": "確認中",
+  "revision-requested": "修正依頼",
+  "approved": "承認",
 }

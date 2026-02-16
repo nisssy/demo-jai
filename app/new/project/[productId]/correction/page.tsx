@@ -3,6 +3,7 @@
 import { Suspense } from "react"
 import { useParams } from "next/navigation"
 import { useMemo } from "react"
+import { AppHeader } from "@/new/ui/AppHeader"
 import { LocalStorageProjectRepository } from "@/new/api/impl/local-storage-project-repository"
 import { ProjectRegistration } from "@/new/features/project-registration/ui/project-registration"
 
@@ -15,13 +16,16 @@ function CorrectionContent() {
   const comments = product?.comments ?? undefined
 
   return (
-    <main className="px-8 py-8 max-w-7xl mx-auto">
-      <ProjectRegistration
-        mode="product-edit"
-        productId={productId}
-        comments={comments}
-      />
-    </main>
+    <>
+      <AppHeader currentRole="Sales" />
+      <main className="px-8 py-8 max-w-7xl mx-auto">
+        <ProjectRegistration
+          mode="product-edit"
+          productId={productId}
+          comments={comments}
+        />
+      </main>
+    </>
   )
 }
 

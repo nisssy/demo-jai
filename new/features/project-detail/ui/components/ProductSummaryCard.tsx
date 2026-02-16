@@ -1,5 +1,4 @@
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Calendar, Users, CheckCircle2, Play, FileText, Gift, Mail, Image, BarChart3 } from "lucide-react"
 import { PROPOSAL_STATUS_LABELS, BOOKING_STATUS_LABELS, EXECUTION_STATUS_LABELS, DESIGN_REQUEST_STATUS_LABELS } from "@/new/api/display"
 import type { BookingStatus } from "@/new/api/types"
@@ -18,13 +17,10 @@ type ProductSummaryCardProps = {
   product: ProductSummary
   salesPersonName?: string
   onEdit: () => void
-  onRequestOrderReceived?: () => void
 }
 
-export const ProductSummaryCard = ({ product, salesPersonName, onEdit, onRequestOrderReceived }: ProductSummaryCardProps) => {
+export const ProductSummaryCard = ({ product, salesPersonName, onEdit }: ProductSummaryCardProps) => {
   const isLottery = product.category === "ポイント" && product.eventType === "合同抽選会"
-  const isEventProduct = product.category === "イベント"
-  const canMarkOrderReceived = isEventProduct && product.proposalStatusRaw !== "order-received"
 
   return (
     <div
@@ -43,20 +39,6 @@ export const ProductSummaryCard = ({ product, salesPersonName, onEdit, onRequest
               {product.eventProductName || "商材名未設定"}
             </h4>
           </div>
-          {canMarkOrderReceived && onRequestOrderReceived && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-xs border-green-300 text-green-700 hover:bg-green-50"
-              onClick={(e) => {
-                e.stopPropagation()
-                onRequestOrderReceived()
-              }}
-            >
-              <CheckCircle2 className="h-3 w-3 mr-1" />
-              受注
-            </Button>
-          )}
         </div>
 
         {/* 基本情報 */}

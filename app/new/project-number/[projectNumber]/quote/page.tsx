@@ -2,6 +2,7 @@
 
 import { Suspense } from "react"
 import { useParams } from "next/navigation"
+import { AppHeader } from "@/new/ui/AppHeader"
 import { ProjectQuote } from "@/new/features/project-quote/ui/project-quote"
 
 function QuoteContent() {
@@ -9,9 +10,12 @@ function QuoteContent() {
   const projectNumber = params.projectNumber as string
 
   return (
-    <main className="px-8 py-8 max-w-7xl mx-auto">
-      <ProjectQuote projectNumber={projectNumber} />
-    </main>
+    <>
+      <AppHeader currentRole="Sales" />
+      <main className="px-8 py-8 max-w-7xl mx-auto">
+        <ProjectQuote projectNumber={projectNumber} />
+      </main>
+    </>
   )
 }
 

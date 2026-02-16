@@ -14,11 +14,11 @@ export const LotteryTabs = ({ lotteryForm: f }: LotteryTabsProps) => {
   return (
     <Tabs value={f.activeTab} onValueChange={f.setActiveTab} className="w-full">
       <TabsList className="w-full grid grid-cols-5">
-        <TabsTrigger value="basic-info" className="text-xs">① 基本情報</TabsTrigger>
-        <TabsTrigger value="prize-set" className="text-xs">② 景品セット</TabsTrigger>
-        <TabsTrigger value="status" className="text-xs">③ ステータス</TabsTrigger>
-        <TabsTrigger value="quote" className="text-xs">④ 見積り</TabsTrigger>
-        <TabsTrigger value="production" className="text-xs">⑤ 制作進行</TabsTrigger>
+        <TabsTrigger value="basic-info" className="text-xs">基本情報</TabsTrigger>
+        <TabsTrigger value="prize-set" className="text-xs">景品セット</TabsTrigger>
+        <TabsTrigger value="status" className="text-xs">ステータス</TabsTrigger>
+        <TabsTrigger value="quote" className="text-xs">見積り</TabsTrigger>
+        <TabsTrigger value="production" className="text-xs">制作進行</TabsTrigger>
       </TabsList>
 
       <TabsContent value="basic-info" className="mt-4">

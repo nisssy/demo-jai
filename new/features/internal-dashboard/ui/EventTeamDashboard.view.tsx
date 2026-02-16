@@ -5,16 +5,22 @@ import { Download } from "lucide-react"
 import { CastArrangementTabView } from "./sections/CastArrangementTab.view"
 import { ArrangementTabView } from "./sections/ArrangementTab.view"
 import { PostEventTabView } from "./sections/PostEventTab.view"
+import { ProductConfirmationTabView } from "./sections/ProductConfirmationTab.view"
 import { HoldFailureModalView } from "./modals/HoldFailureModal.view"
 import { AutoArrangementModalView } from "./modals/AutoArrangementModal.view"
 import { SurveyResultModalView } from "./modals/SurveyResultModal.view"
 import { StatusHistoryModalView } from "./modals/StatusHistoryModal.view"
 import { CostExportModalView } from "./modals/CostExportModal.view"
 import { CostumeArrangementModalView } from "./modals/CostumeArrangementModal.view"
+import { ProductConfirmationDetailModalView } from "./modals/ProductConfirmationDetailModal.view"
+import { CostInputModalView } from "./modals/CostInputModal.view"
 import type { UseEventTeamDashboardReturn } from "../hooks/useEventTeamDashboard"
 import type { ArrangementChecks, CostExportStatuses } from "../hooks/useEventTeamDashboard"
+import type { UseLotteryFormReturn } from "@/new/features/project-registration/hooks/useLotteryForm"
 
-export type EventTeamDashboardViewProps = UseEventTeamDashboardReturn
+export type EventTeamDashboardViewProps = UseEventTeamDashboardReturn & {
+  confirmationLotteryForm: UseLotteryFormReturn
+}
 
 const tabTriggerClass = "relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
 
@@ -51,6 +57,14 @@ export function EventTeamDashboardView(props: EventTeamDashboardViewProps) {
                 </Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger value="product-confirmation" className={tabTriggerClass}>
+              商材確認
+              {props.summaryCounts.productConfirmation > 0 && (
+                <Badge className="ml-1.5 bg-orange-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
+                  {props.summaryCounts.productConfirmation}
+                </Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="arrangement" className={tabTriggerClass}>
               各種手配
               {props.summaryCounts.arrangement > 0 && (
@@ -78,8 +92,17 @@ export function EventTeamDashboardView(props: EventTeamDashboardViewProps) {
             confirmedGroups={props.confirmedProductionGroups}
             tentativeEntryCount={props.tentativeEntryCount}
             confirmedEntryCount={props.confirmedEntryCount}
+            undecidedCastRequests={props.undecidedCastRequests}
             onCompleteCast={props.completeCastHold}
             onOpenHoldFailure={props.openHoldFailure}
+          />
+        </TabsContent>
+
+        <TabsContent value="product-confirmation" className="mt-0">
+          <ProductConfirmationTabView
+            products={props.confirmationProducts}
+            getProjectForProduct={props.getProjectForProduct}
+            onOpenDetail={props.openConfirmationDetail}
           />
         </TabsContent>
 
@@ -98,7 +121,7 @@ export function EventTeamDashboardView(props: EventTeamDashboardViewProps) {
             products={props.postEventProducts}
             getProjectForProduct={props.getProjectForProduct}
             onOpenSurveyResult={props.openSurveyResult}
-            onOpenStatusHistory={props.openStatusHistory}
+            onOpenCostInput={props.openCostInput}
             onOpenCostExport={() => props.setShowCostExportModal(true)}
           />
         </TabsContent>
@@ -173,6 +196,34 @@ export function EventTeamDashboardView(props: EventTeamDashboardViewProps) {
         onDownload={props.downloadCostCsv}
         downloadDisabled={props.costExportTargetProducts.length === 0}
         onClose={props.closeCostExportModal}
+      />
+
+      <ProductConfirmationDetailModalView
+        open={props.showConfirmationDetailModal}
+        onOpenChange={props.setShowConfirmationDetailModal}
+        productForm={props.confirmationProductForm}
+        projectName={props.selectedConfirmationProduct ? (props.getProjectForProduct(props.selectedConfirmationProduct)?.projectName ?? "") : ""}
+        clientName={props.selectedConfirmationClientName}
+        hallAddress=""
+        lotteryForm={props.confirmationLotteryForm}
+        comment={props.confirmationComment}
+        onCommentChange={props.setConfirmationComment}
+        onApprove={props.handleApproveProduct}
+        onRequestRevision={props.handleRequestRevision}
+      />
+
+      <CostInputModalView
+        open={props.showCostInputModal}
+        onOpenChange={props.setShowCostInputModal}
+        product={props.costInputProduct}
+        projectName={props.costInputProjectName}
+        clientName={props.costInputClientName}
+        estimatedAmount={props.costInputEstimatedAmount}
+        costs={props.costInputItems}
+        onCostsChange={props.setCostInputItems}
+        onAutoFill={props.autoFillCostInput}
+        autoFilled={props.costInputAutoFilled}
+        onSave={props.saveCostInput}
       />
     </div>
   )

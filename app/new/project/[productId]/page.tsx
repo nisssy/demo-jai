@@ -2,6 +2,7 @@
 
 import { Suspense } from "react"
 import { useParams } from "next/navigation"
+import { AppHeader } from "@/new/ui/AppHeader"
 import { ProjectRegistration } from "@/new/features/project-registration/ui/project-registration"
 import { ProductChat } from "@/new/features/product-chat/ui/product-chat"
 
@@ -10,18 +11,19 @@ function ProductEditContent() {
   const productId = Number(params.productId)
 
   return (
-    <main className="px-8 py-8 max-w-[1400px] mx-auto">
-      <div className="flex gap-6 items-start">
-        {/* 左: 商材編集フォーム */}
-        <div className="flex-1 min-w-0">
-          <ProjectRegistration mode="product-edit" productId={productId} />
+    <>
+      <AppHeader currentRole="Sales" />
+      <main className="px-8 py-8 max-w-[1400px] mx-auto">
+        <div className="flex gap-6 items-start">
+          <div className="flex-1 min-w-0">
+            <ProjectRegistration mode="product-edit" productId={productId} />
+          </div>
+          <div className="w-96 shrink-0 sticky top-24 h-[calc(100vh-8rem)]">
+            <ProductChat productId={productId} />
+          </div>
         </div>
-        {/* 右: チャットパネル */}
-        <div className="w-96 shrink-0 sticky top-8 h-[calc(100vh-8rem)]">
-          <ProductChat productId={productId} />
-        </div>
-      </div>
-    </main>
+      </main>
+    </>
   )
 }
 

@@ -16,6 +16,9 @@ export type ExecutionStatus = "実施前" | "実施中" | "終了"
 /** 外注業者進捗ステータス */
 export type ProductProgressStatus = "not_started" | "report_uploaded" | "pachitown_linked" | "post_event_done"
 
+/** マネジメント部確認ステータス */
+export type ManagementConfirmationStatus = "unconfirmed" | "under-review" | "revision-requested" | "approved"
+
 // ─── 案件エンティティ ───
 
 export type Project = {
@@ -125,6 +128,8 @@ export type Product = {
   prizeOrdersByVendor?: PrizeOrderDocument[]
   quoCardLetterCheckedAt?: string
   prizeDeliveryInfoByVendor?: PrizeDeliveryInfoByVendor[]
+  // マネジメント部確認
+  managementConfirmationStatus?: ManagementConfirmationStatus
   // 部門間チャット
   chatMessages?: ChatMessage[]
 }

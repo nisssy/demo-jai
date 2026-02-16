@@ -1,13 +1,15 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChevronLeft } from "lucide-react"
-import type { Company, Hall, ProductComment } from "@/new/api/types"
+import type { Company, Hall, ProductComment, ManagementConfirmationStatus } from "@/new/api/types"
 import type { RegistrationMode, ProjectFormState, ProductFormState, FormErrors } from "@/new/features/project-registration/model/types"
 import type { UseLotteryFormReturn } from "@/new/features/project-registration/hooks/useLotteryForm"
 import type { UseCastCalendarReturn } from "@/new/features/project-registration/hooks/useCastCalendar"
 import { BasicInfoSection } from "./components/BasicInfoSection"
 import { ProductSection } from "./components/ProductSection"
+import { ProductContent } from "./components/ProductContent"
 import { ActionButtons } from "./components/ActionButtons"
+import { ConfirmationStatusBar } from "./components/ConfirmationStatusBar"
 import { CastCalendarModal } from "./components/CastCalendarModal"
 
 const MODE_TITLES: Record<RegistrationMode, string> = {
@@ -15,7 +17,7 @@ const MODE_TITLES: Record<RegistrationMode, string> = {
   edit: "案件編集",
   "project-edit": "案件情報編集",
   "product-add": "商材追加",
-  "product-edit": "商材編集",
+  "product-edit": "商材詳細",
 }
 
 export type ProjectRegistrationViewProps = {
@@ -58,6 +60,9 @@ export type ProjectRegistrationViewProps = {
   handleToggleCast: (index: number, role: "companion" | "director", name: string) => void
   handleToggleNomination: (index: number, role: "companion" | "director", name: string) => void
   handleCastHoldTypeChange: (index: number, role: "companion" | "director", name: string, holdType: "tentative" | "confirmed") => void
+  // マネジメント部確認
+  managementConfirmationStatus: ManagementConfirmationStatus
+  handleRequestConfirmation: () => void
   // アクション
   handleSubmit: () => void
   handleBack: () => void
@@ -101,6 +106,8 @@ export const ProjectRegistrationView = ({
   handleToggleCast,
   handleToggleNomination,
   handleCastHoldTypeChange,
+  managementConfirmationStatus,
+  handleRequestConfirmation,
   handleSubmit,
   handleBack,
   lotteryForm,
@@ -168,39 +175,59 @@ export const ProjectRegistrationView = ({
       )}
 
       {/* 商材情報 */}
-      {!isProjectEditMode && form.products.map((product, index) => (
-        <ProductSection
-          key={index}
-          index={index}
-          product={product}
-          errors={errors}
-          canDelete={!isProductMode && form.products.length > 1}
-          onToggleOpen={() => handleToggleProductOpen(index)}
-          onRemove={() => handleRemoveProduct(index)}
-          eventTypeSearchOpen={eventTypeSearchOpen[index] ?? false}
-          onEventTypeSearchOpenChange={(open) => handleEventTypeSearchOpenChange(index, open)}
-          eventTypes={getEventTypesForProduct(product.category)}
-          onSelectEventType={(eventType) => handleSelectEventType(index, eventType)}
-          onCategoryChange={(category) => handleCategoryChange(index, category)}
-          onFieldChange={(field, value) => updateProduct(index, field, value)}
-          calculateDuration={calculateDuration}
-          hallAddress={hallAddress}
-          onCastCountChange={(role, count) => handleCastCountChange(index, role, count)}
-          onToggleCast={(role, name) => handleToggleCast(index, role, name)}
-          onToggleNomination={(role, name) => handleToggleNomination(index, role, name)}
-          onCastHoldTypeChange={(role, name, ht) => handleCastHoldTypeChange(index, role, name, ht)}
-          checkAvailability={castCalendar.checkAvailability}
-          onOpenCalendar={(name, status, type) => castCalendar.openModal(name, status, type)}
-          onStatusChange={(status) => updateProduct(index, "proposalStatus", status)}
-          onReadingCertaintyChange={(value) => updateProduct(index, "readingCertainty", value)}
-          onExecutionStatusChange={(status) => updateProduct(index, "executionStatus", status as string)}
-          onConfirmOrder={() => {
+      {!isProjectEditMode && form.products.map((product, index) => {
+        const contentProps = {
+          index,
+          product,
+          errors,
+          eventTypeSearchOpen: eventTypeSearchOpen[index] ?? false,
+          onEventTypeSearchOpenChange: (open: boolean) => handleEventTypeSearchOpenChange(index, open),
+          eventTypes: getEventTypesForProduct(product.category),
+          onSelectEventType: (eventType: string) => handleSelectEventType(index, eventType),
+          onCategoryChange: (category: string) => handleCategoryChange(index, category),
+          onFieldChange: (field: keyof ProductFormState, value: string) => updateProduct(index, field, value),
+          calculateDuration,
+          hallAddress,
+          onCastCountChange: (role: "companion" | "director", count: string) => handleCastCountChange(index, role, count),
+          onToggleCast: (role: "companion" | "director", name: string) => handleToggleCast(index, role, name),
+          onToggleNomination: (role: "companion" | "director", name: string) => handleToggleNomination(index, role, name),
+          onCastHoldTypeChange: (role: "companion" | "director", name: string, ht: "tentative" | "confirmed") => handleCastHoldTypeChange(index, role, name, ht),
+          checkAvailability: castCalendar.checkAvailability,
+          onOpenCalendar: (name: string, status: Parameters<typeof castCalendar.openModal>[1], type: "companion" | "director") => castCalendar.openModal(name, status, type),
+          onStatusChange: (status: Parameters<typeof updateProduct>[2] & string) => updateProduct(index, "proposalStatus", status),
+          onReadingCertaintyChange: (value: "A" | "B" | "C" | "") => updateProduct(index, "readingCertainty", value),
+          onExecutionStatusChange: (status: string) => updateProduct(index, "executionStatus", status),
+          onConfirmOrder: () => {
             updateProduct(index, "proposalStatus", "order-received")
             updateProduct(index, "readingCertainty", "")
-          }}
-          lotteryForm={product.category === "ポイント" ? lotteryForm : undefined}
-        />
-      ))}
+          },
+          lotteryForm: product.category === "ポイント" ? lotteryForm : undefined,
+        }
+
+        if (mode === "product-edit") {
+          return (
+            <Card key={index}>
+              <CardContent className="pt-6">
+                <ConfirmationStatusBar
+                  status={managementConfirmationStatus}
+                  onRequestConfirmation={handleRequestConfirmation}
+                />
+                <ProductContent {...contentProps} />
+              </CardContent>
+            </Card>
+          )
+        }
+
+        return (
+          <ProductSection
+            key={index}
+            {...contentProps}
+            canDelete={!isProductMode && form.products.length > 1}
+            onToggleOpen={() => handleToggleProductOpen(index)}
+            onRemove={() => handleRemoveProduct(index)}
+          />
+        )
+      })}
 
       {/* アクションボタン */}
       <ActionButtons

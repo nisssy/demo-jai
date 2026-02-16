@@ -9,7 +9,7 @@ export type PostEventTabViewProps = {
   products: Product[]
   getProjectForProduct: (product: Product) => Project | undefined
   onOpenSurveyResult: (product: Product) => void
-  onOpenStatusHistory: (product: Product) => void
+  onOpenCostInput: (product: Product) => void
   onOpenCostExport: () => void
 }
 
@@ -17,7 +17,7 @@ export function PostEventTabView({
   products,
   getProjectForProduct,
   onOpenSurveyResult,
-  onOpenStatusHistory,
+  onOpenCostInput,
   onOpenCostExport,
 }: PostEventTabViewProps) {
   if (products.length === 0) {
@@ -73,7 +73,7 @@ export function PostEventTabView({
                       </TableCell>
                       <TableCell className="sticky right-0 bg-white z-10">
                         <div className="flex gap-2">
-                          <Button size="sm" variant="default" onClick={() => onOpenStatusHistory(product)} className="gap-2">
+                          <Button size="sm" variant="default" onClick={() => onOpenCostInput(product)} className="gap-2">
                             コスト入力
                           </Button>
                           <Button size="sm" variant="outline" onClick={() => onOpenSurveyResult(product)} className="gap-2">

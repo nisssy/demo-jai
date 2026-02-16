@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react"
 import { useAppRouter } from "@/hooks/use-app-router"
 import type { ProjectRepository } from "@/new/api/project-repository"
-import type { Company, Hall, ProductComment } from "@/new/api/types"
+import type { Company, Hall, Product, ProductComment, ChatMessage, ManagementConfirmationStatus } from "@/new/api/types"
 import { getCategoryByEventType, getEventTypesByCategory } from "@/new/api/display"
 import type { RegistrationMode, ProjectFormState, ProductFormState, FormErrors } from "@/new/features/project-registration/model/types"
 import type { LotteryFormState } from "@/new/features/project-registration/model/lottery-types"
@@ -510,6 +510,66 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
       }
     }
 
+    /** キャスト選択時のマネジメント部への依頼メッセージを生成 */
+    const buildCastRequestMessages = (
+      companions: string[],
+      directors: string[],
+      companionHoldTypes: Record<string, string>,
+      directorHoldTypes: Record<string, string>,
+      undecidedCompanionCount: number,
+      undecidedDirectorCount: number,
+      existingProduct?: Product | null,
+    ): ChatMessage[] => {
+      const messages: ChatMessage[] = []
+      for (const name of companions) {
+        // 編集時: 既に押さえ済みのキャストはスキップ
+        if (existingProduct?.companionBookingStatus[name]) continue
+        const holdLabel = companionHoldTypes[name] === "confirmed" ? "本押さえ" : "仮押さえ"
+        messages.push({
+          channel: "マネジメント部",
+          author: "営業",
+          content: `${name}さん（コンパニオン）の${holdLabel}をお願いします`,
+          timestamp: now,
+        })
+      }
+      for (const name of directors) {
+        if (existingProduct?.directorBookingStatus[name]) continue
+        const holdLabel = directorHoldTypes[name] === "confirmed" ? "本押さえ" : "仮押さえ"
+        messages.push({
+          channel: "マネジメント部",
+          author: "営業",
+          content: `${name}さん（ディレクター）の${holdLabel}をお願いします`,
+          timestamp: now,
+        })
+      }
+      // 未定キャストの手配依頼
+      const existingUndecidedCompanions = existingProduct
+        ? parseInt(existingProduct.companionCount || "0") - existingProduct.selectedCompanions.length
+        : 0
+      const existingUndecidedDirectors = existingProduct
+        ? parseInt(existingProduct.directorCount || "0") - existingProduct.selectedDirectors.length
+        : 0
+      const newUndecidedCompanions = undecidedCompanionCount - existingUndecidedCompanions
+      const newUndecidedDirectors = undecidedDirectorCount - existingUndecidedDirectors
+      if (newUndecidedCompanions > 0) {
+        messages.push({
+          channel: "マネジメント部",
+          author: "営業",
+          content: `コンパニオン${newUndecidedCompanions}名の手配をお願いします`,
+          timestamp: now,
+        })
+      }
+      if (newUndecidedDirectors > 0) {
+        messages.push({
+          channel: "マネジメント部",
+          author: "営業",
+          content: `ディレクター${newUndecidedDirectors}名の手配をお願いします`,
+          timestamp: now,
+        })
+      }
+      return messages
+    }
+
     const hallAddress = allHalls.find((h) => h.hallId === form.hallId)?.address ?? ""
 
     /** イベント系商材の請求予定金額を計算（合同抽選会は対象外） */
@@ -551,6 +611,9 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
       for (const p of form.products) {
         const castingSelected = p.selectedCompanions.filter((n) => n !== "未定")
         const directorSelected = p.selectedDirectors.filter((n) => n !== "未定")
+        const undecidedCompanions = p.selectedCompanions.filter((n) => n === "未定").length
+        const undecidedDirectors = p.selectedDirectors.filter((n) => n === "未定").length
+        const castMessages = buildCastRequestMessages(castingSelected, directorSelected, p.companionHoldTypes, p.directorHoldTypes, undecidedCompanions, undecidedDirectors)
         repository.createProduct({
           projectId: project.id,
           projectNumber,
@@ -582,6 +645,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
             directorSelected.map(name => [name, p.directorHoldTypes[name] === "confirmed" ? "confirmed_requesting" as const : "tentative_requesting" as const])
           ),
           mcBookingStatus: {},
+          chatMessages: castMessages.length > 0 ? castMessages : undefined,
           ...buildLotteryFields(p),
         })
       }
@@ -615,7 +679,10 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
         if (p.id) {
           const castingSelected = p.selectedCompanions.filter((n) => n !== "未定")
           const directorSelected = p.selectedDirectors.filter((n) => n !== "未定")
+          const undecidedCompanions = p.selectedCompanions.filter((n) => n === "未定").length
+          const undecidedDirectors = p.selectedDirectors.filter((n) => n === "未定").length
           const existing = repository.getProducts().find(ep => ep.id === p.id)
+          const castMessages = buildCastRequestMessages(castingSelected, directorSelected, p.companionHoldTypes, p.directorHoldTypes, undecidedCompanions, undecidedDirectors, existing)
           repository.updateProduct(p.id, {
             category: p.category,
             eventType: p.eventType,
@@ -648,6 +715,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
                 return [name, existing?.directorBookingStatus[name] ?? fallback]
               })
             ),
+            ...(castMessages.length > 0 ? { chatMessages: [...(existing?.chatMessages ?? []), ...castMessages] } : {}),
             ...buildLotteryFields(p),
           })
         }
@@ -660,6 +728,9 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
         for (const p of form.products) {
           const castingSelected = p.selectedCompanions.filter((n) => n !== "未定")
           const directorSelected = p.selectedDirectors.filter((n) => n !== "未定")
+          const undecidedCompanions = p.selectedCompanions.filter((n) => n === "未定").length
+          const undecidedDirectors = p.selectedDirectors.filter((n) => n === "未定").length
+          const castMessages = buildCastRequestMessages(castingSelected, directorSelected, p.companionHoldTypes, p.directorHoldTypes, undecidedCompanions, undecidedDirectors)
           repository.createProduct({
             projectId: project.id,
             projectNumber: form.projectNumber,
@@ -691,6 +762,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
               directorSelected.map(name => [name, p.directorHoldTypes[name] === "confirmed" ? "confirmed_requesting" as const : "tentative_requesting" as const])
             ),
             mcBookingStatus: {},
+            chatMessages: castMessages.length > 0 ? castMessages : undefined,
             ...buildLotteryFields(p),
           })
         }
@@ -702,7 +774,10 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
       if (p?.id) {
         const castingSelected = p.selectedCompanions.filter((n) => n !== "未定")
         const directorSelected = p.selectedDirectors.filter((n) => n !== "未定")
+        const undecidedCompanions = p.selectedCompanions.filter((n) => n === "未定").length
+        const undecidedDirectors = p.selectedDirectors.filter((n) => n === "未定").length
         const existing = repository.getProducts().find(ep => ep.id === p.id)
+        const castMessages = buildCastRequestMessages(castingSelected, directorSelected, p.companionHoldTypes, p.directorHoldTypes, undecidedCompanions, undecidedDirectors, existing)
         repository.updateProduct(p.id, {
           category: p.category,
           eventType: p.eventType,
@@ -736,6 +811,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
               return [name, existing?.directorBookingStatus[name] ?? fallback]
             })
           ),
+          ...(castMessages.length > 0 ? { chatMessages: [...(existing?.chatMessages ?? []), ...castMessages] } : {}),
           ...buildLotteryFields(p),
         })
       }
@@ -747,6 +823,34 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
       router.push(`/new/project-number/${savedProjectNumber}?role=Sales`)
     }
   }, [form, mode, repository, router, validate, getLotteryData, allHalls])
+
+  // ─── マネジメント部確認ステータス ───
+  const managementConfirmationStatus = useMemo<ManagementConfirmationStatus>(() => {
+    if (mode !== "product-edit" || !productId) return "unconfirmed"
+    const product = repository.getProductById(productId)
+    return product?.managementConfirmationStatus ?? "unconfirmed"
+  }, [mode, productId, repository])
+
+  // ─── 確認依頼 ───
+  const handleRequestConfirmation = useCallback(() => {
+    if (mode !== "product-edit") return
+    const p = form.products[0]
+    if (!p?.id) return
+    const existing = repository.getProducts().find(ep => ep.id === p.id)
+    const now = new Date().toISOString()
+    const message: ChatMessage = {
+      channel: "マネジメント部",
+      author: "営業",
+      content: `商材情報の確認をお願いします（商材名: ${p.eventProductName || p.eventType}）`,
+      timestamp: now,
+    }
+    repository.updateProduct(p.id, {
+      managementConfirmationStatus: "under-review",
+      chatMessages: [...(existing?.chatMessages ?? []), message],
+    })
+    // Re-read to reflect the new status
+    setForm(prev => ({ ...prev }))
+  }, [mode, form, repository])
 
   // ─── 戻る ───
   const handleBack = useCallback(() => {
@@ -795,6 +899,9 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
     handleCastHoldTypeChange,
     // ステータス
     updateProduct,
+    // マネジメント部確認
+    managementConfirmationStatus,
+    handleRequestConfirmation,
     // アクション
     handleSubmit,
     handleBack,

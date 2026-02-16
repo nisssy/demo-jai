@@ -3,6 +3,7 @@
 import { Suspense } from "react"
 import { useParams } from "next/navigation"
 import { useMemo } from "react"
+import { AppHeader } from "@/new/ui/AppHeader"
 import { LocalStorageProjectRepository } from "@/new/api/impl/local-storage-project-repository"
 import { ProjectRegistration } from "@/new/features/project-registration/ui/project-registration"
 
@@ -16,16 +17,22 @@ function ProjectEditContent() {
 
   if (!firstProductId) {
     return (
-      <main className="px-8 py-8 max-w-7xl mx-auto">
-        <div className="text-center py-12 text-slate-500">案件に商材がありません</div>
-      </main>
+      <>
+        <AppHeader currentRole="Sales" />
+        <main className="px-8 py-8 max-w-7xl mx-auto">
+          <div className="text-center py-12 text-slate-500">案件に商材がありません</div>
+        </main>
+      </>
     )
   }
 
   return (
-    <main className="px-8 py-8 max-w-7xl mx-auto">
-      <ProjectRegistration mode="edit" productId={firstProductId} />
-    </main>
+    <>
+      <AppHeader currentRole="Sales" />
+      <main className="px-8 py-8 max-w-7xl mx-auto">
+        <ProjectRegistration mode="edit" productId={firstProductId} />
+      </main>
+    </>
   )
 }
 

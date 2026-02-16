@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Users } from "lucide-react"
 import { BOOKING_STATUS_LABELS } from "@/new/api/display"
-import type { ProductionGroup, CastSubTab } from "../../hooks/useEventTeamDashboard"
+import type { ProductionGroup, CastSubTab, UndecidedCastRequest } from "../../hooks/useEventTeamDashboard"
 import type { BookingStatus } from "@/new/api/types"
 
 export type CastArrangementTabViewProps = {
@@ -14,6 +15,7 @@ export type CastArrangementTabViewProps = {
   confirmedGroups: ProductionGroup[]
   tentativeEntryCount: number
   confirmedEntryCount: number
+  undecidedCastRequests: UndecidedCastRequest[]
   onCompleteCast: (castName: string, castRole: "companion" | "director" | "mc", productId: number) => void
   onOpenHoldFailure: (castName: string, castRole: "companion" | "director" | "mc", productId: number) => void
 }
@@ -103,6 +105,7 @@ export function CastArrangementTabView({
   confirmedGroups,
   tentativeEntryCount,
   confirmedEntryCount,
+  undecidedCastRequests,
   onCompleteCast,
   onOpenHoldFailure,
 }: CastArrangementTabViewProps) {
@@ -171,6 +174,54 @@ export function CastArrangementTabView({
             />
           </TabsContent>
         </Tabs>
+
+        {/* 未定キャスト手配依頼 */}
+        {undecidedCastRequests.length > 0 && (
+          <div className="mt-8 border-t border-slate-200 pt-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Users className="h-5 w-5 text-orange-500" />
+              <h3 className="text-base font-semibold text-slate-900">未定キャスト手配依頼</h3>
+              <Badge className="bg-orange-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
+                {undecidedCastRequests.length}
+              </Badge>
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>商材名</TableHead>
+                  <TableHead>案件名</TableHead>
+                  <TableHead>案件No</TableHead>
+                  <TableHead>実施日</TableHead>
+                  <TableHead>手配依頼</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {undecidedCastRequests.map((req) => (
+                  <TableRow key={req.product.id}>
+                    <TableCell className="font-medium">{req.product.eventProductName}</TableCell>
+                    <TableCell>{req.projectName}</TableCell>
+                    <TableCell>{req.product.projectNumber}</TableCell>
+                    <TableCell>{req.product.eventDate || "未定"}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-2">
+                        {req.companionCount > 0 && (
+                          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                            コンパニオン {req.companionCount}名
+                          </Badge>
+                        )}
+                        {req.directorCount > 0 && (
+                          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                            ディレクター {req.directorCount}名
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

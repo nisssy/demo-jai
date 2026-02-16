@@ -7,7 +7,7 @@
 import type { Project, Product, DesignRequest, Company, Hall, Employee, CastSchedule, MachineMaster } from "./types"
 
 /** シードデータのスキーマバージョン。型定義やシードデータを変更したらインクリメントする */
-export const SEED_VERSION = 14
+export const SEED_VERSION = 15
 
 // ─── Projects ───
 
@@ -93,6 +93,7 @@ export const SEED_PRODUCTS: Product[] = [
     eventDate: "2026/03/15",
     estimatedBillingAmount: 650000,
     proposalStatus: "proposing",
+    managementConfirmationStatus: "unconfirmed",
     executionStatus: "実施前",
     companionCount: "2",
     directorCount: "1",
@@ -140,6 +141,7 @@ export const SEED_PRODUCTS: Product[] = [
     eventDate: "2026/02/01",
     estimatedBillingAmount: 480000,
     proposalStatus: "order-received",
+    managementConfirmationStatus: "approved",
     executionStatus: "終了",
     companionCount: "1",
     directorCount: "0",
@@ -207,6 +209,7 @@ export const SEED_PRODUCTS: Product[] = [
     eventDate: "2026/03/20",
     estimatedBillingAmount: 1200000,
     proposalStatus: "order-received",
+    managementConfirmationStatus: "approved",
     companionCount: "0",
     directorCount: "0",
     mcCount: "0",
@@ -336,6 +339,7 @@ export const SEED_PRODUCTS: Product[] = [
     eventDate: "2026/01/20",
     estimatedBillingAmount: 720000,
     proposalStatus: "order-received",
+    managementConfirmationStatus: "approved",
     executionStatus: "終了",
     companionCount: "2",
     directorCount: "1",
@@ -379,6 +383,7 @@ export const SEED_PRODUCTS: Product[] = [
     eventDate: "2026/02/20",
     estimatedBillingAmount: 550000,
     proposalStatus: "before-proposal",
+    managementConfirmationStatus: "revision-requested",
     executionStatus: "実施前",
     companionCount: "3",
     directorCount: "1",
@@ -413,6 +418,7 @@ export const SEED_PRODUCTS: Product[] = [
     eventDate: "2026/03/25",
     estimatedBillingAmount: 420000,
     proposalStatus: "before-proposal",
+    managementConfirmationStatus: "unconfirmed",
     executionStatus: "実施前",
     companionCount: "1",
     directorCount: "0",
@@ -443,6 +449,7 @@ export const SEED_PRODUCTS: Product[] = [
     eventDate: "2026/04/10",
     estimatedBillingAmount: 700000,
     proposalStatus: "order-received",
+    managementConfirmationStatus: "under-review",
     executionStatus: "実施前",
     companionCount: "2",
     directorCount: "1",
