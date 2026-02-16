@@ -14,6 +14,7 @@ import { CostExportModalView } from "./modals/CostExportModal.view"
 import { CostumeArrangementModalView } from "./modals/CostumeArrangementModal.view"
 import { ProductConfirmationDetailModalView } from "./modals/ProductConfirmationDetailModal.view"
 import { CostInputModalView } from "./modals/CostInputModal.view"
+import { CastAssignmentModalView } from "./modals/CastAssignmentModal.view"
 import type { UseEventTeamDashboardReturn } from "../hooks/useEventTeamDashboard"
 import type { ArrangementChecks, CostExportStatuses } from "../hooks/useEventTeamDashboard"
 import type { UseLotteryFormReturn } from "@/new/features/project-registration/hooks/useLotteryForm"
@@ -95,6 +96,7 @@ export function EventTeamDashboardView(props: EventTeamDashboardViewProps) {
             undecidedCastRequests={props.undecidedCastRequests}
             onCompleteCast={props.completeCastHold}
             onOpenHoldFailure={props.openHoldFailure}
+            onOpenCastAssignment={props.openCastAssignment}
           />
         </TabsContent>
 
@@ -228,6 +230,25 @@ export function EventTeamDashboardView(props: EventTeamDashboardViewProps) {
         onAutoFill={props.autoFillCostInput}
         autoFilled={props.costInputAutoFilled}
         onSave={props.saveCostInput}
+      />
+
+      <CastAssignmentModalView
+        open={props.showCastAssignmentModal}
+        onOpenChange={props.setShowCastAssignmentModal}
+        product={props.castAssignmentProduct}
+        projectName={props.castAssignmentProjectName}
+        availableCompanions={props.availableCompanionsForAssignment}
+        selectedCompanions={props.selectedAssignCompanions}
+        maxCompanions={props.maxAssignCompanions}
+        onToggleCompanion={props.toggleAssignCompanion}
+        showCompanionSection={props.castAssignmentProduct?.eventType !== "スロセレ" && (props.maxAssignCompanions > 0)}
+        availableDirectors={props.availableDirectorsForAssignment}
+        selectedDirectors={props.selectedAssignDirectors}
+        maxDirectors={props.maxAssignDirectors}
+        onToggleDirector={props.toggleAssignDirector}
+        showDirectorSection={props.maxAssignDirectors > 0}
+        productionNames={props.productionNameRecord}
+        onSubmit={props.submitCastAssignment}
       />
     </div>
   )

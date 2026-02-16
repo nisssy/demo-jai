@@ -7,7 +7,7 @@
 import type { Project, Product, DesignRequest, Company, Hall, Employee, CastSchedule, MachineMaster } from "./types"
 
 /** シードデータのスキーマバージョン。型定義やシードデータを変更したらインクリメントする */
-export const SEED_VERSION = 16
+export const SEED_VERSION = 17
 
 // ─── Projects ───
 
@@ -436,7 +436,9 @@ export const SEED_PRODUCTS: Product[] = [
     statusHistory: [
       { status: "仮押さえ依頼", timestamp: "2026-02-10T09:00:00Z", changedBy: "山田 太郎" },
     ],
+    targetMachineFormSent: true,
     targetMachineNames: ["ジャグラー", "マイジャグラーV"],
+    pachitownMachineNames: ["Sマイジャグラー5", "SマイジャグラーV"],
   },
   // Product 7: トリニティガール（受注・実施前 - 各種手配タブ用）
   {
@@ -503,7 +505,6 @@ export const SEED_PRODUCTS: Product[] = [
       { status: "受注", timestamp: "2026-03-01T09:00:00Z", changedBy: "佐藤 次郎" },
       { status: "キャスト手配完了", timestamp: "2026-03-10T10:00:00Z", changedBy: "マネジメント部" },
     ],
-    targetMachineNames: ["ジャグラー", "マイジャグラーV", "ハナハナ"],
   },
 ]
 
@@ -668,6 +669,7 @@ export const SEED_MACHINE_MASTERS: MachineMaster[] = [
   { id: 6, name: "リゼロ", pachitownName: "Sリゼロ鬼がかり" },
   { id: 7, name: "ジャグラー", pachitownName: "Sマイジャグラー5" },
   { id: 8, name: "マイジャグラーV", pachitownName: "SマイジャグラーV" },
+  { id: 9, name: "ハナハナ", pachitownName: "Sハナハナホウオウ天翔" },
 ]
 
 // ─── Design Vendors (デザイン業者マスタ) ───

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import type { ProjectRepository } from "@/new/api/project-repository"
 import type { ChatChannel } from "@/new/features/product-chat/model/types"
 
@@ -17,6 +17,18 @@ export type UseProductChatArgs = {
 
 export function useProductChat({ repository, productId }: UseProductChatArgs) {
   const [refreshKey, setRefreshKey] = useState(0)
+
+  // 他コンポーネントからの chatMessages 更新を検知して再読み込み
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (!detail?.productId || detail.productId === productId) {
+        setRefreshKey(k => k + 1)
+      }
+    }
+    window.addEventListener("chat-updated", handler)
+    return () => window.removeEventListener("chat-updated", handler)
+  }, [productId])
 
   const product = useMemo(() => {
     return repository.getProductById(productId)

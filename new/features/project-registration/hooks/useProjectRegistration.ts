@@ -54,6 +54,9 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
   // ─── イベント区分検索UI (per product) ───
   const [eventTypeSearchOpen, setEventTypeSearchOpen] = useState<Record<number, boolean>>({})
 
+  // ─── リフレッシュ（repository更新後にuseMemo再計算を強制する） ───
+  const [refreshKey, setRefreshKey] = useState(0)
+
   // ─── マスタデータ ───
   const allCompanies = useMemo(() => repository.getCompanies(), [repository])
   const allHalls = useMemo(() => repository.getHalls(), [repository])
@@ -512,6 +515,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
 
     /** キャスト選択時のマネジメント部への依頼メッセージを生成 */
     const buildCastRequestMessages = (
+      eventType: string,
       companions: string[],
       directors: string[],
       companionHoldTypes: Record<string, string>,
@@ -521,16 +525,19 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
       existingProduct?: Product | null,
     ): ChatMessage[] => {
       const messages: ChatMessage[] = []
-      for (const name of companions) {
-        // 編集時: 既に押さえ済みのキャストはスキップ
-        if (existingProduct?.companionBookingStatus[name]) continue
-        const holdLabel = companionHoldTypes[name] === "confirmed" ? "本押さえ" : "仮押さえ"
-        messages.push({
-          channel: "マネジメント部",
-          author: "営業",
-          content: `${name}さん（コンパニオン）の${holdLabel}をお願いします`,
-          timestamp: now,
-        })
+      // スロセレはコンパニオン不要のためスキップ
+      if (eventType !== "スロセレ") {
+        for (const name of companions) {
+          // 編集時: 既に押さえ済みのキャストはスキップ
+          if (existingProduct?.companionBookingStatus[name]) continue
+          const holdLabel = companionHoldTypes[name] === "confirmed" ? "本押さえ" : "仮押さえ"
+          messages.push({
+            channel: "マネジメント部",
+            author: "営業",
+            content: `${name}さん（コンパニオン）の${holdLabel}をお願いします`,
+            timestamp: now,
+          })
+        }
       }
       for (const name of directors) {
         if (existingProduct?.directorBookingStatus[name]) continue
@@ -551,7 +558,8 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
         : 0
       const newUndecidedCompanions = undecidedCompanionCount - existingUndecidedCompanions
       const newUndecidedDirectors = undecidedDirectorCount - existingUndecidedDirectors
-      if (newUndecidedCompanions > 0) {
+      // スロセレはコンパニオン不要のためスキップ
+      if (eventType !== "スロセレ" && newUndecidedCompanions > 0) {
         messages.push({
           channel: "マネジメント部",
           author: "営業",
@@ -611,9 +619,9 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
       for (const p of form.products) {
         const castingSelected = p.selectedCompanions.filter((n) => n !== "未定")
         const directorSelected = p.selectedDirectors.filter((n) => n !== "未定")
-        const undecidedCompanions = p.selectedCompanions.filter((n) => n === "未定").length
-        const undecidedDirectors = p.selectedDirectors.filter((n) => n === "未定").length
-        const castMessages = buildCastRequestMessages(castingSelected, directorSelected, p.companionHoldTypes, p.directorHoldTypes, undecidedCompanions, undecidedDirectors)
+        const undecidedCompanions = Math.max(0, parseInt(p.companionCount || "0") - castingSelected.length)
+        const undecidedDirectors = Math.max(0, parseInt(p.directorCount || "0") - directorSelected.length)
+        const castMessages = buildCastRequestMessages(p.eventType, castingSelected, directorSelected, p.companionHoldTypes, p.directorHoldTypes, undecidedCompanions, undecidedDirectors)
         repository.createProduct({
           projectId: project.id,
           projectNumber,
@@ -679,10 +687,10 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
         if (p.id) {
           const castingSelected = p.selectedCompanions.filter((n) => n !== "未定")
           const directorSelected = p.selectedDirectors.filter((n) => n !== "未定")
-          const undecidedCompanions = p.selectedCompanions.filter((n) => n === "未定").length
-          const undecidedDirectors = p.selectedDirectors.filter((n) => n === "未定").length
+          const undecidedCompanions = Math.max(0, parseInt(p.companionCount || "0") - castingSelected.length)
+          const undecidedDirectors = Math.max(0, parseInt(p.directorCount || "0") - directorSelected.length)
           const existing = repository.getProducts().find(ep => ep.id === p.id)
-          const castMessages = buildCastRequestMessages(castingSelected, directorSelected, p.companionHoldTypes, p.directorHoldTypes, undecidedCompanions, undecidedDirectors, existing)
+          const castMessages = buildCastRequestMessages(p.eventType, castingSelected, directorSelected, p.companionHoldTypes, p.directorHoldTypes, undecidedCompanions, undecidedDirectors, existing)
           repository.updateProduct(p.id, {
             category: p.category,
             eventType: p.eventType,
@@ -728,9 +736,9 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
         for (const p of form.products) {
           const castingSelected = p.selectedCompanions.filter((n) => n !== "未定")
           const directorSelected = p.selectedDirectors.filter((n) => n !== "未定")
-          const undecidedCompanions = p.selectedCompanions.filter((n) => n === "未定").length
-          const undecidedDirectors = p.selectedDirectors.filter((n) => n === "未定").length
-          const castMessages = buildCastRequestMessages(castingSelected, directorSelected, p.companionHoldTypes, p.directorHoldTypes, undecidedCompanions, undecidedDirectors)
+          const undecidedCompanions = Math.max(0, parseInt(p.companionCount || "0") - castingSelected.length)
+          const undecidedDirectors = Math.max(0, parseInt(p.directorCount || "0") - directorSelected.length)
+          const castMessages = buildCastRequestMessages(p.eventType, castingSelected, directorSelected, p.companionHoldTypes, p.directorHoldTypes, undecidedCompanions, undecidedDirectors)
           repository.createProduct({
             projectId: project.id,
             projectNumber: form.projectNumber,
@@ -774,10 +782,10 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
       if (p?.id) {
         const castingSelected = p.selectedCompanions.filter((n) => n !== "未定")
         const directorSelected = p.selectedDirectors.filter((n) => n !== "未定")
-        const undecidedCompanions = p.selectedCompanions.filter((n) => n === "未定").length
-        const undecidedDirectors = p.selectedDirectors.filter((n) => n === "未定").length
+        const undecidedCompanions = Math.max(0, parseInt(p.companionCount || "0") - castingSelected.length)
+        const undecidedDirectors = Math.max(0, parseInt(p.directorCount || "0") - directorSelected.length)
         const existing = repository.getProducts().find(ep => ep.id === p.id)
-        const castMessages = buildCastRequestMessages(castingSelected, directorSelected, p.companionHoldTypes, p.directorHoldTypes, undecidedCompanions, undecidedDirectors, existing)
+        const castMessages = buildCastRequestMessages(p.eventType, castingSelected, directorSelected, p.companionHoldTypes, p.directorHoldTypes, undecidedCompanions, undecidedDirectors, existing)
         repository.updateProduct(p.id, {
           category: p.category,
           eventType: p.eventType,
@@ -829,7 +837,8 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
     if (mode !== "product-edit" || !productId) return "unconfirmed"
     const product = repository.getProductById(productId)
     return product?.managementConfirmationStatus ?? "unconfirmed"
-  }, [mode, productId, repository])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, productId, repository, refreshKey])
 
   // ─── 確認依頼 ───
   const handleRequestConfirmation = useCallback(() => {
@@ -848,8 +857,8 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
       managementConfirmationStatus: "under-review",
       chatMessages: [...(existing?.chatMessages ?? []), message],
     })
-    // Re-read to reflect the new status
-    setForm(prev => ({ ...prev }))
+    setRefreshKey(k => k + 1)
+    window.dispatchEvent(new CustomEvent("chat-updated", { detail: { productId: p.id } }))
   }, [mode, form, repository])
 
   // ─── 戻る ───

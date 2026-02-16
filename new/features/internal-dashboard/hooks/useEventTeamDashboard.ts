@@ -4,7 +4,7 @@ import type { ProjectRepository } from "@/new/api/project-repository"
 import type { Product, BookingStatus, StatusHistoryEntry, ChatMessage } from "@/new/api/types"
 import type { ProductFormState } from "@/new/features/project-registration/model/types"
 import type { CostItem } from "../ui/modals/CostInputModal.view"
-import { SEED_COMPANIONS, SEED_DIRECTORS, SEED_PRODUCTIONS } from "@/new/api/seed-data"
+import { SEED_COMPANIONS, SEED_DIRECTORS, SEED_PRODUCTIONS, SEED_MACHINE_MASTERS } from "@/new/api/seed-data"
 
 /** Product エンティティ → ProductFormState への変換（読み取り専用表示用） */
 function productToFormState(product: Product): ProductFormState {
@@ -207,6 +207,12 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
     postEvent: true,
   })
 
+  // ─── キャスト割り当てモーダル ───
+  const [showCastAssignmentModal, setShowCastAssignmentModal] = useState(false)
+  const [castAssignmentProduct, setCastAssignmentProduct] = useState<Product | null>(null)
+  const [selectedAssignCompanions, setSelectedAssignCompanions] = useState<string[]>([])
+  const [selectedAssignDirectors, setSelectedAssignDirectors] = useState<string[]>([])
+
   // ─── 商材確認モーダル ───
   const [showConfirmationDetailModal, setShowConfirmationDetailModal] = useState(false)
   const [confirmationComment, setConfirmationComment] = useState("")
@@ -257,6 +263,15 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
   const productionMap = useMemo(() =>
     new Map(SEED_PRODUCTIONS.map(p => [p.id, p]))
   , [])
+
+  /** productionId → name の Record（View用） */
+  const productionNameRecord = useMemo(() => {
+    const record: Record<number, string> = {}
+    for (const [id, prod] of productionMap) {
+      record[id] = prod.name
+    }
+    return record
+  }, [productionMap])
 
   /** キャスト手配対象のイベント商材（仮 or 本押さえでアクションが必要なキャストが1人以上いる） */
   const castArrangementEventProducts = useMemo(() =>
@@ -311,6 +326,35 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
     }
     return requests
   }, [allProducts, getProjectName])
+
+  // ─── キャスト割り当て（未定キャスト手配依頼からキャストを選択） ───
+
+  const castAssignmentProjectName = useMemo(() => {
+    if (!castAssignmentProduct) return ""
+    return getProjectForProduct(castAssignmentProduct)?.projectName ?? ""
+  }, [castAssignmentProduct, getProjectForProduct])
+
+  const availableCompanionsForAssignment = useMemo(() => {
+    if (!castAssignmentProduct) return []
+    const assigned = new Set(castAssignmentProduct.selectedCompanions)
+    return SEED_COMPANIONS.filter(c => !assigned.has(c.name))
+  }, [castAssignmentProduct])
+
+  const availableDirectorsForAssignment = useMemo(() => {
+    if (!castAssignmentProduct) return []
+    const assigned = new Set(castAssignmentProduct.selectedDirectors)
+    return SEED_DIRECTORS.filter(d => !assigned.has(d.name))
+  }, [castAssignmentProduct])
+
+  const maxAssignCompanions = useMemo(() => {
+    if (!castAssignmentProduct) return 0
+    return Math.max(0, parseInt(castAssignmentProduct.companionCount || "0") - castAssignmentProduct.selectedCompanions.length)
+  }, [castAssignmentProduct])
+
+  const maxAssignDirectors = useMemo(() => {
+    if (!castAssignmentProduct) return 0
+    return Math.max(0, parseInt(castAssignmentProduct.directorCount || "0") - castAssignmentProduct.selectedDirectors.length)
+  }, [castAssignmentProduct])
 
   // ═══════════════════════════════════════════════════
   // タブ2: 各種手配 — 受注+実施前
@@ -640,12 +684,21 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
     setTimeout(() => setAutoArrangementToast(null), 3000)
   }, [selectedProduct, arrangementChecks, repository, refresh])
 
-  /** スロセレ: 対象機種入力フォームを顧客に送信 */
+  /** スロセレ: 対象機種入力フォームを顧客に送信（顧客入力をシミュレート） */
   const sendTargetMachineForm = useCallback((product: Product) => {
     const now = new Date().toISOString()
+    // マスタからランダムに2〜3機種を選んで顧客入力をシミュレート
+    const shuffled = [...SEED_MACHINE_MASTERS].sort(() => Math.random() - 0.5)
+    const count = 2 + Math.floor(Math.random() * 2) // 2 or 3
+    const picked = shuffled.slice(0, count)
+    const targetMachineNames = picked.map(m => m.name)
+    const pachitownMachineNames = picked.map(m => m.pachitownName)
+
     repository.updateProduct(product.id, {
       targetMachineFormSent: true,
       targetMachineFormSentDate: now.split("T")[0],
+      targetMachineNames,
+      pachitownMachineNames,
       statusHistory: [...(product.statusHistory ?? []), {
         status: "対象機種入力フォーム送信",
         timestamp: now,
@@ -657,6 +710,75 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
     refresh()
     setTimeout(() => setAutoArrangementToast(null), 3000)
   }, [repository, refresh])
+
+  // ─── キャスト割り当てハンドラ ───
+
+  const openCastAssignment = useCallback((product: Product) => {
+    setCastAssignmentProduct(product)
+    setSelectedAssignCompanions([])
+    setSelectedAssignDirectors([])
+    setShowCastAssignmentModal(true)
+  }, [])
+
+  const toggleAssignCompanion = useCallback((name: string) => {
+    setSelectedAssignCompanions(prev => {
+      if (prev.includes(name)) return prev.filter(n => n !== name)
+      if (prev.length >= maxAssignCompanions) return prev
+      return [...prev, name]
+    })
+  }, [maxAssignCompanions])
+
+  const toggleAssignDirector = useCallback((name: string) => {
+    setSelectedAssignDirectors(prev => {
+      if (prev.includes(name)) return prev.filter(n => n !== name)
+      if (prev.length >= maxAssignDirectors) return prev
+      return [...prev, name]
+    })
+  }, [maxAssignDirectors])
+
+  const submitCastAssignment = useCallback(() => {
+    if (!castAssignmentProduct) return
+    const product = castAssignmentProduct
+    const updates: Partial<Product> = {}
+    const now = new Date().toISOString()
+
+    if (selectedAssignCompanions.length > 0) {
+      updates.selectedCompanions = [...product.selectedCompanions, ...selectedAssignCompanions]
+      const newStatus = { ...product.companionBookingStatus }
+      for (const name of selectedAssignCompanions) {
+        newStatus[name] = "tentative_requesting"
+      }
+      updates.companionBookingStatus = newStatus
+    }
+
+    if (selectedAssignDirectors.length > 0) {
+      updates.selectedDirectors = [...product.selectedDirectors, ...selectedAssignDirectors]
+      const newStatus = { ...product.directorBookingStatus }
+      for (const name of selectedAssignDirectors) {
+        newStatus[name] = "tentative_requesting"
+      }
+      updates.directorBookingStatus = newStatus
+    }
+
+    const assignedNames = [...selectedAssignCompanions, ...selectedAssignDirectors]
+    updates.statusHistory = [...(product.statusHistory ?? []), {
+      status: "キャスト割り当て",
+      timestamp: now,
+      changedBy: "マネジメント部",
+      note: assignedNames.join("、"),
+    }]
+
+    updates.chatMessages = [...(product.chatMessages ?? []), {
+      channel: "マネジメント部",
+      author: "マネジメント部",
+      content: `${assignedNames.join("、")}を割り当てました（仮押さえ依頼中）`,
+      timestamp: now,
+    }]
+
+    repository.updateProduct(product.id, updates)
+    setShowCastAssignmentModal(false)
+    refresh()
+  }, [castAssignmentProduct, selectedAssignCompanions, selectedAssignDirectors, repository, refresh])
 
   // ═══════════════════════════════════════════════════
   // ハンドラ: イベント終了処理
@@ -857,6 +979,14 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
     tentativeProductionGroups, confirmedProductionGroups,
     tentativeEntryCount, confirmedEntryCount,
     undecidedCastRequests,
+    // キャスト割り当て
+    showCastAssignmentModal, setShowCastAssignmentModal,
+    castAssignmentProduct, castAssignmentProjectName,
+    availableCompanionsForAssignment, availableDirectorsForAssignment,
+    maxAssignCompanions, maxAssignDirectors,
+    selectedAssignCompanions, selectedAssignDirectors,
+    openCastAssignment, toggleAssignCompanion, toggleAssignDirector, submitCastAssignment,
+    productionNameRecord,
     completeCastHold, requestConfirmedHold,
     showHoldFailureModal, setShowHoldFailureModal, openHoldFailure, submitHoldFailure,
     holdFailureCastName, holdFailureComment, setHoldFailureComment,

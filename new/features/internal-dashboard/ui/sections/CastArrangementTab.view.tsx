@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Users } from "lucide-react"
 import { BOOKING_STATUS_LABELS } from "@/new/api/display"
 import type { ProductionGroup, CastSubTab, UndecidedCastRequest } from "../../hooks/useEventTeamDashboard"
-import type { BookingStatus } from "@/new/api/types"
+import type { BookingStatus, Product } from "@/new/api/types"
 
 export type CastArrangementTabViewProps = {
   castSubTab: CastSubTab
@@ -18,6 +18,7 @@ export type CastArrangementTabViewProps = {
   undecidedCastRequests: UndecidedCastRequest[]
   onCompleteCast: (castName: string, castRole: "companion" | "director" | "mc", productId: number) => void
   onOpenHoldFailure: (castName: string, castRole: "companion" | "director" | "mc", productId: number) => void
+  onOpenCastAssignment: (product: Product) => void
 }
 
 const subTabTriggerClass = "relative px-3 py-2 text-sm font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
@@ -110,6 +111,7 @@ export function CastArrangementTabView({
   undecidedCastRequests,
   onCompleteCast,
   onOpenHoldFailure,
+  onOpenCastAssignment,
 }: CastArrangementTabViewProps) {
   return (
     <Card>
@@ -196,6 +198,7 @@ export function CastArrangementTabView({
                   <TableHead>実施日</TableHead>
                   <TableHead>イベント区分</TableHead>
                   <TableHead>手配依頼</TableHead>
+                  <TableHead>操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -219,6 +222,11 @@ export function CastArrangementTabView({
                           </Badge>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <Button size="sm" variant="outline" onClick={() => onOpenCastAssignment(req.product)}>
+                        キャスト割り当て
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

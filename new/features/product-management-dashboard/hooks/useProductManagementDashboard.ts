@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import type { ProjectRepository } from "@/new/api/project-repository";
 import type { Product, MachineMaster } from "@/new/api/types";
 import type { BannerEditState } from "@/features/product-management-dashboard/model/types";
@@ -70,8 +70,6 @@ function getDateAndDayOfWeek(eventDate: string): {
 
 export function useProductManagementDashboard(repository: ProjectRepository) {
   const [activeTab, setActiveTab] = useState<TabValue>("machineMaster");
-  const [machineMasters, setMachineMasters] = useState<MachineMaster[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
   const [newMasterName, setNewMasterName] = useState("");
   const [newMasterPachitownName, setNewMasterPachitownName] = useState("");
   const [bannerModalOpen, setBannerModalOpen] = useState(false);
@@ -81,20 +79,18 @@ export function useProductManagementDashboard(repository: ProjectRepository) {
     Record<number, string[]>
   >({});
 
-  const loadData = useCallback(() => {
-    const masters = repository.getMachineMasters();
-    setMachineMasters(masters);
-    const allProducts = repository.getProducts();
-    setProducts(allProducts);
-  }, [repository]);
+  // ─── リフレッシュ（repository更新後にデータ再取得を強制する） ───
+  const [refreshKey, setRefreshKey] = useState(0);
+  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const machineMasters = useMemo(() => repository.getMachineMasters(), [repository, refreshKey]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const allProducts = useMemo(() => repository.getProducts(), [repository, refreshKey]);
 
   const slotSelectProducts = useMemo(() => {
-    return products.filter((p) => p.eventType === "スロセレ");
-  }, [products]);
+    return allProducts.filter((p) => p.eventType === "スロセレ");
+  }, [allProducts]);
 
   const productViewModels: ProductMachineViewModel[] = useMemo(() => {
     return slotSelectProducts.map((product) => {
@@ -135,28 +131,29 @@ export function useProductManagementDashboard(repository: ProjectRepository) {
     };
     const updated = [...machineMasters, newMaster];
     repository.saveMachineMasters(updated);
-    setMachineMasters(updated);
     setNewMasterName("");
     setNewMasterPachitownName("");
+    refresh();
   }, [
     machineMasters,
     newMasterName,
     newMasterPachitownName,
     repository,
+    refresh,
   ]);
 
   const deleteMachineMaster = useCallback(
     (masterId: number) => {
       const updated = machineMasters.filter((m) => m.id !== masterId);
       repository.saveMachineMasters(updated);
-      setMachineMasters(updated);
+      refresh();
     },
-    [machineMasters, repository]
+    [machineMasters, repository, refresh]
   );
 
   const autoConvertMachines = useCallback(
     (productId: number) => {
-      const product = products.find((p) => p.id === productId);
+      const product = allProducts.find((p) => p.id === productId);
       if (!product) return;
       const targetNames = product.targetMachineNames ?? [];
       const convertedNames = targetNames.map((name) => {
@@ -170,9 +167,9 @@ export function useProductManagementDashboard(repository: ProjectRepository) {
         ...prev,
         [productId]: convertedNames,
       }));
-      loadData();
+      refresh();
     },
-    [products, machineMasters, repository, loadData]
+    [allProducts, machineMasters, repository, refresh]
   );
 
   const updatePachitownMachineNames = useCallback(
@@ -187,9 +184,9 @@ export function useProductManagementDashboard(repository: ProjectRepository) {
       const names = editingMachineNames[productId];
       if (!names) return;
       repository.updateProduct(productId, { pachitownMachineNames: names });
-      loadData();
+      refresh();
     },
-    [editingMachineNames, repository, loadData]
+    [editingMachineNames, repository, refresh]
   );
 
   const handlePachitownLink = useCallback(
@@ -199,9 +196,9 @@ export function useProductManagementDashboard(repository: ProjectRepository) {
         pachitownLinked: true,
         pachitownLinkedDate: linkedDate,
       });
-      loadData();
+      refresh();
     },
-    [repository, loadData]
+    [repository, refresh]
   );
 
   // 機種名のインライン編集（旧 View 用）
@@ -221,7 +218,7 @@ export function useProductManagementDashboard(repository: ProjectRepository) {
 
   const handleSaveEditMachine = useCallback(
     (productId: number, index: number) => {
-      const product = products.find((p) => p.id === productId);
+      const product = allProducts.find((p) => p.id === productId);
       if (!product) return;
       const pachitownMachineNames = [...(product.pachitownMachineNames ?? [])];
       pachitownMachineNames[index] = editingMachineName.trim();
@@ -229,9 +226,9 @@ export function useProductManagementDashboard(repository: ProjectRepository) {
       setEditingProductId(null);
       setEditingMachineIndex(null);
       setEditingMachineName("");
-      loadData();
+      refresh();
     },
-    [products, editingMachineName, repository, loadData]
+    [allProducts, editingMachineName, repository, refresh]
   );
 
   const handleCancelEditMachine = useCallback(() => {
@@ -296,8 +293,8 @@ export function useProductManagementDashboard(repository: ProjectRepository) {
     setBannerModalOpen(false);
     setBannerModalData(null);
     setBannerEdit(DEFAULT_BANNER_EDIT);
-    loadData();
-  }, [bannerEdit, repository, loadData]);
+    refresh();
+  }, [bannerEdit, repository, refresh]);
 
   const onBannerModalOpenChange = useCallback((open: boolean) => {
     if (!open) {
@@ -320,9 +317,9 @@ export function useProductManagementDashboard(repository: ProjectRepository) {
       setBannerModalOpen(false);
       setBannerModalData(null);
       setBannerEdit(DEFAULT_BANNER_EDIT);
-      loadData();
+      refresh();
     },
-    [bannerEdit, repository, loadData]
+    [bannerEdit, repository, refresh]
   );
 
   return {
