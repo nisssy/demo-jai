@@ -8,6 +8,7 @@ import { getCategoryByEventType, getEventTypesByCategory } from "@/new/api/displ
 import type { RegistrationMode, ProjectFormState, ProductFormState, FormErrors } from "@/new/features/project-registration/model/types"
 import type { LotteryFormState } from "@/new/features/project-registration/model/lottery-types"
 import { EMPTY_PRODUCT } from "@/new/features/project-registration/model/types"
+import { computeEstimatedBilling } from "@/new/api/cast-data"
 
 export type UseProjectRegistrationArgs = {
   repository: ProjectRepository
@@ -136,6 +137,10 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
         performanceFeeDiscount: (product as Record<string, unknown>).performanceFeeDiscount as string ?? "",
         accommodationFeePerPerson: (product as Record<string, unknown>).accommodationFeePerPerson as string ?? "",
         eventBaseFeeDiscount: (product as Record<string, unknown>).eventBaseFeeDiscount as string ?? "",
+        // ステータス
+        proposalStatus: product.proposalStatus ?? "before-proposal",
+        readingCertainty: product.readingCertainty ?? "",
+        executionStatus: product.executionStatus ?? null,
       }
 
       if (mode === "edit" && project) {
@@ -505,6 +510,26 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
       }
     }
 
+    const hallAddress = allHalls.find((h) => h.hallId === form.hallId)?.address ?? ""
+
+    /** イベント系商材の請求予定金額を計算（合同抽選会は対象外） */
+    const calcBilling = (p: ProductFormState): number => {
+      if (p.category === "ポイント") return 0
+      return computeEstimatedBilling({
+        startTime: p.startTime,
+        endTime: p.endTime,
+        companionCount: p.companionCount,
+        directorCount: p.directorCount,
+        selectedCompanions: p.selectedCompanions,
+        selectedDirectors: p.selectedDirectors,
+        performanceFeeDiscount: p.performanceFeeDiscount,
+        accommodationFeePerPerson: p.accommodationFeePerPerson,
+        eventBaseFeeDiscount: p.eventBaseFeeDiscount,
+        eventType: p.eventType,
+        hallAddress,
+      })
+    }
+
     let savedProjectNumber = form.projectNumber
 
     if (mode === "new") {
@@ -540,8 +565,10 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
           publicationDate: p.publicationDate,
           publicationTime: p.publicationTime,
           reportRequired: p.reportRequired,
-          estimatedBillingAmount: 0,
-          proposalStatus: "before-proposal",
+          estimatedBillingAmount: calcBilling(p),
+          proposalStatus: p.proposalStatus,
+          readingCertainty: p.readingCertainty || undefined,
+          executionStatus: p.executionStatus ?? undefined,
           companionCount: p.companionCount || "0",
           directorCount: p.directorCount || "0",
           mcCount: "0",
@@ -601,6 +628,10 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
             publicationDate: p.publicationDate,
             publicationTime: p.publicationTime,
             reportRequired: p.reportRequired,
+            estimatedBillingAmount: calcBilling(p),
+            proposalStatus: p.proposalStatus,
+            readingCertainty: p.readingCertainty || undefined,
+            executionStatus: p.executionStatus ?? undefined,
             companionCount: p.companionCount || "0",
             directorCount: p.directorCount || "0",
             selectedCompanions: castingSelected,
@@ -643,8 +674,10 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
             publicationDate: p.publicationDate,
             publicationTime: p.publicationTime,
             reportRequired: p.reportRequired,
-            estimatedBillingAmount: 0,
-            proposalStatus: "before-proposal",
+            estimatedBillingAmount: calcBilling(p),
+            proposalStatus: p.proposalStatus,
+            readingCertainty: p.readingCertainty || undefined,
+            executionStatus: p.executionStatus ?? undefined,
             companionCount: p.companionCount || "0",
             directorCount: p.directorCount || "0",
             mcCount: "0",
@@ -682,6 +715,10 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
           publicationDate: p.publicationDate,
           publicationTime: p.publicationTime,
           reportRequired: p.reportRequired,
+          estimatedBillingAmount: calcBilling(p),
+          proposalStatus: p.proposalStatus,
+          readingCertainty: p.readingCertainty || undefined,
+          executionStatus: p.executionStatus ?? undefined,
           comments: [],
           companionCount: p.companionCount || "0",
           directorCount: p.directorCount || "0",
@@ -705,11 +742,11 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
     }
 
     if (mode === "new") {
-      router.push("/new?role=Sales")
+      router.push(`/new/project-number/${savedProjectNumber}?role=Sales`)
     } else {
       router.push(`/new/project-number/${savedProjectNumber}?role=Sales`)
     }
-  }, [form, mode, repository, router, validate, getLotteryData])
+  }, [form, mode, repository, router, validate, getLotteryData, allHalls])
 
   // ─── 戻る ───
   const handleBack = useCallback(() => {
@@ -756,6 +793,8 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
     handleToggleCast,
     handleToggleNomination,
     handleCastHoldTypeChange,
+    // ステータス
+    updateProduct,
     // アクション
     handleSubmit,
     handleBack,

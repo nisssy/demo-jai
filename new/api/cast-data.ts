@@ -107,3 +107,63 @@ export function computeTransportFee(selectedCompanions: string[], hallAddress: s
   }
   return Math.round(total)
 }
+
+// ─── 請求予定金額（合計）計算 ───
+
+type BillingInput = {
+  startTime: string
+  endTime: string
+  companionCount: string
+  directorCount: string
+  selectedCompanions: string[]
+  selectedDirectors: string[]
+  performanceFeeDiscount: string
+  accommodationFeePerPerson: string
+  eventBaseFeeDiscount: string
+  eventType: string
+  hallAddress: string
+}
+
+/** イベント系商材の請求予定金額（= 見積金額）を算出 */
+export function computeEstimatedBilling(input: BillingInput): number {
+  const durationHours = getDurationInHours(input.startTime, input.endTime)
+
+  // コンパニオンコスト
+  const companionNames = input.selectedCompanions.filter((n) => n !== "未定")
+  const companionCount = parseInt(input.companionCount, 10) || 0
+  const companionSelectedCost = companionNames.reduce(
+    (total, name) => total + (COMPANION_HOURLY_RATES[name] ?? 0) * durationHours,
+    0
+  )
+  const companionUndecided = Math.max(0, companionCount - companionNames.length)
+  const companionCost = Math.round(companionSelectedCost + companionUndecided * getAverageCompanionRate() * durationHours)
+
+  // ディレクターコスト
+  const directorNames = input.selectedDirectors.filter((n) => n !== "未定")
+  const directorCount = parseInt(input.directorCount, 10) || 0
+  const directorSelectedCost = directorNames.reduce(
+    (total, name) => total + (DIRECTOR_HOURLY_RATES[name] ?? 0) * durationHours,
+    0
+  )
+  const directorUndecided = Math.max(0, directorCount - directorNames.length)
+  const directorCost = Math.round(directorSelectedCost + directorUndecided * getAverageDirectorRate() * durationHours)
+
+  // 出演料（割引後）
+  const performanceDiscount = parseInt(input.performanceFeeDiscount, 10) || 0
+  const performanceAfterDiscount = Math.round(Math.max(0, companionCost + directorCost - performanceDiscount))
+
+  // 交通費
+  const transportFee = computeTransportFee(input.selectedCompanions, input.hallAddress)
+
+  // 宿泊費
+  const totalCastCount = companionCount + directorCount
+  const accommodationPerPerson = parseInt(input.accommodationFeePerPerson, 10) || 0
+  const totalAccommodation = Math.round(accommodationPerPerson * totalCastCount)
+
+  // イベント基本料金（割引後）
+  const eventBaseFee = getEventBaseFee(input.eventType)
+  const eventDiscount = parseInt(input.eventBaseFeeDiscount, 10) || 0
+  const eventFeeAfterDiscount = Math.round(Math.max(0, eventBaseFee - eventDiscount))
+
+  return performanceAfterDiscount + transportFee + totalAccommodation + eventFeeAfterDiscount
+}

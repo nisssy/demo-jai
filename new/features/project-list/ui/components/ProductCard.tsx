@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Users, CheckCircle2, Play, FileText, Gift, Mail, Image } from "lucide-react"
+import { Calendar, Users, CheckCircle2, Play, FileText, Gift, Mail, Image, BarChart3 } from "lucide-react"
 import type { ProductViewModel } from "@/new/features/project-list/hooks/useProjectList"
 import { PROPOSAL_STATUS_LABELS, BOOKING_STATUS_LABELS, EXECUTION_STATUS_LABELS, DESIGN_REQUEST_STATUS_LABELS } from "@/new/api/display"
 import type { BookingStatus } from "@/new/api/types"
@@ -54,6 +54,21 @@ export const ProductCard = ({ product, projectSalesPersonName }: ProductCardProp
               {PROPOSAL_STATUS_LABELS[product.proposalStatus] ?? product.proposalStatus}
             </Badge>
           </div>
+
+          {/* ヨミ（受注済み以外で表示） */}
+          {product.proposalStatus !== "order-received" && product.readingCertainty && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <BarChart3 className="h-3.5 w-3.5 text-slate-500" />
+              <span className="text-slate-500 min-w-[60px]">ヨミ:</span>
+              <Badge className={`text-xs px-2 py-0.5 ${
+                product.readingCertainty === "A" ? "bg-green-100 text-green-800" :
+                product.readingCertainty === "B" ? "bg-yellow-100 text-yellow-800" :
+                "bg-orange-100 text-orange-800"
+              }`}>
+                {product.readingCertainty}
+              </Badge>
+            </div>
+          )}
 
           {/* 実施ステータス（全商材共通） */}
           <div className="flex items-center gap-1.5 text-xs">

@@ -16,6 +16,7 @@ export type ProductViewModel = {
   eventDate: string
   estimatedBillingAmount: number
   proposalStatus: ProposalStatus
+  readingCertainty?: "A" | "B" | "C"
   // キャスト（マッピング済み）
   casts: { name: string; type: string; bookingStatus: BookingStatus }[]
   // コメント
@@ -39,6 +40,7 @@ export type ProjectGroupViewModel = {
   hallId: string
   salesPersonName: string
   requestDate: string
+  createdAt: string
   products: ProductViewModel[]
 }
 
@@ -90,6 +92,7 @@ function toProductViewModel(product: Product, designStatuses: { poster: DesignRe
     posterStatus: designStatuses.poster,
     dmStatus: designStatuses.dm,
     winnerListStatus: designStatuses.winnerList,
+    readingCertainty: product.readingCertainty,
     prizeOrdered: !!product.prizeOrderedAt,
   }
 }
@@ -202,6 +205,7 @@ export function useProjectList({ repository }: UseProjectListArgs) {
         hallId: project.hallId,
         salesPersonName: project.salesPersonName,
         requestDate: project.requestDate,
+        createdAt: project.createdAt,
         products: productVMs,
       }
 
@@ -220,6 +224,9 @@ export function useProjectList({ repository }: UseProjectListArgs) {
       // 案件一覧タブ（全件）
       allGroups.push(group)
     }
+
+    // 作成日の降順でソート
+    allGroups.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 
     return {
       projectsTabGroups: allGroups,

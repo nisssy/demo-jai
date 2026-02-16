@@ -1,4 +1,4 @@
-import type { LotteryFormState } from "./lottery-types"
+import type { LotteryFormState, OrderStatus, ExecutionStatus } from "./lottery-types"
 
 /** 登録画面のモード */
 export type RegistrationMode = "new" | "edit" | "project-edit" | "product-add" | "product-edit"
@@ -31,6 +31,10 @@ export type ProductFormState = {
   performanceFeeDiscount: string
   accommodationFeePerPerson: string
   eventBaseFeeDiscount: string
+  // ステータス（全商材共通）
+  proposalStatus: OrderStatus
+  readingCertainty: "A" | "B" | "C" | ""
+  executionStatus: ExecutionStatus | null
   // 合同抽選会
   lottery?: LotteryFormState
 }
@@ -76,4 +80,7 @@ export const EMPTY_PRODUCT: ProductFormState = {
   performanceFeeDiscount: "",
   accommodationFeePerPerson: "",
   eventBaseFeeDiscount: "",
+  proposalStatus: "before-proposal",
+  readingCertainty: "",
+  executionStatus: null,
 }

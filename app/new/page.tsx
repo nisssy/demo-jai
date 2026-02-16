@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useMemo } from "react"
+import { Suspense, useMemo, useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { AppHeader } from "@/new/ui/AppHeader"
 import { RoleSelection } from "@/new/features/role-selection/ui/role-selection"
@@ -27,7 +27,11 @@ const VALID_ROLES: Role[] = [
 function NewPageContent() {
   const searchParams = useSearchParams()
   const roleFromQuery = searchParams?.get("role") as Role | null
-  const repository = useMemo(() => new LocalStorageProjectRepository(), [])
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // ロール未選択 → ロール選択画面
   if (!roleFromQuery || !VALID_ROLES.includes(roleFromQuery)) {
@@ -38,8 +42,28 @@ function NewPageContent() {
     )
   }
 
+  // localStorage 依存のダッシュボードはクライアントマウント後にのみレンダリング
+  if (!mounted) {
+    return (
+      <>
+        <AppHeader currentRole={roleFromQuery} />
+        <main className="px-8 py-8 max-w-7xl mx-auto">
+          <div className="flex items-center justify-center py-20">
+            <div className="h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        </main>
+      </>
+    )
+  }
+
+  return <DashboardContent role={roleFromQuery} />
+}
+
+function DashboardContent({ role }: { role: Role }) {
+  const repository = useMemo(() => new LocalStorageProjectRepository(), [])
+
   const dashboard = (() => {
-    switch (roleFromQuery) {
+    switch (role) {
       case "Sales":
         return <ProjectList />
       case "Internal":
@@ -61,7 +85,7 @@ function NewPageContent() {
 
   return (
     <>
-      <AppHeader currentRole={roleFromQuery} />
+      <AppHeader currentRole={role} />
       <main className="px-8 py-8 max-w-7xl mx-auto">
         {dashboard}
       </main>

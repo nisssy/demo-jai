@@ -191,6 +191,13 @@ export const ProjectRegistrationView = ({
           onCastHoldTypeChange={(role, name, ht) => handleCastHoldTypeChange(index, role, name, ht)}
           checkAvailability={castCalendar.checkAvailability}
           onOpenCalendar={(name, status, type) => castCalendar.openModal(name, status, type)}
+          onStatusChange={(status) => updateProduct(index, "proposalStatus", status)}
+          onReadingCertaintyChange={(value) => updateProduct(index, "readingCertainty", value)}
+          onExecutionStatusChange={(status) => updateProduct(index, "executionStatus", status as string)}
+          onConfirmOrder={() => {
+            updateProduct(index, "proposalStatus", "order-received")
+            updateProduct(index, "readingCertainty", "")
+          }}
           lotteryForm={product.category === "ポイント" ? lotteryForm : undefined}
         />
       ))}

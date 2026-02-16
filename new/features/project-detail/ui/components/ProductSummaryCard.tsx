@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Calendar, Users, CheckCircle2, Play, FileText, Gift, Mail, Image } from "lucide-react"
+import { Calendar, Users, CheckCircle2, Play, FileText, Gift, Mail, Image, BarChart3 } from "lucide-react"
 import { PROPOSAL_STATUS_LABELS, BOOKING_STATUS_LABELS, EXECUTION_STATUS_LABELS, DESIGN_REQUEST_STATUS_LABELS } from "@/new/api/display"
 import type { BookingStatus } from "@/new/api/types"
 import type { ProductSummary } from "@/new/features/project-detail/model/types"
@@ -79,6 +79,17 @@ export const ProductSummaryCard = ({ product, salesPersonName, onEdit, onRequest
               {product.proposalStatus ?? "-"}
             </Badge>
           </div>
+
+          {/* ヨミ（受注前のみ表示） */}
+          {product.proposalStatusRaw !== "order-received" && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <BarChart3 className="h-3.5 w-3.5 text-slate-500" />
+              <span className="text-slate-500 min-w-[60px]">ヨミ:</span>
+              <Badge className={`text-xs px-2 py-0.5 ${product.readingCertainty === "A" ? "bg-green-100 text-green-800" : product.readingCertainty === "B" ? "bg-yellow-100 text-yellow-800" : product.readingCertainty === "C" ? "bg-orange-100 text-orange-800" : "bg-slate-100 text-slate-600"}`}>
+                {product.readingCertainty || "-"}
+              </Badge>
+            </div>
+          )}
 
           {/* 実施ステータス */}
           <div className="flex items-center gap-1.5 text-xs">

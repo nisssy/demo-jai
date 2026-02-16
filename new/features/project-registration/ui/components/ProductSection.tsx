@@ -10,6 +10,8 @@ import { ProductBasicFields } from "./ProductBasicFields"
 import { CastingSection } from "./CastingSection"
 import { BillingSection } from "./BillingSection"
 import { LotteryTabs } from "./lottery/LotteryTabs"
+import { LotteryStatus } from "./lottery/LotteryStatus"
+import type { OrderStatus, ExecutionStatus } from "@/new/features/project-registration/model/lottery-types"
 
 const PRODUCT_LABELS = ["①", "②", "③", "④", "⑤"]
 
@@ -38,6 +40,11 @@ type ProductSectionProps = {
   checkAvailability?: (name: string, role: "companion" | "director") => AvailabilityStatus
   onOpenCalendar?: (name: string, status: AvailabilityStatus, type: "companion" | "director") => void
   onCastHoldTypeChange: (role: "companion" | "director", name: string, holdType: "tentative" | "confirmed") => void
+  // ステータス
+  onStatusChange: (status: OrderStatus) => void
+  onReadingCertaintyChange: (value: "A" | "B" | "C" | "") => void
+  onExecutionStatusChange: (status: ExecutionStatus) => void
+  onConfirmOrder: () => void
   // 合同抽選会
   lotteryForm?: UseLotteryFormReturn
 }
@@ -63,6 +70,10 @@ export const ProductSection = ({
   checkAvailability,
   onOpenCalendar,
   onCastHoldTypeChange,
+  onStatusChange,
+  onReadingCertaintyChange,
+  onExecutionStatusChange,
+  onConfirmOrder,
   lotteryForm,
 }: ProductSectionProps) => {
   const isLottery = product.category === "ポイント" && !!product.eventType.trim()
@@ -110,10 +121,11 @@ export const ProductSection = ({
               </div>
             ) : showCastingAndBilling ? (
               <Tabs defaultValue="basic">
-                <TabsList className="w-full">
-                  <TabsTrigger value="basic" className="flex-1">① 基本情報</TabsTrigger>
-                  <TabsTrigger value="casting" className="flex-1">② キャスティング</TabsTrigger>
-                  <TabsTrigger value="billing" className="flex-1">③ 請求予定金額</TabsTrigger>
+                <TabsList className="w-full grid grid-cols-4">
+                  <TabsTrigger value="basic" className="text-xs">① 基本情報</TabsTrigger>
+                  <TabsTrigger value="casting" className="text-xs">② キャスティング</TabsTrigger>
+                  <TabsTrigger value="billing" className="text-xs">③ 請求予定金額</TabsTrigger>
+                  <TabsTrigger value="status" className="text-xs">④ ステータス</TabsTrigger>
                 </TabsList>
                 <TabsContent value="basic" className="mt-4">
                   {basicFields}
@@ -134,6 +146,17 @@ export const ProductSection = ({
                     product={product}
                     hallAddress={hallAddress}
                     onFieldChange={onFieldChange}
+                  />
+                </TabsContent>
+                <TabsContent value="status" className="mt-4">
+                  <LotteryStatus
+                    proposalStatus={product.proposalStatus}
+                    readingCertainty={product.readingCertainty}
+                    executionStatus={product.executionStatus}
+                    onStatusChange={onStatusChange}
+                    onReadingCertaintyChange={onReadingCertaintyChange}
+                    onExecutionStatusChange={onExecutionStatusChange}
+                    onConfirmOrder={onConfirmOrder}
                   />
                 </TabsContent>
               </Tabs>

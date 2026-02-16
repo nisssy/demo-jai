@@ -83,6 +83,7 @@ export function useProjectDetail({ repository, projectNumber }: UseProjectDetail
         // ステータス
         proposalStatus: PROPOSAL_STATUS_LABELS[p.proposalStatus as ProposalStatus] ?? undefined,
         proposalStatusRaw: p.proposalStatus,
+        readingCertainty: p.readingCertainty,
         executionStatus: p.executionStatus,
         // キャスト
         casts: toCastSummaries(p),

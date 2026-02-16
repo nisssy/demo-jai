@@ -42,6 +42,8 @@ export type ProjectListViewProps = {
   onClickHoldFailureProduct: (productId: number) => void
 }
 
+const tabTriggerClass = "relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
+
 export const ProjectListView = ({
   activeTab,
   onActiveTabChange,
@@ -81,28 +83,32 @@ export const ProjectListView = ({
 
       {/* タブ */}
       <Tabs value={activeTab} onValueChange={(v) => onActiveTabChange(v as ProjectListTab)}>
-        <TabsList>
-          <TabsTrigger value="projects">案件一覧</TabsTrigger>
-          <TabsTrigger value="corrections" className="gap-1.5">
-            修正確認依頼
-            {correctionsCount > 0 && (
-              <Badge className="bg-red-500 text-white text-xs px-1.5 py-0 min-w-[20px] h-5">
-                {correctionsCount}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="temporaryHoldFailure" className="gap-1.5">
-            仮押さえ不可
-            {holdFailureCount > 0 && (
-              <Badge className="bg-red-500 text-white text-xs px-1.5 py-0 min-w-[20px] h-5">
-                {holdFailureCount}
-              </Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
+        <div className="border-b border-slate-100 mb-8">
+          <TabsList className="bg-transparent h-auto p-0 gap-0">
+            <TabsTrigger value="projects" className={tabTriggerClass}>
+              案件一覧
+            </TabsTrigger>
+            <TabsTrigger value="corrections" className={tabTriggerClass}>
+              修正確認依頼
+              {correctionsCount > 0 && (
+                <Badge className="ml-1.5 bg-red-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
+                  {correctionsCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="temporaryHoldFailure" className={tabTriggerClass}>
+              仮押さえ不可
+              {holdFailureCount > 0 && (
+                <Badge className="ml-1.5 bg-red-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
+                  {holdFailureCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* 案件一覧タブ */}
-        <TabsContent value="projects" className="space-y-4">
+        <TabsContent value="projects" className="mt-0 space-y-4">
           <ProjectListFilters
             filters={filters}
             onFiltersChange={onFiltersChange}
@@ -144,7 +150,7 @@ export const ProjectListView = ({
         </TabsContent>
 
         {/* 修正確認依頼タブ */}
-        <TabsContent value="corrections" className="space-y-4">
+        <TabsContent value="corrections" className="mt-0 space-y-4">
           {correctionsTabGroups.length === 0 ? (
             <div className="text-center py-12 text-slate-500">修正依頼はありません</div>
           ) : (
@@ -173,7 +179,7 @@ export const ProjectListView = ({
         </TabsContent>
 
         {/* 仮押さえ不可タブ */}
-        <TabsContent value="temporaryHoldFailure" className="space-y-4">
+        <TabsContent value="temporaryHoldFailure" className="mt-0 space-y-4">
           {holdFailureTabGroups.length === 0 ? (
             <div className="text-center py-12 text-slate-500">仮押さえ不可の案件はありません</div>
           ) : (

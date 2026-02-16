@@ -30,6 +30,7 @@ export type ProductSummary = {
   // ステータス
   proposalStatus?: string
   proposalStatusRaw?: ProposalStatus
+  readingCertainty?: "A" | "B" | "C"
   executionStatus?: ExecutionStatus
   // キャスト
   casts: CastSummary[]
