@@ -13,6 +13,9 @@ export type ProposalStatus = "before-proposal" | "proposing" | "order-received"
 /** 実施ステータス（全商材共通） */
 export type ExecutionStatus = "実施前" | "実施中" | "終了"
 
+/** 外注業者進捗ステータス */
+export type ProductProgressStatus = "not_started" | "report_uploaded" | "pachitown_linked" | "post_event_done"
+
 // ─── 案件エンティティ ───
 
 export type Project = {
@@ -51,6 +54,7 @@ export type Product = {
   companionBookingStatus: Record<string, BookingStatus>
   directorBookingStatus: Record<string, BookingStatus>
   mcBookingStatus: Record<string, BookingStatus>
+  companionCostumes?: Record<string, string>
   // 時間・表示設定
   startTime?: string
   endTime?: string
@@ -61,10 +65,38 @@ export type Product = {
   reportRequired?: string
   // 実施ステータス（全商材共通）
   executionStatus?: ExecutionStatus
-  // 修正・コメント
-  correctionRequest?: string
-  correctionComment?: string
+  // コメント（ロール間のやり取り）
+  comments?: ProductComment[]
   temporaryHoldFailureComment?: string
+  // キャスト別仮押さえ不可コメント（マネジメント部用）
+  companionTentativeHoldFailureComment?: Record<string, string>
+  directorTentativeHoldFailureComment?: Record<string, string>
+  mcTentativeHoldFailureComment?: Record<string, string>
+  // ステータス履歴（マネジメント部用）
+  statusHistory?: StatusHistoryEntry[]
+  // コスト（マネジメント部用）
+  castingCost?: number
+  transportationFee?: number
+  accommodationFee?: number
+  postPRCost?: number
+  // アンケート（マネジメント部・外注業者用）
+  surveySent?: boolean
+  surveySentDate?: string
+  surveyResult?: SurveyResult
+  // イベント写真・レポート（外注業者用）
+  eventPhotos?: string[]
+  reportUploaded?: boolean
+  reportUploadedAt?: string
+  reportNote?: string
+  postEventTransactionResult?: string
+  postEventMachineData?: string
+  // 商材管理課用
+  targetMachineNames?: string[]
+  pachitownMachineNames?: string[]
+  pachitownLinked?: boolean
+  pachitownLinkedDate?: string
+  bannerGenerated?: boolean
+  bannerData?: BannerData
   // 合同抽選会
   dmMailing?: "yes" | "no"
   hallNames?: string[]
@@ -74,12 +106,25 @@ export type Product = {
   insightPersonId?: number
   readingCertainty?: "A" | "B" | "C"
   posterCount?: number
+  area?: string
+  budget?: string
   prizeInfo?: PrizeInfo[]
   hallQuotes?: HallQuote[]
   quoteConfig?: QuoteConfig
   prizeOrderedAt?: string
   winnerListUploadedAt?: string
   winnerListValidatedAt?: string
+  // 合同抽選会 - 当選者・発注・配送（事務管理課用）
+  winnerList?: WinnerInfo[]
+  notificationOrderGeneratedAt?: string
+  notificationOrderSentAt?: string
+  notificationOrderDesignVendorId?: string
+  notificationOrderDesignVendorName?: string
+  prizeOrderGeneratedAt?: string
+  prizeOrderRequestedAt?: string
+  prizeOrdersByVendor?: PrizeOrderDocument[]
+  quoCardLetterCheckedAt?: string
+  prizeDeliveryInfoByVendor?: PrizeDeliveryInfoByVendor[]
 }
 
 // ─── 合同抽選会サブ型 ───
@@ -119,6 +164,85 @@ export type QuoteConfig = {
   companyPercentages: Record<string, number>
 }
 
+/** 当選者情報 */
+export type WinnerInfo = {
+  id: string
+  name: string
+  address?: string
+  phone?: string
+  prize?: string
+}
+
+/** 配送情報（当選者ごと） */
+export type DeliveryInfo = {
+  winnerId: string
+  winnerName: string
+  carrierName?: string
+  trackingNumber?: string
+  shippedAt?: string
+}
+
+/** 景品発注書（1業者分） */
+export type PrizeOrderDocument = {
+  vendorId: string
+  vendorName: string
+  requestedAt: string
+  prizeItems: PrizeInfo[]
+}
+
+/** 業者ごとの配送情報 */
+export type PrizeDeliveryInfoByVendor = {
+  vendorId: string
+  vendorName: string
+  deliveredAt?: string
+  carrierName?: string
+  trackingNumber?: string
+  shippedAt?: string
+  deliveries?: DeliveryInfo[]
+}
+
+// ─── 商材コメント（ロール間やり取り） ───
+
+export type ProductComment = {
+  author: string
+  content: string
+  timestamp: string
+}
+
+// ─── ステータス履歴 ───
+
+export type StatusHistoryEntry = {
+  status: string
+  timestamp: string
+  changedBy?: string
+  note?: string
+}
+
+// ─── アンケート結果 ───
+
+export type SurveyResult = {
+  satisfaction?: string
+  comment?: string
+  nextEventDesired?: string
+  improvementRequest?: string
+}
+
+// ─── 商材管理課サブ型 ───
+
+export type MachineMaster = {
+  id: number
+  name: string
+  pachitownName: string
+}
+
+export type BannerData = {
+  date: string
+  dayOfWeek: string
+  prefecture: string
+  storeName: string
+  targetMachines: string[]
+}
+
 // ─── デザイン依頼 ───
 
 export type DesignRequestComment = {
@@ -134,13 +258,21 @@ export type DesignRequest = {
   requestType: "poster" | "dm" | "winner-list"
   projectId: number
   projectNumber?: string
+  projectName?: string
+  companyName?: string
+  hallNames?: string[]
+  eventStartDate?: string
+  eventEndDate?: string
   status: "requested" | "uploaded"
   vendorId: string
   vendorName?: string
   requestedAt: string
+  requestedBy?: string
+  requestedByName?: string
   uploadedAt?: string
   uploadedFileName?: string
   comments?: DesignRequestComment[]
+  prizeInfo?: PrizeInfo[]
 }
 
 // ─── マスタデータ ───

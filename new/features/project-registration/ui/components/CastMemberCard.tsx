@@ -1,5 +1,7 @@
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Label } from "@/components/ui/label"
 import { CheckCircle2, Calendar } from "lucide-react"
 import type { AvailabilityStatus } from "@/new/features/project-registration/hooks/useCastCalendar"
 
@@ -12,9 +14,11 @@ type CastMemberCardProps = {
   hourlyRate: number
   durationHours: number
   availability?: AvailabilityStatus
+  holdType?: "tentative" | "confirmed"
   onToggle: () => void
   onToggleNomination: () => void
   onOpenCalendar?: () => void
+  onHoldTypeChange?: (holdType: "tentative" | "confirmed") => void
 }
 
 function AvailabilityBadge({ availability, isExclusive }: { availability: AvailabilityStatus; isExclusive: boolean }) {
@@ -58,9 +62,11 @@ export const CastMemberCard = ({
   hourlyRate,
   durationHours,
   availability,
+  holdType,
   onToggle,
   onToggleNomination,
   onOpenCalendar,
+  onHoldTypeChange,
 }: CastMemberCardProps) => {
   const estimatedFee = hourlyRate * durationHours
   const isUndecided = name === "未定"
@@ -104,6 +110,28 @@ export const CastMemberCard = ({
               >
                 <Checkbox checked={isNominated} onCheckedChange={onToggleNomination} />
                 <span className="text-xs text-slate-700">指名</span>
+              </div>
+            )}
+
+            {isSelected && onHoldTypeChange && (
+              <div
+                className="mt-2"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <RadioGroup
+                  value={holdType ?? "tentative"}
+                  onValueChange={(v) => onHoldTypeChange(v as "tentative" | "confirmed")}
+                  className="flex gap-3"
+                >
+                  <div className="flex items-center gap-1">
+                    <RadioGroupItem value="tentative" id={`hold-t-${name}`} className="h-3.5 w-3.5" />
+                    <Label htmlFor={`hold-t-${name}`} className="text-xs cursor-pointer text-slate-600">仮押さえ</Label>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <RadioGroupItem value="confirmed" id={`hold-c-${name}`} className="h-3.5 w-3.5" />
+                    <Label htmlFor={`hold-c-${name}`} className="text-xs cursor-pointer text-slate-600">本押さえ</Label>
+                  </div>
+                </RadioGroup>
               </div>
             )}
 

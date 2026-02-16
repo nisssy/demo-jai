@@ -38,7 +38,6 @@ export type ProjectListViewProps = {
   // ナビゲーション
   onCreateNewProject: () => void
   onClickDetail: (projectNumber: string) => void
-  onClickProduct: (productId: number) => void
   onClickCorrectionProduct: (productId: number) => void
   onClickHoldFailureProduct: (productId: number) => void
 }
@@ -66,7 +65,6 @@ export const ProjectListView = ({
   onSelectCompany,
   onCreateNewProject,
   onClickDetail,
-  onClickProduct,
   onClickCorrectionProduct,
   onClickHoldFailureProduct,
 }: ProjectListViewProps) => {
@@ -136,7 +134,6 @@ export const ProjectListView = ({
                         key={product.id}
                         product={product}
                         projectSalesPersonName={group.salesPersonName}
-                        onClick={onClickProduct}
                       />
                     ))}
                   </div>
@@ -163,7 +160,7 @@ export const ProjectListView = ({
                         key={product.id}
                         product={product}
                         alertTitle="修正依頼内容"
-                        alertText={product.correctionRequest ?? ""}
+                        alertText={product.comments?.[product.comments.length - 1]?.content ?? ""}
                         actionLabel="修正"
                         onAction={onClickCorrectionProduct}
                       />

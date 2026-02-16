@@ -6,23 +6,24 @@ import { useProjectRegistration } from "@/new/features/project-registration/hook
 import { useLotteryForm } from "@/new/features/project-registration/hooks/useLotteryForm"
 import { useCastCalendar } from "@/new/features/project-registration/hooks/useCastCalendar"
 import { ProjectRegistrationView } from "./ProjectRegistration.view"
+import type { ProductComment } from "@/new/api/types"
 import type { RegistrationMode } from "@/new/features/project-registration/model/types"
 
 type ProjectRegistrationContainerProps = {
   mode: RegistrationMode
   productId?: number
-  correctionRequest?: string
+  comments?: ProductComment[]
 }
 
 export const ProjectRegistrationContainer = ({
   mode,
   productId,
-  correctionRequest,
+  comments,
 }: ProjectRegistrationContainerProps) => {
   const repository = useMemo(() => new LocalStorageProjectRepository(), [])
   const lotteryForm = useLotteryForm({ repository, productId })
   const hookResult = useProjectRegistration({
-    repository, mode, productId, correctionRequest,
+    repository, mode, productId, comments,
     getLotteryData: lotteryForm.getLotteryData,
   })
 

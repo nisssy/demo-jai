@@ -16,17 +16,13 @@ const BOOKING_STATUS_COLORS: Record<BookingStatus, string> = {
 type ProductCardProps = {
   product: ProductViewModel
   projectSalesPersonName: string
-  onClick: (productId: number) => void
 }
 
-export const ProductCard = ({ product, projectSalesPersonName, onClick }: ProductCardProps) => {
+export const ProductCard = ({ product, projectSalesPersonName }: ProductCardProps) => {
   const isLottery = product.category === "ポイント" && product.eventType === "合同抽選会"
 
   return (
-    <div
-      className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-white"
-      onClick={() => onClick(product.id)}
-    >
+    <div className="border rounded-lg p-4 bg-white">
       <div className="space-y-3">
         {/* ヘッダー */}
         <div className="flex items-start justify-between">

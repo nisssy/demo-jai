@@ -11,11 +11,13 @@ type CastTypeSectionProps = {
   castMembers: CastMember[]
   selectedNames: string[]
   nominations: Record<string, boolean>
+  holdTypes: Record<string, "tentative" | "confirmed">
   durationHours: number
   checkAvailability?: (name: string) => AvailabilityStatus
   onCountChange: (count: string) => void
   onToggle: (name: string) => void
   onToggleNomination: (name: string) => void
+  onHoldTypeChange: (name: string, holdType: "tentative" | "confirmed") => void
   onOpenCalendar?: (name: string, status: AvailabilityStatus) => void
 }
 
@@ -26,11 +28,13 @@ export const CastTypeSection = ({
   castMembers,
   selectedNames,
   nominations,
+  holdTypes,
   durationHours,
   checkAvailability,
   onCountChange,
   onToggle,
   onToggleNomination,
+  onHoldTypeChange,
   onOpenCalendar,
 }: CastTypeSectionProps) => {
   const numCount = parseInt(count, 10) || 0
@@ -92,8 +96,10 @@ export const CastTypeSection = ({
                     hourlyRate={member.hourlyRate}
                     durationHours={durationHours}
                     availability={availability}
+                    holdType={holdTypes[member.name]}
                     onToggle={() => onToggle(member.name)}
                     onToggleNomination={() => onToggleNomination(member.name)}
+                    onHoldTypeChange={(ht) => onHoldTypeChange(member.name, ht)}
                     onOpenCalendar={onOpenCalendar ? () => onOpenCalendar(member.name, availability ?? "available") : undefined}
                   />
                 )
@@ -119,8 +125,10 @@ export const CastTypeSection = ({
                     hourlyRate={member.hourlyRate}
                     durationHours={durationHours}
                     availability={availability}
+                    holdType={holdTypes[member.name]}
                     onToggle={() => onToggle(member.name)}
                     onToggleNomination={() => onToggleNomination(member.name)}
+                    onHoldTypeChange={(ht) => onHoldTypeChange(member.name, ht)}
                     onOpenCalendar={onOpenCalendar ? () => onOpenCalendar(member.name, availability ?? "available") : undefined}
                   />
                 )

@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react"
 import { useAppRouter } from "@/hooks/use-app-router"
 import type { ProjectRepository } from "@/new/api/project-repository"
-import type { Company, Hall } from "@/new/api/types"
+import type { Company, Hall, ProductComment } from "@/new/api/types"
 import { getCategoryByEventType, getEventTypesByCategory } from "@/new/api/display"
 import type { RegistrationMode, ProjectFormState, ProductFormState, FormErrors } from "@/new/features/project-registration/model/types"
 import type { LotteryFormState } from "@/new/features/project-registration/model/lottery-types"
@@ -13,7 +13,7 @@ export type UseProjectRegistrationArgs = {
   repository: ProjectRepository
   mode: RegistrationMode
   productId?: number
-  correctionRequest?: string
+  comments?: ProductComment[]
   getLotteryData?: () => LotteryFormState
 }
 
@@ -36,7 +36,7 @@ function createInitialForm(): ProjectFormState {
   }
 }
 
-export function useProjectRegistration({ repository, mode, productId, correctionRequest, getLotteryData }: UseProjectRegistrationArgs) {
+export function useProjectRegistration({ repository, mode, productId, comments, getLotteryData }: UseProjectRegistrationArgs) {
   const router = useAppRouter()
 
   // ─── フォーム状態 ───
@@ -85,6 +85,25 @@ export function useProjectRegistration({ repository, mode, productId, correction
 
     const project = repository.getProjectByProjectNumber(product.projectNumber)
 
+    if (mode === "project-edit") {
+      // 案件情報のみロード（商材は不要）
+      if (project) {
+        setForm((prev) => ({
+          ...prev,
+          projectNumber: project.projectNumber,
+          companyId: project.companyId,
+          companyName: project.companyName,
+          hallId: project.hallId,
+          hallName: project.hallName,
+          projectName: project.projectName,
+          salesPersonName: project.salesPersonName,
+          requestDate: project.requestDate,
+        }))
+        setProjectNameTouched(true)
+      }
+      return
+    }
+
     if (mode === "edit" || mode === "product-edit") {
       const productForm: ProductFormState = {
         id: product.id,
@@ -107,6 +126,12 @@ export function useProjectRegistration({ repository, mode, productId, correction
         selectedDirectors: product.selectedDirectors?.length ? product.selectedDirectors : ["未定"],
         nominatedCompanions: {},
         nominatedDirectors: {},
+        companionHoldTypes: Object.fromEntries(
+          Object.entries(product.companionBookingStatus ?? {}).map(([name, status]) => [name, status.startsWith("confirmed") ? "confirmed" as const : "tentative" as const])
+        ),
+        directorHoldTypes: Object.fromEntries(
+          Object.entries(product.directorBookingStatus ?? {}).map(([name, status]) => [name, status.startsWith("confirmed") ? "confirmed" as const : "tentative" as const])
+        ),
         // 請求予定金額
         performanceFeeDiscount: (product as Record<string, unknown>).performanceFeeDiscount as string ?? "",
         accommodationFeePerPerson: (product as Record<string, unknown>).accommodationFeePerPerson as string ?? "",
@@ -314,47 +339,46 @@ export function useProjectRegistration({ repository, mode, productId, correction
     })
   }, [])
 
-  // ─── キャスティング: キャスト選択トグル ───
+  // ─── キャスティング: キャスト選択トグル（FIFO方式: 上限に達したら最古の選択を入れ替え） ───
   const handleToggleCast = useCallback((index: number, role: "companion" | "director", name: string) => {
     setForm((prev) => {
       const products = [...prev.products]
       const p = { ...products[index] }
 
-      if (role === "companion") {
-        const current = [...p.selectedCompanions]
-        if (name === "未定") {
+      const maxCount = parseInt(role === "companion" ? p.companionCount : p.directorCount, 10) || 0
+      const currentSelected = role === "companion" ? [...p.selectedCompanions] : [...p.selectedDirectors]
+      const currentNominations = role === "companion" ? { ...p.nominatedCompanions } : { ...p.nominatedDirectors }
+
+      if (name === "未定") {
+        if (role === "companion") {
           p.selectedCompanions = ["未定"]
           p.nominatedCompanions = {}
         } else {
-          const without未定 = current.filter((n) => n !== "未定")
-          const idx = without未定.indexOf(name)
-          if (idx >= 0) {
-            without未定.splice(idx, 1)
-            const newNominations = { ...p.nominatedCompanions }
-            delete newNominations[name]
-            p.nominatedCompanions = newNominations
-          } else {
-            without未定.push(name)
-          }
-          p.selectedCompanions = without未定.length > 0 ? without未定 : ["未定"]
-        }
-      } else {
-        const current = [...p.selectedDirectors]
-        if (name === "未定") {
           p.selectedDirectors = ["未定"]
           p.nominatedDirectors = {}
+        }
+      } else {
+        const without未定 = currentSelected.filter((n) => n !== "未定")
+        const idx = without未定.indexOf(name)
+        if (idx >= 0) {
+          // 既に選択済み → 解除
+          without未定.splice(idx, 1)
+          delete currentNominations[name]
         } else {
-          const without未定 = current.filter((n) => n !== "未定")
-          const idx = without未定.indexOf(name)
-          if (idx >= 0) {
-            without未定.splice(idx, 1)
-            const newNominations = { ...p.nominatedDirectors }
-            delete newNominations[name]
-            p.nominatedDirectors = newNominations
-          } else {
-            without未定.push(name)
+          // 新規選択: 上限に達している場合は最古（先頭）を除去して入れ替え
+          if (maxCount > 0 && without未定.length >= maxCount) {
+            const removed = without未定.shift()!
+            delete currentNominations[removed]
           }
+          without未定.push(name)
+        }
+
+        if (role === "companion") {
+          p.selectedCompanions = without未定.length > 0 ? without未定 : ["未定"]
+          p.nominatedCompanions = currentNominations
+        } else {
           p.selectedDirectors = without未定.length > 0 ? without未定 : ["未定"]
+          p.nominatedDirectors = currentNominations
         }
       }
 
@@ -373,6 +397,23 @@ export function useProjectRegistration({ repository, mode, productId, correction
         p.nominatedCompanions = { ...p.nominatedCompanions, [name]: !p.nominatedCompanions[name] }
       } else {
         p.nominatedDirectors = { ...p.nominatedDirectors, [name]: !p.nominatedDirectors[name] }
+      }
+
+      products[index] = p
+      return { ...prev, products }
+    })
+  }, [])
+
+  // ─── キャスティング: 押さえ種別変更 ───
+  const handleCastHoldTypeChange = useCallback((index: number, role: "companion" | "director", name: string, holdType: "tentative" | "confirmed") => {
+    setForm((prev) => {
+      const products = [...prev.products]
+      const p = { ...products[index] }
+
+      if (role === "companion") {
+        p.companionHoldTypes = { ...p.companionHoldTypes, [name]: holdType }
+      } else {
+        p.directorHoldTypes = { ...p.directorHoldTypes, [name]: holdType }
       }
 
       products[index] = p
@@ -404,6 +445,7 @@ export function useProjectRegistration({ repository, mode, productId, correction
   const validate = useCallback((): boolean => {
     const newErrors: FormErrors = {}
     const isProductMode = mode === "product-add" || mode === "product-edit"
+    const isProjectEditMode = mode === "project-edit"
 
     if (!isProductMode) {
       if (!form.projectName.trim()) newErrors.projectName = "案件名を入力してください"
@@ -411,6 +453,11 @@ export function useProjectRegistration({ repository, mode, productId, correction
       if (!form.hallName.trim()) newErrors.hallName = "ホール名を選択してください"
       if (!form.salesPersonName.trim()) newErrors.salesPersonName = "ホール担当営業を入力してください"
       if (!form.requestDate.trim()) newErrors.requestDate = "依頼日を入力してください"
+    }
+
+    if (isProjectEditMode) {
+      setErrors(newErrors)
+      return Object.keys(newErrors).length === 0
     }
 
     for (let i = 0; i < form.products.length; i++) {
@@ -501,12 +548,29 @@ export function useProjectRegistration({ repository, mode, productId, correction
           selectedCompanions: castingSelected,
           selectedDirectors: directorSelected,
           selectedMcs: [],
-          companionBookingStatus: {},
-          directorBookingStatus: {},
+          companionBookingStatus: Object.fromEntries(
+            castingSelected.map(name => [name, p.companionHoldTypes[name] === "confirmed" ? "confirmed_requesting" as const : "tentative_requesting" as const])
+          ),
+          directorBookingStatus: Object.fromEntries(
+            directorSelected.map(name => [name, p.directorHoldTypes[name] === "confirmed" ? "confirmed_requesting" as const : "tentative_requesting" as const])
+          ),
           mcBookingStatus: {},
           ...buildLotteryFields(p),
         })
       }
+    }
+
+    if (mode === "project-edit") {
+      repository.updateProject(form.projectNumber, {
+        projectName: form.projectName,
+        companyId: form.companyId,
+        companyName: form.companyName,
+        hallId: form.hallId,
+        hallName: form.hallName,
+        salesPersonName: form.salesPersonName,
+        requestDate: form.requestDate,
+        updatedAt: now,
+      })
     }
 
     if (mode === "edit") {
@@ -524,6 +588,7 @@ export function useProjectRegistration({ repository, mode, productId, correction
         if (p.id) {
           const castingSelected = p.selectedCompanions.filter((n) => n !== "未定")
           const directorSelected = p.selectedDirectors.filter((n) => n !== "未定")
+          const existing = repository.getProducts().find(ep => ep.id === p.id)
           repository.updateProduct(p.id, {
             category: p.category,
             eventType: p.eventType,
@@ -540,6 +605,18 @@ export function useProjectRegistration({ repository, mode, productId, correction
             directorCount: p.directorCount || "0",
             selectedCompanions: castingSelected,
             selectedDirectors: directorSelected,
+            companionBookingStatus: Object.fromEntries(
+              castingSelected.map(name => {
+                const fallback = p.companionHoldTypes[name] === "confirmed" ? "confirmed_requesting" as const : "tentative_requesting" as const
+                return [name, existing?.companionBookingStatus[name] ?? fallback]
+              })
+            ),
+            directorBookingStatus: Object.fromEntries(
+              directorSelected.map(name => {
+                const fallback = p.directorHoldTypes[name] === "confirmed" ? "confirmed_requesting" as const : "tentative_requesting" as const
+                return [name, existing?.directorBookingStatus[name] ?? fallback]
+              })
+            ),
             ...buildLotteryFields(p),
           })
         }
@@ -574,8 +651,12 @@ export function useProjectRegistration({ repository, mode, productId, correction
             selectedCompanions: castingSelected,
             selectedDirectors: directorSelected,
             selectedMcs: [],
-            companionBookingStatus: {},
-            directorBookingStatus: {},
+            companionBookingStatus: Object.fromEntries(
+              castingSelected.map(name => [name, p.companionHoldTypes[name] === "confirmed" ? "confirmed_requesting" as const : "tentative_requesting" as const])
+            ),
+            directorBookingStatus: Object.fromEntries(
+              directorSelected.map(name => [name, p.directorHoldTypes[name] === "confirmed" ? "confirmed_requesting" as const : "tentative_requesting" as const])
+            ),
             mcBookingStatus: {},
             ...buildLotteryFields(p),
           })
@@ -588,6 +669,7 @@ export function useProjectRegistration({ repository, mode, productId, correction
       if (p?.id) {
         const castingSelected = p.selectedCompanions.filter((n) => n !== "未定")
         const directorSelected = p.selectedDirectors.filter((n) => n !== "未定")
+        const existing = repository.getProducts().find(ep => ep.id === p.id)
         repository.updateProduct(p.id, {
           category: p.category,
           eventType: p.eventType,
@@ -600,11 +682,23 @@ export function useProjectRegistration({ repository, mode, productId, correction
           publicationDate: p.publicationDate,
           publicationTime: p.publicationTime,
           reportRequired: p.reportRequired,
-          correctionRequest: undefined,
+          comments: [],
           companionCount: p.companionCount || "0",
           directorCount: p.directorCount || "0",
           selectedCompanions: castingSelected,
           selectedDirectors: directorSelected,
+          companionBookingStatus: Object.fromEntries(
+            castingSelected.map(name => {
+              const fallback = p.companionHoldTypes[name] === "confirmed" ? "confirmed_requesting" as const : "tentative_requesting" as const
+              return [name, existing?.companionBookingStatus[name] ?? fallback]
+            })
+          ),
+          directorBookingStatus: Object.fromEntries(
+            directorSelected.map(name => {
+              const fallback = p.directorHoldTypes[name] === "confirmed" ? "confirmed_requesting" as const : "tentative_requesting" as const
+              return [name, existing?.directorBookingStatus[name] ?? fallback]
+            })
+          ),
           ...buildLotteryFields(p),
         })
       }
@@ -626,7 +720,7 @@ export function useProjectRegistration({ repository, mode, productId, correction
     mode,
     form,
     errors,
-    correctionRequest,
+    comments,
     // 法人検索
     companySearchOpen,
     setCompanySearchOpen,
@@ -661,6 +755,7 @@ export function useProjectRegistration({ repository, mode, productId, correction
     handleCastCountChange,
     handleToggleCast,
     handleToggleNomination,
+    handleCastHoldTypeChange,
     // アクション
     handleSubmit,
     handleBack,

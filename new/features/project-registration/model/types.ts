@@ -1,7 +1,7 @@
 import type { LotteryFormState } from "./lottery-types"
 
 /** 登録画面のモード */
-export type RegistrationMode = "new" | "edit" | "product-add" | "product-edit"
+export type RegistrationMode = "new" | "edit" | "project-edit" | "product-add" | "product-edit"
 
 /** 商材フォームの状態 */
 export type ProductFormState = {
@@ -25,6 +25,8 @@ export type ProductFormState = {
   selectedDirectors: string[]
   nominatedCompanions: Record<string, boolean>
   nominatedDirectors: Record<string, boolean>
+  companionHoldTypes: Record<string, "tentative" | "confirmed">
+  directorHoldTypes: Record<string, "tentative" | "confirmed">
   // 請求予定金額
   performanceFeeDiscount: string
   accommodationFeePerPerson: string
@@ -69,6 +71,8 @@ export const EMPTY_PRODUCT: ProductFormState = {
   selectedDirectors: ["未定"],
   nominatedCompanions: {},
   nominatedDirectors: {},
+  companionHoldTypes: {},
+  directorHoldTypes: {},
   performanceFeeDiscount: "",
   accommodationFeePerPerson: "",
   eventBaseFeeDiscount: "",

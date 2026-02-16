@@ -5,6 +5,7 @@ import type { RegistrationMode } from "@/new/features/project-registration/model
 const SUBMIT_LABELS: Record<RegistrationMode, string> = {
   new: "案件を作成",
   edit: "案件を更新",
+  "project-edit": "案件情報を更新",
   "product-add": "商材を追加",
   "product-edit": "商材を更新",
 }
@@ -23,7 +24,7 @@ export const ActionButtons = ({
   onSubmit,
 }: ActionButtonsProps) => {
   const isProductMode = mode === "product-add" || mode === "product-edit"
-  const canAddProduct = !isProductMode && productCount < 5
+  const canAddProduct = !isProductMode && mode !== "project-edit" && productCount < 5
 
   return (
     <div className="flex items-center gap-4">

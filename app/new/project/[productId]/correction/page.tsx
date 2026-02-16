@@ -12,14 +12,14 @@ function CorrectionContent() {
 
   const repository = useMemo(() => new LocalStorageProjectRepository(), [])
   const product = repository.getProductById(productId)
-  const correctionRequest = product?.correctionRequest ?? undefined
+  const comments = product?.comments ?? undefined
 
   return (
     <main className="px-8 py-8 max-w-7xl mx-auto">
       <ProjectRegistration
         mode="product-edit"
         productId={productId}
-        correctionRequest={correctionRequest}
+        comments={comments}
       />
     </main>
   )

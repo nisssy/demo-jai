@@ -1,17 +1,24 @@
 "use client"
 
 import { Suspense } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useSearchParams } from "next/navigation"
+import { AppHeader } from "@/new/ui/AppHeader"
 import { ProjectDetail } from "@/new/features/project-detail/ui/project-detail"
+import type { Role } from "@/new/types/role"
 
 function ProjectDetailContent() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const projectNumber = params.projectNumber as string
+  const role = (searchParams?.get("role") as Role) || "Sales"
 
   return (
-    <main className="px-8 py-8 max-w-7xl mx-auto">
-      <ProjectDetail projectNumber={projectNumber} />
-    </main>
+    <>
+      <AppHeader currentRole={role} />
+      <main className="px-8 py-8 max-w-7xl mx-auto">
+        <ProjectDetail projectNumber={projectNumber} />
+      </main>
+    </>
   )
 }
 

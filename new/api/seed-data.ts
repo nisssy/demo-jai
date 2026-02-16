@@ -4,10 +4,10 @@
  * ローカル開発・デモ用の初期データを一元管理する。
  * バージョンを変更するとクライアントの localStorage がリセットされる。
  */
-import type { Project, Product, DesignRequest, Company, Hall, Employee, CastSchedule } from "./types"
+import type { Project, Product, DesignRequest, Company, Hall, Employee, CastSchedule, MachineMaster } from "./types"
 
 /** シードデータのスキーマバージョン。型定義やシードデータを変更したらインクリメントする */
-export const SEED_VERSION = 7
+export const SEED_VERSION = 12
 
 // ─── Projects ───
 
@@ -82,6 +82,7 @@ export const SEED_PROJECTS: Project[] = [
 // ─── Products ───
 
 export const SEED_PRODUCTS: Product[] = [
+  // Product 1: トリニティガール（手配進行中 - マネジメント部用）
   {
     id: 1,
     projectId: 1,
@@ -102,7 +103,28 @@ export const SEED_PRODUCTS: Product[] = [
     companionBookingStatus: { "佐藤 花子": "tentative_completed", "田中 美咲": "tentative_completed" },
     directorBookingStatus: { "鈴木 一郎": "confirmed_completed" },
     mcBookingStatus: {},
+    startTime: "10:00",
+    endTime: "18:00",
+    mustSeeFlag: "要",
+    mustSeePublication: "要",
+    publicationDate: "2026/03/10",
+    reportRequired: "要",
+    statusHistory: [
+      { status: "提案中", timestamp: "2026-02-01T09:00:00Z", changedBy: "山田 太郎" },
+      { status: "マネジメント部確認中", timestamp: "2026-02-03T10:00:00Z", changedBy: "山田 太郎" },
+      { status: "仮押さえ依頼", timestamp: "2026-02-05T14:00:00Z", changedBy: "佐藤 マネージャー" },
+      { status: "手配進行中", timestamp: "2026-02-07T11:00:00Z", changedBy: "佐藤 マネージャー" },
+    ],
+    castingCost: 180000,
+    transportationFee: 25000,
+    accommodationFee: 0,
+    postPRCost: 15000,
+    targetMachineNames: ["パチスロ北斗の拳", "バジリスク絆2"],
+    pachitownMachineNames: ["P北斗の拳10", "Pバジリスク絆2天膳"],
+    pachitownLinked: false,
+    bannerGenerated: false,
   },
+  // Product 2: スロセレ（イベント終了 - 外注業者用）
   {
     id: 2,
     projectId: 1,
@@ -110,20 +132,58 @@ export const SEED_PRODUCTS: Product[] = [
     category: "イベント",
     eventType: "スロセレ",
     eventProductName: "スロセレ 春の特別企画",
-    eventDate: "2026/04/10",
+    eventDate: "2026/02/01",
     estimatedBillingAmount: 480000,
-    proposalStatus: "proposing",
-    executionStatus: "実施前",
+    proposalStatus: "order-received",
+    executionStatus: "終了",
     companionCount: "1",
     directorCount: "0",
     mcCount: "1",
     selectedCompanions: ["高橋 奈々"],
     selectedDirectors: [],
     selectedMcs: ["伊藤 翔太"],
-    companionBookingStatus: { "高橋 奈々": "tentative_requesting" },
+    companionBookingStatus: { "高橋 奈々": "confirmed_completed" },
     directorBookingStatus: {},
-    mcBookingStatus: { "伊藤 翔太": "tentative_requesting" },
+    mcBookingStatus: { "伊藤 翔太": "confirmed_completed" },
+    startTime: "11:00",
+    endTime: "17:00",
+    reportRequired: "要",
+    targetMachineNames: ["スマスロ北斗の拳", "からくりサーカス"],
+    pachitownMachineNames: ["Sスマスロ北斗の拳", "Sからくりサーカス"],
+    pachitownLinked: true,
+    pachitownLinkedDate: "2026-02-05",
+    bannerGenerated: true,
+    bannerData: {
+      date: "2/1",
+      dayOfWeek: "日曜日",
+      prefecture: "東京都",
+      storeName: "パチンコキング新宿店",
+      targetMachines: ["Sスマスロ北斗の拳", "Sからくりサーカス"],
+    },
+    surveyResult: {
+      satisfaction: "5",
+      comment: "大変楽しいイベントでした。キャストの対応も素晴らしかったです。",
+      nextEventDesired: "はい",
+      improvementRequest: "もう少し長い時間開催して欲しい",
+    },
+    eventPhotos: ["/images/event1-photo1.jpg", "/images/event1-photo2.jpg", "/images/event1-photo3.jpg"],
+    reportUploaded: true,
+    reportUploadedAt: "2026-02-03T10:00:00Z",
+    postEventTransactionResult: "稼働率120%達成。来場者数約500名。",
+    postEventMachineData: "北斗の拳: 稼働率135%、からくりサーカス: 稼働率110%",
+    statusHistory: [
+      { status: "受注", timestamp: "2026-01-15T09:00:00Z", changedBy: "山田 太郎" },
+      { status: "手配進行中", timestamp: "2026-01-20T10:00:00Z", changedBy: "佐藤 マネージャー" },
+      { status: "イベント終了処理中", timestamp: "2026-02-02T09:00:00Z", changedBy: "システム" },
+    ],
+    castingCost: 120000,
+    transportationFee: 15000,
+    accommodationFee: 0,
+    postPRCost: 10000,
+    surveySent: true,
+    surveySentDate: "2026-02-02",
   },
+  // Product 3: 合同抽選会（受注済み - 事務管理課用）
   {
     id: 3,
     projectId: 2,
@@ -151,6 +211,8 @@ export const SEED_PRODUCTS: Product[] = [
     salesPersonId: 1,
     insightPersonId: 2,
     readingCertainty: "A" as const,
+    area: "東京都",
+    budget: "1200000",
     prizeInfo: [
       { rank: "特賞", name: "液晶テレビ 50インチ", quantity: "2", prizeId: "1", vendorId: "1", vendorName: "景品卸売センター" },
       { rank: "1等", name: "ダイソン掃除機", quantity: "5", prizeId: "2", vendorId: "1", vendorName: "景品卸売センター" },
@@ -191,10 +253,66 @@ export const SEED_PRODUCTS: Product[] = [
         calculatedAmount: 116667,
       },
     ],
-    prizeOrderedAt: undefined,
-    winnerListUploadedAt: undefined,
-    winnerListValidatedAt: undefined,
+    winnerList: [
+      { id: "W-001", name: "鈴木 太郎", address: "東京都渋谷区1-1-1", phone: "090-1111-1111", prize: "特賞" },
+      { id: "W-002", name: "田中 花子", address: "東京都新宿区2-2-2", phone: "090-2222-2222", prize: "1等" },
+      { id: "W-003", name: "佐藤 次郎", address: "東京都豊島区3-3-3", phone: "090-3333-3333", prize: "1等" },
+      { id: "W-004", name: "高橋 美咲", address: "東京都港区4-4-4", phone: "090-4444-4444", prize: "2等" },
+      { id: "W-005", name: "渡辺 健一", address: "東京都品川区5-5-5", phone: "090-5555-5555", prize: "2等" },
+    ],
+    winnerListUploadedAt: "2026-02-20T10:00:00Z",
+    winnerListValidatedAt: "2026-02-20T10:05:00Z",
+    notificationOrderGeneratedAt: "2026-02-21T09:00:00Z",
+    notificationOrderSentAt: "2026-02-21T10:00:00Z",
+    notificationOrderDesignVendorId: "V-001",
+    notificationOrderDesignVendorName: "デザインスタジオA",
+    prizeOrderGeneratedAt: "2026-02-22T09:00:00Z",
+    prizeOrderRequestedAt: "2026-02-22T10:00:00Z",
+    prizeOrdersByVendor: [
+      {
+        vendorId: "1",
+        vendorName: "景品卸売センター",
+        requestedAt: "2026-02-22T10:00:00Z",
+        prizeItems: [
+          { rank: "特賞", name: "液晶テレビ 50インチ", quantity: "2", prizeId: "1", vendorId: "1", vendorName: "景品卸売センター" },
+          { rank: "1等", name: "ダイソン掃除機", quantity: "5", prizeId: "2", vendorId: "1", vendorName: "景品卸売センター" },
+          { rank: "参加賞", name: "ティッシュBOX", quantity: "500", prizeId: "5", vendorId: "1", vendorName: "景品卸売センター" },
+        ],
+      },
+      {
+        vendorId: "2",
+        vendorName: "プレミアム景品",
+        requestedAt: "2026-02-22T10:00:00Z",
+        prizeItems: [
+          { rank: "2等", name: "任天堂Switch", quantity: "10", prizeId: "3", vendorId: "2", vendorName: "プレミアム景品" },
+        ],
+      },
+      {
+        vendorId: "3",
+        vendorName: "ギフトプラザ",
+        requestedAt: "2026-02-22T10:00:00Z",
+        prizeItems: [
+          { rank: "3等", name: "商品券 5000円分", quantity: "50", prizeId: "4", vendorId: "3", vendorName: "ギフトプラザ" },
+        ],
+      },
+    ],
+    quoCardLetterCheckedAt: undefined,
+    prizeDeliveryInfoByVendor: [
+      {
+        vendorId: "1",
+        vendorName: "景品卸売センター",
+        deliveredAt: "2026-03-01T14:00:00Z",
+        carrierName: "ヤマト運輸",
+        trackingNumber: "1234-5678-9012",
+        shippedAt: "2026-02-28T10:00:00Z",
+        deliveries: [
+          { winnerId: "W-001", winnerName: "鈴木 太郎", carrierName: "ヤマト運輸", trackingNumber: "T-001", shippedAt: "2026-02-28T10:00:00Z" },
+          { winnerId: "W-002", winnerName: "田中 花子", carrierName: "ヤマト運輸", trackingNumber: "T-002", shippedAt: "2026-02-28T10:00:00Z" },
+        ],
+      },
+    ],
   },
+  // Product 4: トリニティガール（イベント終了済み - マネジメント部用）
   {
     id: 4,
     projectId: 3,
@@ -202,7 +320,7 @@ export const SEED_PRODUCTS: Product[] = [
     category: "イベント",
     eventType: "トリニティガール",
     eventProductName: "トリニティガール GW特別イベント",
-    eventDate: "2026/05/03",
+    eventDate: "2026/01/20",
     estimatedBillingAmount: 720000,
     proposalStatus: "order-received",
     executionStatus: "終了",
@@ -215,7 +333,29 @@ export const SEED_PRODUCTS: Product[] = [
     companionBookingStatus: { "佐藤 花子": "confirmed_completed", "小林 愛": "confirmed_completed" },
     directorBookingStatus: { "鈴木 一郎": "confirmed_completed" },
     mcBookingStatus: {},
+    startTime: "10:00",
+    endTime: "18:00",
+    reportRequired: "要",
+    mustSeePublication: "不要",
+    statusHistory: [
+      { status: "受注", timestamp: "2026-01-05T09:00:00Z", changedBy: "山田 太郎" },
+      { status: "手配進行中", timestamp: "2026-01-10T10:00:00Z", changedBy: "佐藤 マネージャー" },
+      { status: "イベント終了処理中", timestamp: "2026-01-21T09:00:00Z", changedBy: "システム" },
+    ],
+    castingCost: 220000,
+    transportationFee: 30000,
+    accommodationFee: 15000,
+    postPRCost: 20000,
+    surveySent: true,
+    surveySentDate: "2026-01-21",
+    surveyResult: {
+      satisfaction: "4",
+      comment: "良いイベントでした。次回も開催希望です。",
+      nextEventDesired: "はい",
+    },
   },
+  // Product 5: トリニティガール（マネジメント部確認中 - 確認フロー用）
+  // キャスト名は SEED_COMPANIONS / SEED_DIRECTORS の名前を使用（プロダクション紐付け）
   {
     id: 5,
     projectId: 4,
@@ -230,14 +370,26 @@ export const SEED_PRODUCTS: Product[] = [
     companionCount: "3",
     directorCount: "1",
     mcCount: "0",
-    selectedCompanions: ["佐藤 花子", "田中 美咲", "高橋 奈々"],
-    selectedDirectors: ["鈴木 一郎"],
+    selectedCompanions: ["Rio", "Ayaka", "Nanaka"],
+    selectedDirectors: ["Takeshi"],
     selectedMcs: [],
-    companionBookingStatus: {},
-    directorBookingStatus: {},
+    companionBookingStatus: { "Rio": "tentative_requesting", "Ayaka": "tentative_requesting", "Nanaka": "confirmed_requesting" },
+    directorBookingStatus: { "Takeshi": "tentative_requesting" },
     mcBookingStatus: {},
-    correctionRequest: "コンパニオンの人数を3名から2名に変更してください。予算の都合上、ディレクターも不要です。",
+    startTime: "10:00",
+    endTime: "17:00",
+    mustSeeFlag: "要",
+    reportRequired: "要",
+    comments: [
+      { author: "マネジメント部", content: "コンパニオンの人数を3名から2名に変更してください。予算の都合上、ディレクターも不要です。", timestamp: "2026-02-06T14:00:00Z" },
+    ],
+    statusHistory: [
+      { status: "提案中", timestamp: "2026-02-01T09:00:00Z", changedBy: "山田 太郎" },
+      { status: "マネジメント部確認中", timestamp: "2026-02-05T10:00:00Z", changedBy: "山田 太郎" },
+    ],
+    targetMachineNames: ["エヴァンゲリオン", "リゼロ"],
   },
+  // Product 6: スロセレ（仮押さえ依頼中 - マネジメント部・外注業者用）
   {
     id: 6,
     projectId: 5,
@@ -252,13 +404,54 @@ export const SEED_PRODUCTS: Product[] = [
     companionCount: "1",
     directorCount: "0",
     mcCount: "0",
-    selectedCompanions: ["佐藤 花子"],
+    selectedCompanions: ["高橋 みゆき"],
     selectedDirectors: [],
     selectedMcs: [],
-    companionBookingStatus: {},
+    companionBookingStatus: { "高橋 みゆき": "tentative_requesting" },
     directorBookingStatus: {},
     mcBookingStatus: {},
-    temporaryHoldFailureComment: "佐藤 花子さんは3/25に別案件の本押さえが入っているため、仮押さえできません。代替のキャストをご検討ください。",
+    startTime: "11:00",
+    endTime: "17:00",
+    reportRequired: "要",
+    temporaryHoldFailureComment: "高橋 みゆきさんは3/25に別案件の本押さえが入っているため、仮押さえできません。代替のキャストをご検討ください。",
+    statusHistory: [
+      { status: "仮押さえ依頼", timestamp: "2026-02-10T09:00:00Z", changedBy: "山田 太郎" },
+    ],
+    targetMachineNames: ["ジャグラー", "マイジャグラーV"],
+  },
+  // Product 7: トリニティガール（受注・実施前 - 各種手配タブ用）
+  {
+    id: 7,
+    projectId: 1,
+    projectNumber: "PJ-001",
+    category: "イベント",
+    eventType: "トリニティガール",
+    eventProductName: "トリニティガール 4月開催",
+    eventDate: "2026/04/10",
+    estimatedBillingAmount: 700000,
+    proposalStatus: "order-received",
+    executionStatus: "実施前",
+    companionCount: "2",
+    directorCount: "1",
+    mcCount: "0",
+    selectedCompanions: ["山田 花子", "佐藤 美咲"],
+    selectedDirectors: ["Kenji"],
+    selectedMcs: [],
+    companionBookingStatus: { "山田 花子": "confirmed_completed", "佐藤 美咲": "confirmed_completed" },
+    directorBookingStatus: { "Kenji": "confirmed_completed" },
+    mcBookingStatus: {},
+    startTime: "10:00",
+    endTime: "18:00",
+    mustSeePublication: "要",
+    reportRequired: "要",
+    statusHistory: [
+      { status: "受注", timestamp: "2026-02-15T09:00:00Z", changedBy: "山田 太郎" },
+      { status: "キャスト手配完了", timestamp: "2026-02-20T10:00:00Z", changedBy: "マネジメント部" },
+    ],
+    targetMachineNames: ["パチスロ北斗の拳", "バジリスク絆2"],
+    pachitownMachineNames: ["P北斗の拳10", "Pバジリスク絆2天膳"],
+    pachitownLinked: false,
+    bannerGenerated: false,
   },
 ]
 
@@ -270,22 +463,61 @@ export const SEED_DESIGN_REQUESTS: DesignRequest[] = [
     requestType: "poster",
     projectId: 3,
     projectNumber: "PJ-002",
+    projectName: "春の大抽選会2026",
+    companyName: "マルハン株式会社",
+    hallNames: ["グランドホール渋谷", "パチンコキング新宿店"],
+    eventStartDate: "2026/03/15",
+    eventEndDate: "2026/03/25",
     status: "uploaded",
     vendorId: "V-001",
     vendorName: "デザインスタジオA",
     requestedAt: "2026-02-10T10:00:00Z",
+    requestedBy: "EMP-001",
+    requestedByName: "山田 太郎",
     uploadedAt: "2026-02-12T15:00:00Z",
     uploadedFileName: "poster_v1.pdf",
+    comments: [
+      { id: "C-001", text: "ポスターデザインをお願いします。赤を基調としたデザインでお願いします。", role: "Sales", authorName: "山田 太郎", createdAt: "2026-02-10T10:05:00Z" },
+      { id: "C-002", text: "承知しました。2日以内に初稿をアップロードします。", role: "DesignVendor", authorName: "デザインスタジオA", createdAt: "2026-02-10T11:00:00Z" },
+      { id: "C-003", text: "初稿をアップロードしました。ご確認ください。", role: "DesignVendor", authorName: "デザインスタジオA", createdAt: "2026-02-12T15:00:00Z" },
+    ],
   },
   {
     id: "DR-002",
     requestType: "dm",
     projectId: 3,
     projectNumber: "PJ-002",
+    projectName: "春の大抽選会2026",
+    companyName: "マルハン株式会社",
+    hallNames: ["グランドホール渋谷", "パチンコキング新宿店"],
+    eventStartDate: "2026/03/15",
+    eventEndDate: "2026/03/25",
     status: "requested",
     vendorId: "V-001",
     vendorName: "デザインスタジオA",
     requestedAt: "2026-02-11T09:00:00Z",
+    requestedBy: "EMP-001",
+    requestedByName: "山田 太郎",
+    comments: [
+      { id: "C-004", text: "DM用デザインをお願いします。ポスターと統一感のあるデザインで。", role: "Sales", authorName: "山田 太郎", createdAt: "2026-02-11T09:05:00Z" },
+    ],
+  },
+  {
+    id: "DR-003",
+    requestType: "winner-list",
+    projectId: 3,
+    projectNumber: "PJ-002",
+    projectName: "春の大抽選会2026",
+    companyName: "マルハン株式会社",
+    hallNames: ["グランドホール渋谷", "パチンコキング新宿店"],
+    eventStartDate: "2026/03/15",
+    eventEndDate: "2026/03/25",
+    status: "requested",
+    vendorId: "V-002",
+    vendorName: "デザインスタジオB",
+    requestedAt: "2026-02-21T10:00:00Z",
+    requestedBy: "EMP-003",
+    requestedByName: "田中 三郎",
   },
 ]
 
@@ -339,17 +571,18 @@ export type SeedCastMember = {
   isExclusive: boolean
   hourlyRate: number
   productionId?: number
+  size?: string
 }
 
 export const SEED_COMPANIONS: SeedCastMember[] = [
-  { id: 1, name: "Rio", isExclusive: true, hourlyRate: 5000, productionId: 1 },
-  { id: 2, name: "Ayaka", isExclusive: true, hourlyRate: 5500, productionId: 1 },
-  { id: 3, name: "Nanaka", isExclusive: true, hourlyRate: 5200, productionId: 2 },
-  { id: 4, name: "山田 花子", isExclusive: false, hourlyRate: 6000, productionId: 3 },
-  { id: 5, name: "佐藤 美咲", isExclusive: false, hourlyRate: 5800, productionId: 3 },
-  { id: 6, name: "鈴木 さくら", isExclusive: false, hourlyRate: 6200, productionId: 3 },
-  { id: 7, name: "高橋 みゆき", isExclusive: false, hourlyRate: 5900, productionId: 2 },
-  { id: 8, name: "伊藤 あかり", isExclusive: false, hourlyRate: 6100, productionId: 1 },
+  { id: 1, name: "Rio", isExclusive: true, hourlyRate: 5000, productionId: 1, size: "S" },
+  { id: 2, name: "Ayaka", isExclusive: true, hourlyRate: 5500, productionId: 1, size: "M" },
+  { id: 3, name: "Nanaka", isExclusive: true, hourlyRate: 5200, productionId: 2, size: "M" },
+  { id: 4, name: "山田 花子", isExclusive: false, hourlyRate: 6000, productionId: 3, size: "L" },
+  { id: 5, name: "佐藤 美咲", isExclusive: false, hourlyRate: 5800, productionId: 3, size: "M" },
+  { id: 6, name: "鈴木 さくら", isExclusive: false, hourlyRate: 6200, productionId: 3, size: "S" },
+  { id: 7, name: "高橋 みゆき", isExclusive: false, hourlyRate: 5900, productionId: 2, size: "M" },
+  { id: 8, name: "伊藤 あかり", isExclusive: false, hourlyRate: 6100, productionId: 1, size: "L" },
 ]
 
 // ─── Cast Members (Directors) ───
@@ -372,10 +605,37 @@ export const SEED_EVENT_BASE_FEES: Record<string, number> = {
   "スロセレ": 70000,
 }
 
+// ─── Machine Masters (機種マスタ) ───
+
+export const SEED_MACHINE_MASTERS: MachineMaster[] = [
+  { id: 1, name: "パチスロ北斗の拳", pachitownName: "P北斗の拳10" },
+  { id: 2, name: "バジリスク絆2", pachitownName: "Pバジリスク絆2天膳" },
+  { id: 3, name: "スマスロ北斗の拳", pachitownName: "Sスマスロ北斗の拳" },
+  { id: 4, name: "からくりサーカス", pachitownName: "Sからくりサーカス" },
+  { id: 5, name: "エヴァンゲリオン", pachitownName: "Pエヴァンゲリオン15" },
+  { id: 6, name: "リゼロ", pachitownName: "Sリゼロ鬼がかり" },
+  { id: 7, name: "ジャグラー", pachitownName: "Sマイジャグラー5" },
+  { id: 8, name: "マイジャグラーV", pachitownName: "SマイジャグラーV" },
+]
+
+// ─── Design Vendors (デザイン業者マスタ) ───
+
+export const SEED_DESIGN_VENDORS = [
+  { id: "V-001", name: "デザインスタジオA" },
+  { id: "V-002", name: "デザインスタジオB" },
+]
+
+// ─── Prize Vendors (景品業者マスタ) ───
+
+export const SEED_PRIZE_VENDORS = [
+  { id: "1", name: "景品卸売センター" },
+  { id: "2", name: "プレミアム景品" },
+  { id: "3", name: "ギフトプラザ" },
+]
+
 // ─── Cast Schedules（キャスト予定データ） ───
 
 export const SEED_CAST_SCHEDULES: CastSchedule[] = [
-  // コンパニオン
   {
     castName: "Rio",
     role: "companion",
@@ -403,7 +663,6 @@ export const SEED_CAST_SCHEDULES: CastSchedule[] = [
       { dayOfWeek: 5, startTime: "14:00", endTime: "18:00", holdType: "confirmed", nominated: true },
     ],
   },
-  // ディレクター
   {
     castName: "Takeshi",
     role: "director",

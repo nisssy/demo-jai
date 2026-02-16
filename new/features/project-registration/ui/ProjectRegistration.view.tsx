@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChevronLeft } from "lucide-react"
-import type { Company, Hall } from "@/new/api/types"
+import type { Company, Hall, ProductComment } from "@/new/api/types"
 import type { RegistrationMode, ProjectFormState, ProductFormState, FormErrors } from "@/new/features/project-registration/model/types"
 import type { UseLotteryFormReturn } from "@/new/features/project-registration/hooks/useLotteryForm"
 import type { UseCastCalendarReturn } from "@/new/features/project-registration/hooks/useCastCalendar"
@@ -13,6 +13,7 @@ import { CastCalendarModal } from "./components/CastCalendarModal"
 const MODE_TITLES: Record<RegistrationMode, string> = {
   new: "新規案件作成",
   edit: "案件編集",
+  "project-edit": "案件情報編集",
   "product-add": "商材追加",
   "product-edit": "商材編集",
 }
@@ -21,7 +22,7 @@ export type ProjectRegistrationViewProps = {
   mode: RegistrationMode
   form: ProjectFormState
   errors: FormErrors
-  correctionRequest?: string
+  comments?: ProductComment[]
   // 法人検索
   companySearchOpen: boolean
   setCompanySearchOpen: (open: boolean) => void
@@ -56,6 +57,7 @@ export type ProjectRegistrationViewProps = {
   handleCastCountChange: (index: number, role: "companion" | "director", count: string) => void
   handleToggleCast: (index: number, role: "companion" | "director", name: string) => void
   handleToggleNomination: (index: number, role: "companion" | "director", name: string) => void
+  handleCastHoldTypeChange: (index: number, role: "companion" | "director", name: string, holdType: "tentative" | "confirmed") => void
   // アクション
   handleSubmit: () => void
   handleBack: () => void
@@ -69,7 +71,7 @@ export const ProjectRegistrationView = ({
   mode,
   form,
   errors,
-  correctionRequest,
+  comments,
   companySearchOpen,
   setCompanySearchOpen,
   companySearchQuery,
@@ -98,12 +100,14 @@ export const ProjectRegistrationView = ({
   handleCastCountChange,
   handleToggleCast,
   handleToggleNomination,
+  handleCastHoldTypeChange,
   handleSubmit,
   handleBack,
   lotteryForm,
   castCalendar,
 }: ProjectRegistrationViewProps) => {
   const isProductMode = mode === "product-add" || mode === "product-edit"
+  const isProjectEditMode = mode === "project-edit"
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -116,14 +120,20 @@ export const ProjectRegistrationView = ({
         <h1 className="text-2xl font-bold">{MODE_TITLES[mode]}</h1>
       </div>
 
-      {/* 修正依頼 */}
-      {mode === "product-edit" && correctionRequest && (
+      {/* コメント履歴 */}
+      {mode === "product-edit" && comments && comments.length > 0 && (
         <Card className="border-orange-200 bg-orange-50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base text-orange-800">修正依頼</CardTitle>
+            <CardTitle className="text-base text-orange-800">コメント</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-orange-700">{correctionRequest}</p>
+          <CardContent className="space-y-2">
+            {comments.map((c, i) => (
+              <div key={i} className="text-sm">
+                <span className="font-medium text-orange-800">{c.author}</span>
+                <span className="text-orange-400 text-xs ml-2">{new Date(c.timestamp).toLocaleString("ja-JP")}</span>
+                <p className="text-orange-700 mt-0.5">{c.content}</p>
+              </div>
+            ))}
           </CardContent>
         </Card>
       )}
@@ -158,7 +168,7 @@ export const ProjectRegistrationView = ({
       )}
 
       {/* 商材情報 */}
-      {form.products.map((product, index) => (
+      {!isProjectEditMode && form.products.map((product, index) => (
         <ProductSection
           key={index}
           index={index}
@@ -178,6 +188,7 @@ export const ProjectRegistrationView = ({
           onCastCountChange={(role, count) => handleCastCountChange(index, role, count)}
           onToggleCast={(role, name) => handleToggleCast(index, role, name)}
           onToggleNomination={(role, name) => handleToggleNomination(index, role, name)}
+          onCastHoldTypeChange={(role, name, ht) => handleCastHoldTypeChange(index, role, name, ht)}
           checkAvailability={castCalendar.checkAvailability}
           onOpenCalendar={(name, status, type) => castCalendar.openModal(name, status, type)}
           lotteryForm={product.category === "ポイント" ? lotteryForm : undefined}

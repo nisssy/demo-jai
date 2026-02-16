@@ -1,9 +1,17 @@
 "use client"
 
-import { Suspense } from "react"
+import { Suspense, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
+import { AppHeader } from "@/new/ui/AppHeader"
 import { RoleSelection } from "@/new/features/role-selection/ui/role-selection"
 import { ProjectList } from "@/new/features/project-list/ui/project-list"
+import { InternalDashboard } from "@/new/features/internal-dashboard/ui/internal-dashboard"
+import { ProductManagementDashboard } from "@/new/features/product-management-dashboard/ui/product-management-dashboard"
+import { OutsourcingVendorDashboard } from "@/new/features/outsourcing-vendor-dashboard/ui/outsourcing-vendor-dashboard"
+import { LotteryAdminDashboard } from "@/new/features/lottery-admin-dashboard/ui/lottery-admin-dashboard"
+import { DesignVendorDashboard } from "@/new/features/design-vendor-dashboard/ui/design-vendor-dashboard"
+import { PrizeVendorDashboard } from "@/new/features/prize-vendor-dashboard/ui/prize-vendor-dashboard"
+import { LocalStorageProjectRepository } from "@/new/api/impl/local-storage-project-repository"
 import type { Role } from "@/new/types/role"
 
 const VALID_ROLES: Role[] = [
@@ -16,19 +24,10 @@ const VALID_ROLES: Role[] = [
   "PrizeVendor",
 ]
 
-const ROLE_LABELS: Record<Role, string> = {
-  Sales: "BS・CS",
-  Internal: "マネジメント部",
-  ProductManagement: "商材管理課",
-  OutsourcingVendor: "スロセレ外注業者",
-  LotteryAdmin: "事務管理課（抽選）",
-  DesignVendor: "デザイン業者",
-  PrizeVendor: "景品業者",
-}
-
 function NewPageContent() {
   const searchParams = useSearchParams()
   const roleFromQuery = searchParams?.get("role") as Role | null
+  const repository = useMemo(() => new LocalStorageProjectRepository(), [])
 
   // ロール未選択 → ロール選択画面
   if (!roleFromQuery || !VALID_ROLES.includes(roleFromQuery)) {
@@ -39,27 +38,34 @@ function NewPageContent() {
     )
   }
 
-  // BS・CS → 案件一覧画面
-  if (roleFromQuery === "Sales") {
-    return (
-      <main className="px-8 py-8 max-w-7xl mx-auto">
-        <ProjectList />
-      </main>
-    )
-  }
+  const dashboard = (() => {
+    switch (roleFromQuery) {
+      case "Sales":
+        return <ProjectList />
+      case "Internal":
+        return <InternalDashboard repository={repository} />
+      case "ProductManagement":
+        return <ProductManagementDashboard repository={repository} />
+      case "OutsourcingVendor":
+        return <OutsourcingVendorDashboard />
+      case "LotteryAdmin":
+        return <LotteryAdminDashboard />
+      case "DesignVendor":
+        return <DesignVendorDashboard repository={repository} />
+      case "PrizeVendor":
+        return <PrizeVendorDashboard repository={repository} />
+      default:
+        return null
+    }
+  })()
 
-  // その他のロール → 準備中
   return (
-    <main className="px-8 py-8 max-w-7xl mx-auto">
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">
-            {ROLE_LABELS[roleFromQuery]}
-          </h2>
-          <p className="text-slate-500">この画面は準備中です</p>
-        </div>
-      </div>
-    </main>
+    <>
+      <AppHeader currentRole={roleFromQuery} />
+      <main className="px-8 py-8 max-w-7xl mx-auto">
+        {dashboard}
+      </main>
+    </>
   )
 }
 

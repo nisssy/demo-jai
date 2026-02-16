@@ -10,6 +10,7 @@ type CastingSectionProps = {
   onToggleCast: (role: "companion" | "director", name: string) => void
   onToggleNomination: (role: "companion" | "director", name: string) => void
   onOpenCalendar?: (name: string, status: AvailabilityStatus, type: "companion" | "director") => void
+  onCastHoldTypeChange: (role: "companion" | "director", name: string, holdType: "tentative" | "confirmed") => void
 }
 
 export const CastingSection = ({
@@ -19,6 +20,7 @@ export const CastingSection = ({
   onToggleCast,
   onToggleNomination,
   onOpenCalendar,
+  onCastHoldTypeChange,
 }: CastingSectionProps) => {
   // 表示制御はタブ側で行うため、ここでは常にレンダリング
   const companions = getCompanionList()
@@ -42,11 +44,13 @@ export const CastingSection = ({
             castMembers={companions}
             selectedNames={product.selectedCompanions}
             nominations={product.nominatedCompanions}
+            holdTypes={product.companionHoldTypes}
             durationHours={durationHours}
             checkAvailability={checkAvailability ? (name) => checkAvailability(name, "companion") : undefined}
             onCountChange={(count) => onCastCountChange("companion", count)}
             onToggle={(name) => onToggleCast("companion", name)}
             onToggleNomination={(name) => onToggleNomination("companion", name)}
+            onHoldTypeChange={(name, ht) => onCastHoldTypeChange("companion", name, ht)}
             onOpenCalendar={onOpenCalendar ? (name, status) => onOpenCalendar(name, status, "companion") : undefined}
           />
         )}
@@ -59,11 +63,13 @@ export const CastingSection = ({
           castMembers={directors}
           selectedNames={product.selectedDirectors}
           nominations={product.nominatedDirectors}
+          holdTypes={product.directorHoldTypes}
           durationHours={durationHours}
           checkAvailability={checkAvailability ? (name) => checkAvailability(name, "director") : undefined}
           onCountChange={(count) => onCastCountChange("director", count)}
           onToggle={(name) => onToggleCast("director", name)}
           onToggleNomination={(name) => onToggleNomination("director", name)}
+          onHoldTypeChange={(name, ht) => onCastHoldTypeChange("director", name, ht)}
           onOpenCalendar={onOpenCalendar ? (name, status) => onOpenCalendar(name, status, "director") : undefined}
         />
       </div>

@@ -1,4 +1,17 @@
-import type { BookingStatus, ProposalStatus, ExecutionStatus } from "./types"
+import type { BookingStatus, ProposalStatus, ExecutionStatus, ProductProgressStatus } from "./types"
+import type { Role } from "@/new/types/role"
+
+// ─── ロールラベル ───
+
+export const ROLE_LABELS: Record<Role, string> = {
+  Sales: "BS・CS",
+  Internal: "マネジメント部",
+  ProductManagement: "商材管理課",
+  LotteryAdmin: "事務管理課（抽選）",
+  OutsourcingVendor: "スロセレ外注業者",
+  DesignVendor: "デザイン業者",
+  PrizeVendor: "景品業者",
+}
 
 // ─── 提案ステータス ───
 
@@ -26,7 +39,6 @@ export const EXECUTION_STATUS_LABELS: Record<ExecutionStatus, string> = {
   "実施中": "実施中",
   "終了": "終了",
 }
-
 
 // ─── ヨミ（読み確度） ───
 
@@ -56,6 +68,31 @@ export const DESIGN_REQUEST_TYPE_LABELS: Record<string, string> = {
 export const DESIGN_REQUEST_STATUS_LABELS: Record<string, string> = {
   "requested": "初稿待ち",
   "uploaded": "アップロード済み",
+}
+
+// ─── 外注業者進捗ステータス ───
+
+export const PRODUCT_PROGRESS_STATUS_LABELS: Record<ProductProgressStatus, string> = {
+  "not_started": "未対応",
+  "report_uploaded": "レポートアップロード済",
+  "pachitown_linked": "パチタウン連携済",
+  "post_event_done": "事後データ入力済",
+}
+
+// ─── 衣装 ───
+
+export const COSTUME_OPTIONS: { value: string; label: string }[] = [
+  { value: "costume1", label: "衣装A (S/M/L対応)" },
+  { value: "costume2", label: "衣装B (S/M/L対応)" },
+  { value: "costume3", label: "衣装C (S/M/L対応)" },
+  { value: "costume4", label: "衣装D (S/M/L対応)" },
+]
+
+export const COSTUME_LABELS: Record<string, string> = {
+  costume1: "衣装A",
+  costume2: "衣装B",
+  costume3: "衣装C",
+  costume4: "衣装D",
 }
 
 // ─── カテゴリ・イベント区分マッピング ───

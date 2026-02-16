@@ -31,7 +31,6 @@ export const ProjectListContainer = () => {
     handleCompanyHallSearchTypeChange,
     handleCreateNewProject,
     handleClickDetail,
-    handleClickProduct,
     handleClickCorrectionProduct,
     handleClickHoldFailureProduct,
   } = useProjectList({ repository })
@@ -60,7 +59,6 @@ export const ProjectListContainer = () => {
       onSelectCompany={handleSelectCompany}
       onCreateNewProject={handleCreateNewProject}
       onClickDetail={handleClickDetail}
-      onClickProduct={handleClickProduct}
       onClickCorrectionProduct={handleClickCorrectionProduct}
       onClickHoldFailureProduct={handleClickHoldFailureProduct}
     />

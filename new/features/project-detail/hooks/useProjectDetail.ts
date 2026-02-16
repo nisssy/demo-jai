@@ -1,19 +1,52 @@
 "use client"
 
-import { useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { useAppRouter } from "@/hooks/use-app-router"
 import type { ProjectRepository } from "@/new/api/project-repository"
+import type { Product, DesignRequest } from "@/new/api/types"
 import { PROPOSAL_STATUS_LABELS } from "@/new/api/display"
-import type { ProposalStatus } from "@/new/api/types"
-import type { ProjectInfo, ProductSummary } from "@/new/features/project-detail/model/types"
+import type { ProposalStatus, BookingStatus } from "@/new/api/types"
+import type { ProjectInfo, ProductSummary, CastSummary } from "@/new/features/project-detail/model/types"
 
 export type UseProjectDetailArgs = {
   repository: ProjectRepository
   projectNumber: string
 }
 
+/** 受注確認モーダルに表示する仮押さえ完了キャスト情報 */
+export type TentativeCompletedCast = {
+  name: string
+  role: "companion" | "director"
+  roleLabel: string
+}
+
+/** デザイン依頼ステータスを解決 */
+function resolveDesignStatus(requests: DesignRequest[]): DesignRequest["status"] | null {
+  if (requests.length === 0) return null
+  return requests[requests.length - 1].status
+}
+
+/** Product → CastSummary[] にマッピング */
+function toCastSummaries(product: Product): CastSummary[] {
+  const casts: CastSummary[] = []
+  for (const name of product.selectedCompanions ?? []) {
+    casts.push({ name, type: "コンパニオン", bookingStatus: product.companionBookingStatus?.[name] ?? "tentative_requesting" })
+  }
+  for (const name of product.selectedDirectors ?? []) {
+    casts.push({ name, type: "ディレクター", bookingStatus: product.directorBookingStatus?.[name] ?? "tentative_requesting" })
+  }
+  for (const name of product.selectedMcs ?? []) {
+    casts.push({ name, type: "MC", bookingStatus: product.mcBookingStatus?.[name] ?? "tentative_requesting" })
+  }
+  return casts
+}
+
 export function useProjectDetail({ repository, projectNumber }: UseProjectDetailArgs) {
   const router = useAppRouter()
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  // 受注確認モーダル
+  const [orderReceivedTargetId, setOrderReceivedTargetId] = useState<number | null>(null)
 
   const projectInfo = useMemo<ProjectInfo | null>(() => {
     const project = repository.getProjectByProjectNumber(projectNumber)
@@ -29,26 +62,113 @@ export function useProjectDetail({ repository, projectNumber }: UseProjectDetail
       salesPersonName: project.salesPersonName,
       requestDate: project.requestDate,
     }
-  }, [repository, projectNumber])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repository, projectNumber, refreshKey])
 
   const products = useMemo<ProductSummary[]>(() => {
-    return repository.getProductsByProjectNumber(projectNumber).map((p) => ({
-      id: p.id,
-      category: p.category,
-      eventType: p.eventType,
-      eventProductName: p.eventProductName,
-      eventDate: p.eventDate,
-      proposalStatus: PROPOSAL_STATUS_LABELS[p.proposalStatus as ProposalStatus] ?? undefined,
-      estimatedBillingAmount: p.estimatedBillingAmount,
-    }))
-  }, [repository, projectNumber])
+    return repository.getProductsByProjectNumber(projectNumber).map((p) => {
+      // デザイン依頼ステータスを解決
+      const designRequests = repository.getDesignRequestsByProjectId(p.id)
+      const posterReqs = designRequests.filter((dr) => dr.requestType === "poster")
+      const dmReqs = designRequests.filter((dr) => dr.requestType === "dm")
+      const winnerListReqs = designRequests.filter((dr) => dr.requestType === "winner-list")
+
+      return {
+        id: p.id,
+        category: p.category,
+        eventType: p.eventType,
+        eventProductName: p.eventProductName,
+        eventDate: p.eventDate,
+        estimatedBillingAmount: p.estimatedBillingAmount,
+        // ステータス
+        proposalStatus: PROPOSAL_STATUS_LABELS[p.proposalStatus as ProposalStatus] ?? undefined,
+        proposalStatusRaw: p.proposalStatus,
+        executionStatus: p.executionStatus,
+        // キャスト
+        casts: toCastSummaries(p),
+        // 合同抽選会
+        dmMailing: p.dmMailing,
+        posterStatus: resolveDesignStatus(posterReqs),
+        dmStatus: resolveDesignStatus(dmReqs),
+        winnerListStatus: resolveDesignStatus(winnerListReqs),
+        prizeOrdered: !!p.prizeOrderedAt,
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repository, projectNumber, refreshKey])
 
   const firstProductId = products.length > 0 ? products[0].id : undefined
+
+  // 受注確認モーダル: 仮押さえ完了キャスト一覧
+  const tentativeCompletedCasts = useMemo<TentativeCompletedCast[]>(() => {
+    if (orderReceivedTargetId == null) return []
+    const product = repository.getProductById(orderReceivedTargetId)
+    if (!product) return []
+
+    const casts: TentativeCompletedCast[] = []
+    for (const [name, status] of Object.entries(product.companionBookingStatus ?? {})) {
+      if (status === "tentative_completed") {
+        casts.push({ name, role: "companion", roleLabel: "コンパニオン" })
+      }
+    }
+    for (const [name, status] of Object.entries(product.directorBookingStatus ?? {})) {
+      if (status === "tentative_completed") {
+        casts.push({ name, role: "director", roleLabel: "ディレクター" })
+      }
+    }
+    return casts
+  }, [repository, orderReceivedTargetId])
+
+  // 受注確認モーダル: 対象商材名
+  const orderReceivedTargetProduct = useMemo<ProductSummary | undefined>(() => {
+    if (orderReceivedTargetId == null) return undefined
+    return products.find((p) => p.id === orderReceivedTargetId)
+  }, [products, orderReceivedTargetId])
+
+  // 受注ボタンクリック → モーダル表示
+  const handleRequestOrderReceived = useCallback((productId: number) => {
+    setOrderReceivedTargetId(productId)
+  }, [])
+
+  // 受注確認 → 実行
+  const handleConfirmOrderReceived = useCallback(() => {
+    if (orderReceivedTargetId == null) return
+    const product = repository.getProductById(orderReceivedTargetId)
+    if (!product) return
+
+    // 仮押さえ完了 → 本押さえ依頼中 に更新
+    const updatedCompanionBookingStatus = { ...product.companionBookingStatus }
+    for (const [name, status] of Object.entries(updatedCompanionBookingStatus)) {
+      if (status === "tentative_completed") {
+        updatedCompanionBookingStatus[name] = "confirmed_requesting" as BookingStatus
+      }
+    }
+    const updatedDirectorBookingStatus = { ...product.directorBookingStatus }
+    for (const [name, status] of Object.entries(updatedDirectorBookingStatus)) {
+      if (status === "tentative_completed") {
+        updatedDirectorBookingStatus[name] = "confirmed_requesting" as BookingStatus
+      }
+    }
+
+    repository.updateProduct(orderReceivedTargetId, {
+      proposalStatus: "order-received",
+      companionBookingStatus: updatedCompanionBookingStatus,
+      directorBookingStatus: updatedDirectorBookingStatus,
+    })
+
+    setOrderReceivedTargetId(null)
+    setRefreshKey((k) => k + 1)
+  }, [repository, orderReceivedTargetId])
+
+  // 受注確認キャンセル
+  const handleCancelOrderReceived = useCallback(() => {
+    setOrderReceivedTargetId(null)
+  }, [])
 
   // 案件情報編集
   const handleEditProjectInfo = useCallback(() => {
     if (!firstProductId) return
-    router.push(`/new/project-registration?mode=edit&productId=${firstProductId}`)
+    router.push(`/new/project-registration?mode=project-edit&productId=${firstProductId}`)
   }, [router, firstProductId])
 
   // 商材追加
@@ -75,6 +195,14 @@ export function useProjectDetail({ repository, projectNumber }: UseProjectDetail
   return {
     projectInfo,
     products,
+    // 受注確認
+    orderReceivedModalOpen: orderReceivedTargetId != null,
+    orderReceivedTargetProduct,
+    tentativeCompletedCasts,
+    onRequestOrderReceived: handleRequestOrderReceived,
+    onConfirmOrderReceived: handleConfirmOrderReceived,
+    onCancelOrderReceived: handleCancelOrderReceived,
+    // ナビゲーション
     onUpdateProjectInfo: handleEditProjectInfo,
     onAddProduct: handleAddProduct,
     onEditProduct: handleEditProduct,

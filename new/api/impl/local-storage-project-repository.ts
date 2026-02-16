@@ -1,5 +1,5 @@
 import type { ProjectRepository } from "../project-repository"
-import type { Project, Product, DesignRequest, Company, Hall, Employee, CastSchedule } from "../types"
+import type { Project, Product, DesignRequest, Company, Hall, Employee, CastSchedule, MachineMaster } from "../types"
 import {
   SEED_VERSION,
   SEED_PROJECTS,
@@ -9,6 +9,7 @@ import {
   SEED_HALLS,
   SEED_EMPLOYEES,
   SEED_CAST_SCHEDULES,
+  SEED_MACHINE_MASTERS,
 } from "../seed-data"
 
 const STORAGE_KEYS = {
@@ -19,6 +20,7 @@ const STORAGE_KEYS = {
   companies: "new_companies",
   halls: "new_halls",
   employees: "new_employees",
+  machineMasters: "new_machine_masters",
 } as const
 
 function getFromStorage<T>(key: string, fallback: T[]): T[] {
@@ -42,7 +44,6 @@ export class LocalStorageProjectRepository implements ProjectRepository {
     this.ensureSeeded()
   }
 
-  /** シードデータを投入（バージョン不一致時はリセット） */
   private ensureSeeded(): void {
     if (typeof window === "undefined") return
 
@@ -72,6 +73,9 @@ export class LocalStorageProjectRepository implements ProjectRepository {
     if (!localStorage.getItem(STORAGE_KEYS.employees)) {
       localStorage.setItem(STORAGE_KEYS.employees, JSON.stringify(SEED_EMPLOYEES))
     }
+    if (!localStorage.getItem(STORAGE_KEYS.machineMasters)) {
+      localStorage.setItem(STORAGE_KEYS.machineMasters, JSON.stringify(SEED_MACHINE_MASTERS))
+    }
   }
 
   getProjects(): Project[] {
@@ -94,13 +98,16 @@ export class LocalStorageProjectRepository implements ProjectRepository {
     return this.getProducts().filter((p) => p.projectNumber === projectNumber)
   }
 
-  getDesignRequestsByProjectId(projectId: number): DesignRequest[] {
+  getAllDesignRequests(): DesignRequest[] {
     return getFromStorage<DesignRequest>(STORAGE_KEYS.designRequests, SEED_DESIGN_REQUESTS)
-      .filter((dr) => dr.projectId === projectId)
+  }
+
+  getDesignRequestsByProjectId(projectId: number): DesignRequest[] {
+    return this.getAllDesignRequests().filter((dr) => dr.projectId === projectId)
   }
 
   createDesignRequest(request: Omit<DesignRequest, "id">): DesignRequest {
-    const all = getFromStorage<DesignRequest>(STORAGE_KEYS.designRequests, SEED_DESIGN_REQUESTS)
+    const all = this.getAllDesignRequests()
     const maxNum = all.reduce((max, dr) => {
       const match = dr.id.match(/^DR-(\d+)$/)
       return match ? Math.max(max, parseInt(match[1], 10)) : max
@@ -110,8 +117,18 @@ export class LocalStorageProjectRepository implements ProjectRepository {
     return newRequest
   }
 
+  updateDesignRequest(id: string, updates: Partial<DesignRequest>): DesignRequest | undefined {
+    const all = this.getAllDesignRequests()
+    const index = all.findIndex((dr) => dr.id === id)
+    if (index === -1) return undefined
+    const updated = { ...all[index], ...updates }
+    all[index] = updated
+    saveToStorage(STORAGE_KEYS.designRequests, all)
+    return updated
+  }
+
   addDesignRequestComment(requestId: string, comment: string, role: string, authorName?: string): void {
-    const all = getFromStorage<DesignRequest>(STORAGE_KEYS.designRequests, SEED_DESIGN_REQUESTS)
+    const all = this.getAllDesignRequests()
     const index = all.findIndex((dr) => dr.id === requestId)
     if (index === -1) return
     const dr = { ...all[index] }
@@ -142,6 +159,14 @@ export class LocalStorageProjectRepository implements ProjectRepository {
 
   getCastSchedules(): CastSchedule[] {
     return SEED_CAST_SCHEDULES
+  }
+
+  getMachineMasters(): MachineMaster[] {
+    return getFromStorage<MachineMaster>(STORAGE_KEYS.machineMasters, SEED_MACHINE_MASTERS)
+  }
+
+  saveMachineMasters(masters: MachineMaster[]): void {
+    saveToStorage(STORAGE_KEYS.machineMasters, masters)
   }
 
   // ─── 書き込み ───

@@ -1,14 +1,25 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ChevronLeft, Plus, FileText } from "lucide-react"
+import { ChevronLeft, Plus } from "lucide-react"
 import type { ProjectInfo, ProductSummary } from "@/new/features/project-detail/model/types"
+import type { TentativeCompletedCast } from "@/new/features/project-detail/hooks/useProjectDetail"
 import { ProjectInfoCard } from "./components/ProjectInfoCard"
+import { ProjectSummaryCard } from "./components/ProjectSummaryCard"
 import { ProductSummaryCard } from "./components/ProductSummaryCard"
+import { OrderReceivedConfirmModal } from "./components/OrderReceivedConfirmModal"
 
 export type ProjectDetailViewProps = {
   projectInfo: ProjectInfo | null
   products: ProductSummary[]
+  // 受注確認
+  orderReceivedModalOpen: boolean
+  orderReceivedTargetProduct?: ProductSummary
+  tentativeCompletedCasts: TentativeCompletedCast[]
+  onRequestOrderReceived: (productId: number) => void
+  onConfirmOrderReceived: () => void
+  onCancelOrderReceived: () => void
+  // ナビゲーション
   onUpdateProjectInfo: () => void
   onAddProduct: () => void
   onEditProduct: (productId: number) => void
@@ -19,6 +30,12 @@ export type ProjectDetailViewProps = {
 export const ProjectDetailView = ({
   projectInfo,
   products,
+  orderReceivedModalOpen,
+  orderReceivedTargetProduct,
+  tentativeCompletedCasts,
+  onRequestOrderReceived,
+  onConfirmOrderReceived,
+  onCancelOrderReceived,
   onUpdateProjectInfo,
   onAddProduct,
   onEditProduct,
@@ -40,7 +57,7 @@ export const ProjectDetailView = ({
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 p-6">
+    <div className="max-w-6xl mx-auto p-6 space-y-6">
       {/* ヘッダー */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={onBack}>
@@ -54,61 +71,64 @@ export const ProjectDetailView = ({
         </div>
       </div>
 
-      {/* 案件情報カード */}
-      <ProjectInfoCard projectInfo={projectInfo} onEdit={onUpdateProjectInfo} />
-
-      {/* 見積作成ボタン */}
-      {products.length > 0 && (
-        <Card className="border-blue-200 bg-blue-50/30">
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-900">見積書</p>
-                <p className="text-xs text-slate-500">商材を選択して見積書を作成・送付します</p>
-              </div>
-              <Button onClick={onCreateQuote} variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-50">
-                <FileText className="h-4 w-4 mr-2" />
-                見積作成
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* 商材一覧カード */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            商材一覧
-            <Badge variant="outline">{products.length}件</Badge>
-          </CardTitle>
-          <Button onClick={onAddProduct}>
-            <Plus className="h-4 w-4 mr-2" />
-            商材を追加
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {products.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">
-              <p className="mb-4">商材が登録されていません</p>
-              <Button variant="outline" onClick={onAddProduct}>
-                <Plus className="h-4 w-4 mr-2" />
-                最初の商材を追加
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {products.map((product) => (
-                <ProductSummaryCard
-                  key={product.id}
-                  product={product}
-                  onEdit={() => onEditProduct(product.id)}
-                />
-              ))}
-            </div>
+      {/* 2カラムレイアウト: 左=案件情報+サマリ / 右=商材一覧 */}
+      <div className="flex gap-6 items-start">
+        {/* 左カラム: 案件情報 + サマリ（sticky） */}
+        <div className="w-72 shrink-0 sticky top-24 space-y-4">
+          <ProjectInfoCard projectInfo={projectInfo} onEdit={onUpdateProjectInfo} />
+          {products.length > 0 && (
+            <ProjectSummaryCard products={products} onCreateQuote={onCreateQuote} />
           )}
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* 右カラム: 商材一覧 */}
+        <div className="flex-1 min-w-0">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                商材一覧
+                <Badge variant="outline">{products.length}件</Badge>
+              </CardTitle>
+              <Button onClick={onAddProduct}>
+                <Plus className="h-4 w-4 mr-2" />
+                商材を追加
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {products.length === 0 ? (
+                <div className="text-center py-12 text-slate-500">
+                  <p className="mb-4">商材が登録されていません</p>
+                  <Button variant="outline" onClick={onAddProduct}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    最初の商材を追加
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {products.map((product) => (
+                    <ProductSummaryCard
+                      key={product.id}
+                      product={product}
+                      salesPersonName={projectInfo.salesPersonName}
+                      onEdit={() => onEditProduct(product.id)}
+                      onRequestOrderReceived={() => onRequestOrderReceived(product.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* 受注確認モーダル */}
+      <OrderReceivedConfirmModal
+        open={orderReceivedModalOpen}
+        product={orderReceivedTargetProduct}
+        tentativeCompletedCasts={tentativeCompletedCasts}
+        onConfirm={onConfirmOrderReceived}
+        onCancel={onCancelOrderReceived}
+      />
     </div>
   )
 }

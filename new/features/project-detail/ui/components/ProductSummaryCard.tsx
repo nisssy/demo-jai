@@ -1,61 +1,174 @@
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Edit2, Calendar } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Calendar, Users, CheckCircle2, Play, FileText, Gift, Mail, Image } from "lucide-react"
+import { PROPOSAL_STATUS_LABELS, BOOKING_STATUS_LABELS, EXECUTION_STATUS_LABELS, DESIGN_REQUEST_STATUS_LABELS } from "@/new/api/display"
+import type { BookingStatus } from "@/new/api/types"
 import type { ProductSummary } from "@/new/features/project-detail/model/types"
+
+const BOOKING_STATUS_COLORS: Record<BookingStatus, string> = {
+  "tentative_requesting": "bg-yellow-100 text-yellow-800",
+  "tentative_failed": "bg-red-100 text-red-800",
+  "tentative_completed": "bg-green-100 text-green-800",
+  "confirmed_requesting": "bg-purple-100 text-purple-800",
+  "confirmed_failed": "bg-red-100 text-red-800",
+  "confirmed_completed": "bg-blue-100 text-blue-800",
+}
 
 type ProductSummaryCardProps = {
   product: ProductSummary
+  salesPersonName?: string
   onEdit: () => void
+  onRequestOrderReceived?: () => void
 }
 
-export const ProductSummaryCard = ({ product, onEdit }: ProductSummaryCardProps) => {
+export const ProductSummaryCard = ({ product, salesPersonName, onEdit, onRequestOrderReceived }: ProductSummaryCardProps) => {
+  const isLottery = product.category === "ポイント" && product.eventType === "合同抽選会"
+  const isEventProduct = product.category === "イベント"
+  const canMarkOrderReceived = isEventProduct && product.proposalStatusRaw !== "order-received"
+
   return (
-    <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={onEdit}>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 space-y-2">
+    <div
+      className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-white"
+      onClick={onEdit}
+    >
+      <div className="space-y-3">
+        {/* ヘッダー */}
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <Badge variant="outline">{product.category}</Badge>
-              <Badge variant="outline">{product.eventType}</Badge>
+              <Badge className="bg-slate-700 text-white text-xs">{product.category}</Badge>
+              <Badge variant="outline" className="text-xs">{product.eventType}</Badge>
             </div>
+            <h4 className="font-medium text-slate-900">
+              {product.eventProductName || "商材名未設定"}
+            </h4>
+          </div>
+          {canMarkOrderReceived && onRequestOrderReceived && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs border-green-300 text-green-700 hover:bg-green-50"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRequestOrderReceived()
+              }}
+            >
+              <CheckCircle2 className="h-3 w-3 mr-1" />
+              受注
+            </Button>
+          )}
+        </div>
 
-            <div className="space-y-1">
-              <p className="font-medium text-slate-900">
-                {product.eventProductName || "商材名未設定"}
-              </p>
-              {product.eventDate && (
-                <p className="text-sm text-slate-600 flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5" />
-                  実施日: {product.eventDate}
-                </p>
-              )}
-              {product.estimatedBillingAmount != null && (
-                <p className="text-sm text-slate-600">
-                  請求予定: ¥{product.estimatedBillingAmount.toLocaleString()}
-                </p>
-              )}
-            </div>
+        {/* 基本情報 */}
+        <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
+          {product.eventDate && (
+            <span className="flex items-center gap-1">
+              <Calendar className="h-3.5 w-3.5" />
+              {product.eventDate}
+            </span>
+          )}
+        </div>
 
-            {product.proposalStatus && (
-              <Badge className="bg-blue-100 text-blue-800 text-xs">
-                {product.proposalStatus}
-              </Badge>
-            )}
+        {/* ステータス */}
+        <div className="space-y-2 pt-2 border-t border-slate-100">
+          {/* 提案ステータス */}
+          <div className="flex items-center gap-1.5 text-xs">
+            <CheckCircle2 className="h-3.5 w-3.5 text-slate-500" />
+            <span className="text-slate-500 min-w-[60px]">提案:</span>
+            <Badge className={`text-xs px-2 py-0.5 ${product.proposalStatusRaw === "order-received" ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-600"}`}>
+              {product.proposalStatus ?? "-"}
+            </Badge>
           </div>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation()
-              onEdit()
-            }}
-          >
-            <Edit2 className="h-4 w-4" />
-          </Button>
+          {/* 実施ステータス */}
+          <div className="flex items-center gap-1.5 text-xs">
+            <Play className="h-3.5 w-3.5 text-slate-500" />
+            <span className="text-slate-500 min-w-[60px]">実施:</span>
+            <Badge className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5">
+              {product.executionStatus ? EXECUTION_STATUS_LABELS[product.executionStatus] : "-"}
+            </Badge>
+          </div>
+
+          {/* 合同抽選会固有ステータス */}
+          {isLottery && (
+            <>
+              <div className="flex items-center gap-1.5 text-xs">
+                <Image className="h-3.5 w-3.5 text-slate-500" />
+                <span className="text-slate-500 min-w-[60px]">ポスター:</span>
+                <Badge className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5">
+                  {product.posterStatus ? DESIGN_REQUEST_STATUS_LABELS[product.posterStatus] : "-"}
+                </Badge>
+              </div>
+              {product.dmMailing === "yes" && (
+                <div className="flex items-center gap-1.5 text-xs">
+                  <Mail className="h-3.5 w-3.5 text-slate-500" />
+                  <span className="text-slate-500 min-w-[60px]">DM:</span>
+                  <Badge className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5">
+                    {product.dmStatus ? DESIGN_REQUEST_STATUS_LABELS[product.dmStatus] : "-"}
+                  </Badge>
+                </div>
+              )}
+              <div className="flex items-center gap-1.5 text-xs">
+                <FileText className="h-3.5 w-3.5 text-slate-500" />
+                <span className="text-slate-500 min-w-[60px]">通知書:</span>
+                <Badge className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5">
+                  {product.winnerListStatus ? DESIGN_REQUEST_STATUS_LABELS[product.winnerListStatus] : "-"}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs">
+                <Gift className="h-3.5 w-3.5 text-slate-500" />
+                <span className="text-slate-500 min-w-[60px]">景品:</span>
+                <Badge className={`text-xs px-2 py-0.5 ${product.prizeOrdered ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-600"}`}>
+                  {product.prizeOrdered ? "発注済み" : "-"}
+                </Badge>
+              </div>
+            </>
+          )}
+
+          {/* イベント系キャスティング */}
+          {!isLottery && product.casts && product.casts.length > 0 && (
+            <>
+              <div className="text-xs text-slate-500 mt-2">キャスティング</div>
+              <div className="space-y-1">
+                {product.casts.map((cast, index) => {
+                  const label = BOOKING_STATUS_LABELS[cast.bookingStatus] ?? cast.bookingStatus
+                  const color = BOOKING_STATUS_COLORS[cast.bookingStatus] ?? "bg-slate-100 text-slate-600"
+                  return (
+                    <div key={index} className="flex items-center gap-2 text-xs">
+                      <Users className="h-3.5 w-3.5 text-slate-500" />
+                      <span className="text-slate-600 min-w-[80px]">{cast.type}:</span>
+                      <span className="text-slate-800 font-medium">{cast.name}</span>
+                      <Badge className={`${color} text-xs px-2 py-0.5`}>
+                        {label}
+                      </Badge>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
         </div>
-      </CardContent>
-    </Card>
+
+        {/* フッター */}
+        <div className="pt-2 border-t border-slate-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs text-slate-500 mb-1">見積金額</div>
+              <div className="text-lg font-semibold text-slate-900">
+                ¥{(product.estimatedBillingAmount ?? 0).toLocaleString()}
+              </div>
+            </div>
+            {salesPersonName && (
+              <div className="text-right">
+                <div className="text-xs text-slate-500 mb-1">担当営業</div>
+                <div className="text-sm font-medium text-slate-700">
+                  {salesPersonName}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }

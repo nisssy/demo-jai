@@ -1,4 +1,4 @@
-import type { Project, Product, DesignRequest, Company, Hall, Employee, CastSchedule } from "./types"
+import type { Project, Product, DesignRequest, Company, Hall, Employee, CastSchedule, MachineMaster } from "./types"
 
 /** 案件リポジトリのインターフェース */
 export interface ProjectRepository {
@@ -12,8 +12,10 @@ export interface ProjectRepository {
   getProductsByProjectNumber(projectNumber: string): Product[]
 
   // デザイン依頼
+  getAllDesignRequests(): DesignRequest[]
   getDesignRequestsByProjectId(projectId: number): DesignRequest[]
   createDesignRequest(request: Omit<DesignRequest, "id">): DesignRequest
+  updateDesignRequest(id: string, updates: Partial<DesignRequest>): DesignRequest | undefined
   addDesignRequestComment(requestId: string, comment: string, role: string, authorName?: string): void
 
   // 書き込み
@@ -28,4 +30,8 @@ export interface ProjectRepository {
   getHalls(): Hall[]
   getEmployees(): Employee[]
   getCastSchedules(): CastSchedule[]
+
+  // 機種マスタ
+  getMachineMasters(): MachineMaster[]
+  saveMachineMasters(masters: MachineMaster[]): void
 }

@@ -1,0 +1,179 @@
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Download } from "lucide-react"
+import { CastArrangementTabView } from "./sections/CastArrangementTab.view"
+import { ArrangementTabView } from "./sections/ArrangementTab.view"
+import { PostEventTabView } from "./sections/PostEventTab.view"
+import { HoldFailureModalView } from "./modals/HoldFailureModal.view"
+import { AutoArrangementModalView } from "./modals/AutoArrangementModal.view"
+import { SurveyResultModalView } from "./modals/SurveyResultModal.view"
+import { StatusHistoryModalView } from "./modals/StatusHistoryModal.view"
+import { CostExportModalView } from "./modals/CostExportModal.view"
+import { CostumeArrangementModalView } from "./modals/CostumeArrangementModal.view"
+import type { UseEventTeamDashboardReturn } from "../hooks/useEventTeamDashboard"
+import type { ArrangementChecks, CostExportStatuses } from "../hooks/useEventTeamDashboard"
+
+export type EventTeamDashboardViewProps = UseEventTeamDashboardReturn
+
+const tabTriggerClass = "relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
+
+export function EventTeamDashboardView(props: EventTeamDashboardViewProps) {
+  return (
+    <div className="max-w-7xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-slate-900">マネジメント部 ダッシュボード</h1>
+        <Button variant="outline" onClick={() => props.setShowCostExportModal(true)} className="gap-2">
+          <Download className="h-4 w-4" />
+          コスト出力
+        </Button>
+      </div>
+
+      {/* トースト通知 */}
+      {props.autoArrangementToast && (
+        <div className="fixed top-4 right-4 z-50 bg-green-600 text-white px-4 py-3 rounded-md shadow-lg">
+          {props.autoArrangementToast}
+        </div>
+      )}
+
+      <Tabs
+        value={props.activeTab}
+        onValueChange={val => props.setActiveTab(val as typeof props.activeTab)}
+        className="w-full"
+      >
+        <div className="border-b border-slate-100 mb-8">
+          <TabsList className="bg-transparent h-auto p-0 gap-0">
+            <TabsTrigger value="cast-arrangement" className={tabTriggerClass}>
+              キャスト手配
+              {props.summaryCounts.castArrangement > 0 && (
+                <Badge className="ml-1.5 bg-red-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
+                  {props.summaryCounts.castArrangement}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="arrangement" className={tabTriggerClass}>
+              各種手配
+              {props.summaryCounts.arrangement > 0 && (
+                <Badge className="ml-1.5 bg-slate-400 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
+                  {props.summaryCounts.arrangement}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="post-event" className={tabTriggerClass}>
+              イベント終了処理
+              {props.summaryCounts.postEvent > 0 && (
+                <Badge className="ml-1.5 bg-slate-400 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
+                  {props.summaryCounts.postEvent}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent value="cast-arrangement" className="mt-0">
+          <CastArrangementTabView
+            castSubTab={props.castSubTab}
+            onSubTabChange={props.setCastSubTab}
+            tentativeGroups={props.tentativeProductionGroups}
+            confirmedGroups={props.confirmedProductionGroups}
+            tentativeEntryCount={props.tentativeEntryCount}
+            confirmedEntryCount={props.confirmedEntryCount}
+            onCompleteCast={props.completeCastHold}
+            onOpenHoldFailure={props.openHoldFailure}
+          />
+        </TabsContent>
+
+        <TabsContent value="arrangement" className="mt-0">
+          <ArrangementTabView
+            products={props.arrangementProducts}
+            getProjectForProduct={props.getProjectForProduct}
+            onOpenAutoArrangement={props.openAutoArrangement}
+            onOpenStatusHistory={props.openStatusHistory}
+            onOpenCostumeArrangement={props.openCostumeArrangement}
+          />
+        </TabsContent>
+
+        <TabsContent value="post-event" className="mt-0">
+          <PostEventTabView
+            products={props.postEventProducts}
+            getProjectForProduct={props.getProjectForProduct}
+            onOpenSurveyResult={props.openSurveyResult}
+            onOpenStatusHistory={props.openStatusHistory}
+            onOpenCostExport={() => props.setShowCostExportModal(true)}
+          />
+        </TabsContent>
+      </Tabs>
+
+      {/* Modals */}
+      <HoldFailureModalView
+        open={props.showHoldFailureModal}
+        onOpenChange={props.setShowHoldFailureModal}
+        product={props.holdFailureProduct}
+        castName={props.holdFailureCastName}
+        clientName={props.holdFailureClientName}
+        comment={props.holdFailureComment}
+        onCommentChange={props.setHoldFailureComment}
+        onSubmit={props.submitHoldFailure}
+      />
+
+      <AutoArrangementModalView
+        open={props.showAutoArrangementModal}
+        onOpenChange={props.setShowAutoArrangementModal}
+        product={props.selectedProduct}
+        checks={props.arrangementChecks}
+        onCheckChange={(key: keyof ArrangementChecks, checked: boolean) =>
+          props.setArrangementChecks(prev => ({ ...prev, [key]: checked }))
+        }
+        onExecute={props.executeAutoArrangement}
+        onClose={() => props.setShowAutoArrangementModal(false)}
+      />
+
+      <SurveyResultModalView
+        open={props.showSurveyResultModal}
+        onOpenChange={props.setShowSurveyResultModal}
+        product={props.selectedProduct}
+        clientName={props.selectedProductClientName}
+        onDownloadCsv={props.downloadSurveyCsv}
+      />
+
+      <StatusHistoryModalView
+        open={props.showStatusHistoryModal}
+        onOpenChange={props.setShowStatusHistoryModal}
+        product={props.selectedProduct}
+        clientName={props.selectedProductClientName}
+      />
+
+      <CostumeArrangementModalView
+        open={props.showCostumeModal}
+        onOpenChange={props.setShowCostumeModal}
+        product={props.selectedProduct}
+        companionSizes={props.companionSizeMap}
+        costumes={props.costumeDraft}
+        onCostumeChange={(name, value) =>
+          props.setCostumeDraft(prev => ({ ...prev, [name]: value }))
+        }
+        onSave={props.saveCostumeArrangement}
+      />
+
+      <CostExportModalView
+        open={props.showCostExportModal}
+        onOpenChange={props.setShowCostExportModal}
+        dateFrom={props.costExportDateFrom}
+        dateTo={props.costExportDateTo}
+        onDateFromChange={props.setCostExportDateFrom}
+        onDateToChange={props.setCostExportDateTo}
+        format={props.costExportFormat}
+        onFormatChange={props.setCostExportFormat}
+        statuses={props.costExportStatuses}
+        onStatusChange={(key: keyof CostExportStatuses, checked: boolean) =>
+          props.setCostExportStatuses(prev => ({ ...prev, [key]: checked }))
+        }
+        targetProducts={props.costExportTargetProducts}
+        totalAmount={props.costExportTotalAmount}
+        onDownload={props.downloadCostCsv}
+        downloadDisabled={props.costExportTargetProducts.length === 0}
+        onClose={props.closeCostExportModal}
+      />
+    </div>
+  )
+}

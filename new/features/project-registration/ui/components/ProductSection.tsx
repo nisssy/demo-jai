@@ -37,6 +37,7 @@ type ProductSectionProps = {
   onToggleNomination: (role: "companion" | "director", name: string) => void
   checkAvailability?: (name: string, role: "companion" | "director") => AvailabilityStatus
   onOpenCalendar?: (name: string, status: AvailabilityStatus, type: "companion" | "director") => void
+  onCastHoldTypeChange: (role: "companion" | "director", name: string, holdType: "tentative" | "confirmed") => void
   // 合同抽選会
   lotteryForm?: UseLotteryFormReturn
 }
@@ -61,6 +62,7 @@ export const ProductSection = ({
   onToggleNomination,
   checkAvailability,
   onOpenCalendar,
+  onCastHoldTypeChange,
   lotteryForm,
 }: ProductSectionProps) => {
   const isLottery = product.category === "ポイント" && !!product.eventType.trim()
@@ -124,6 +126,7 @@ export const ProductSection = ({
                     onToggleCast={onToggleCast}
                     onToggleNomination={onToggleNomination}
                     onOpenCalendar={onOpenCalendar}
+                    onCastHoldTypeChange={onCastHoldTypeChange}
                   />
                 </TabsContent>
                 <TabsContent value="billing" className="mt-4">

@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from "react"
 import { useAppRouter } from "@/hooks/use-app-router"
 import type { ProjectRepository } from "@/new/api/project-repository"
-import type { Project, Product, Company, Hall, BookingStatus, ProposalStatus, ExecutionStatus, DesignRequest } from "@/new/api/types"
+import type { Project, Product, ProductComment, Company, Hall, BookingStatus, ProposalStatus, ExecutionStatus, DesignRequest } from "@/new/api/types"
 import type { ProjectListTab, FilterState } from "@/new/features/project-list/model/types"
 
 /** Viewに渡す案件グループ表示用の型 */
@@ -18,8 +18,8 @@ export type ProductViewModel = {
   proposalStatus: ProposalStatus
   // キャスト（マッピング済み）
   casts: { name: string; type: string; bookingStatus: BookingStatus }[]
-  // 修正
-  correctionRequest?: string
+  // コメント
+  comments?: ProductComment[]
   temporaryHoldFailureComment?: string
   // 合同抽選会
   executionStatus?: ExecutionStatus
@@ -83,7 +83,7 @@ function toProductViewModel(product: Product, designStatuses: { poster: DesignRe
     estimatedBillingAmount: product.estimatedBillingAmount,
     proposalStatus: product.proposalStatus,
     casts,
-    correctionRequest: product.correctionRequest,
+    comments: product.comments,
     temporaryHoldFailureComment: product.temporaryHoldFailureComment,
     executionStatus: product.executionStatus,
     dmMailing: product.dmMailing,
@@ -205,8 +205,8 @@ export function useProjectList({ repository }: UseProjectListArgs) {
         products: productVMs,
       }
 
-      // 修正依頼タブ（修正依頼コメントが存在する商材）
-      const correctionProducts = productVMs.filter((p) => p.correctionRequest)
+      // 修正依頼タブ（コメントが存在する商材）
+      const correctionProducts = productVMs.filter((p) => p.comments && p.comments.length > 0)
       if (correctionProducts.length > 0) {
         correctionGroups.push({ ...group, products: correctionProducts })
       }
