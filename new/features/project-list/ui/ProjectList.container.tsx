@@ -12,10 +12,8 @@ export const ProjectListContainer = () => {
     activeTab,
     setActiveTab,
     projectsTabGroups,
-    correctionsTabGroups,
-    holdFailureTabGroups,
-    correctionsCount,
-    holdFailureCount,
+    messagesTabGroups,
+    messagesCount,
     filters,
     setFilters,
     companyHallSearchOpen,
@@ -31,8 +29,7 @@ export const ProjectListContainer = () => {
     handleCompanyHallSearchTypeChange,
     handleCreateNewProject,
     handleClickDetail,
-    handleClickCorrectionProduct,
-    handleClickHoldFailureProduct,
+    handleClickMessageProduct,
   } = useProjectList({ repository })
 
   return (
@@ -40,10 +37,8 @@ export const ProjectListContainer = () => {
       activeTab={activeTab}
       onActiveTabChange={setActiveTab}
       projectsTabGroups={projectsTabGroups}
-      correctionsTabGroups={correctionsTabGroups}
-      holdFailureTabGroups={holdFailureTabGroups}
-      correctionsCount={correctionsCount}
-      holdFailureCount={holdFailureCount}
+      messagesTabGroups={messagesTabGroups}
+      messagesCount={messagesCount}
       filters={filters}
       onFiltersChange={setFilters}
       companyHallSearchOpen={companyHallSearchOpen}
@@ -59,8 +54,7 @@ export const ProjectListContainer = () => {
       onSelectCompany={handleSelectCompany}
       onCreateNewProject={handleCreateNewProject}
       onClickDetail={handleClickDetail}
-      onClickCorrectionProduct={handleClickCorrectionProduct}
-      onClickHoldFailureProduct={handleClickHoldFailureProduct}
+      onClickMessageProduct={handleClickMessageProduct}
     />
   )
 }

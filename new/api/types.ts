@@ -125,6 +125,8 @@ export type Product = {
   prizeOrdersByVendor?: PrizeOrderDocument[]
   quoCardLetterCheckedAt?: string
   prizeDeliveryInfoByVendor?: PrizeDeliveryInfoByVendor[]
+  // 部門間チャット
+  chatMessages?: ChatMessage[]
 }
 
 // ─── 合同抽選会サブ型 ───
@@ -205,6 +207,15 @@ export type PrizeDeliveryInfoByVendor = {
 
 export type ProductComment = {
   author: string
+  content: string
+  timestamp: string
+}
+
+// ─── 部門間チャットメッセージ ───
+
+export type ChatMessage = {
+  channel: string    // 部門名（例: "マネジメント部", "外注業者"）
+  author: string     // 発言者ロール
   content: string
   timestamp: string
 }

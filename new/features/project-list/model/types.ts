@@ -1,5 +1,5 @@
 /** 案件一覧のタブ */
-export type ProjectListTab = "projects" | "corrections" | "temporaryHoldFailure"
+export type ProjectListTab = "projects" | "messages"
 
 /** フィルタ条件（UI状態） */
 export type FilterState = {

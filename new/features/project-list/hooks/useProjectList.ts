@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from "react"
 import { useAppRouter } from "@/hooks/use-app-router"
 import type { ProjectRepository } from "@/new/api/project-repository"
-import type { Project, Product, ProductComment, Company, Hall, BookingStatus, ProposalStatus, ExecutionStatus, DesignRequest } from "@/new/api/types"
+import type { Project, Product, ProductComment, ChatMessage, Company, Hall, BookingStatus, ProposalStatus, ExecutionStatus, DesignRequest } from "@/new/api/types"
 import type { ProjectListTab, FilterState } from "@/new/features/project-list/model/types"
 
 /** Viewに渡す案件グループ表示用の型 */
@@ -19,9 +19,12 @@ export type ProductViewModel = {
   readingCertainty?: "A" | "B" | "C"
   // キャスト（マッピング済み）
   casts: { name: string; type: string; bookingStatus: BookingStatus }[]
-  // コメント
+  // コメント・チャット
   comments?: ProductComment[]
   temporaryHoldFailureComment?: string
+  chatMessages?: ChatMessage[]
+  /** 営業以外からの最新メッセージ（新着メッセージタブ用） */
+  latestIncomingMessage?: { author: string; content: string; timestamp: string }
   // 合同抽選会
   executionStatus?: ExecutionStatus
   dmMailing?: "yes" | "no"
@@ -75,6 +78,20 @@ function toProductViewModel(product: Product, designStatuses: { poster: DesignRe
     casts.push({ name, type: "MC", bookingStatus: product.mcBookingStatus?.[name] ?? "tentative_requesting" })
   }
 
+  // 営業以外からの最新受信メッセージを特定
+  const incomingMessages: { author: string; content: string; timestamp: string }[] = []
+  for (const msg of product.chatMessages ?? []) {
+    if (msg.author !== "営業") {
+      incomingMessages.push({ author: msg.author, content: msg.content, timestamp: msg.timestamp })
+    }
+  }
+  for (const comment of product.comments ?? []) {
+    if (comment.author !== "営業") {
+      incomingMessages.push({ author: comment.author, content: comment.content, timestamp: comment.timestamp })
+    }
+  }
+  incomingMessages.sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+
   return {
     id: product.id,
     projectNumber: product.projectNumber,
@@ -87,6 +104,8 @@ function toProductViewModel(product: Product, designStatuses: { poster: DesignRe
     casts,
     comments: product.comments,
     temporaryHoldFailureComment: product.temporaryHoldFailureComment,
+    chatMessages: product.chatMessages,
+    latestIncomingMessage: incomingMessages[0] ?? undefined,
     executionStatus: product.executionStatus,
     dmMailing: product.dmMailing,
     posterStatus: designStatuses.poster,
@@ -156,7 +175,7 @@ export function useProjectList({ repository }: UseProjectListArgs) {
   }, [])
 
   // リポジトリからデータ取得 + ViewModel変換
-  const { projectsTabGroups, correctionsTabGroups, holdFailureTabGroups } = useMemo(() => {
+  const { projectsTabGroups, messagesTabGroups } = useMemo(() => {
     const projects = repository.getProjects()
     const products = repository.getProducts()
 
@@ -176,8 +195,7 @@ export function useProjectList({ repository }: UseProjectListArgs) {
 
     // グループ構築 & 振り分け
     const allGroups: ProjectGroupViewModel[] = []
-    const correctionGroups: ProjectGroupViewModel[] = []
-    const holdFailureGroups: ProjectGroupViewModel[] = []
+    const messageGroups: ProjectGroupViewModel[] = []
 
     for (const [pn, prods] of productsByPn.entries()) {
       const project = projectMap.get(pn)
@@ -209,16 +227,14 @@ export function useProjectList({ repository }: UseProjectListArgs) {
         products: productVMs,
       }
 
-      // 修正依頼タブ（コメントが存在する商材）
-      const correctionProducts = productVMs.filter((p) => p.comments && p.comments.length > 0)
-      if (correctionProducts.length > 0) {
-        correctionGroups.push({ ...group, products: correctionProducts })
-      }
-
-      // 仮押さえ不可タブ（仮押さえ不可コメントが存在する商材）
-      const holdFailureProducts = productVMs.filter((p) => p.temporaryHoldFailureComment)
-      if (holdFailureProducts.length > 0) {
-        holdFailureGroups.push({ ...group, products: holdFailureProducts })
+      // 新着メッセージタブ（営業以外からのメッセージがある商材）
+      const messageProducts = productVMs.filter((p) => p.latestIncomingMessage)
+      if (messageProducts.length > 0) {
+        // 最新メッセージ順にソート
+        const sorted = [...messageProducts].sort((a, b) =>
+          (b.latestIncomingMessage?.timestamp ?? "").localeCompare(a.latestIncomingMessage?.timestamp ?? "")
+        )
+        messageGroups.push({ ...group, products: sorted })
       }
 
       // 案件一覧タブ（全件）
@@ -228,15 +244,20 @@ export function useProjectList({ repository }: UseProjectListArgs) {
     // 作成日の降順でソート
     allGroups.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 
+    // メッセージグループは最新メッセージの新しい順
+    messageGroups.sort((a, b) => {
+      const aTs = a.products[0]?.latestIncomingMessage?.timestamp ?? ""
+      const bTs = b.products[0]?.latestIncomingMessage?.timestamp ?? ""
+      return bTs.localeCompare(aTs)
+    })
+
     return {
       projectsTabGroups: allGroups,
-      correctionsTabGroups: correctionGroups,
-      holdFailureTabGroups: holdFailureGroups,
+      messagesTabGroups: messageGroups,
     }
   }, [repository])
 
-  const correctionsCount = correctionsTabGroups.reduce((sum, g) => sum + g.products.length, 0)
-  const holdFailureCount = holdFailureTabGroups.reduce((sum, g) => sum + g.products.length, 0)
+  const messagesCount = messagesTabGroups.reduce((sum, g) => sum + g.products.length, 0)
 
   // ナビゲーション
   const handleCreateNewProject = useCallback(() => {
@@ -251,22 +272,16 @@ export function useProjectList({ repository }: UseProjectListArgs) {
     router.push(`/new/project/${productId}?role=Sales`)
   }, [router])
 
-  const handleClickCorrectionProduct = useCallback((productId: number) => {
-    router.push(`/new/project/${productId}/correction?role=Sales`)
-  }, [router])
-
-  const handleClickHoldFailureProduct = useCallback((productId: number) => {
-    router.push(`/new/project/${productId}?role=Sales`)
+  const handleClickMessageProduct = useCallback((productId: number) => {
+    router.push(`/new/project-registration?mode=product-edit&productId=${productId}`)
   }, [router])
 
   return {
     activeTab,
     setActiveTab,
     projectsTabGroups,
-    correctionsTabGroups,
-    holdFailureTabGroups,
-    correctionsCount,
-    holdFailureCount,
+    messagesTabGroups,
+    messagesCount,
     filters,
     setFilters,
     // 法人/ホール検索
@@ -285,7 +300,6 @@ export function useProjectList({ repository }: UseProjectListArgs) {
     handleCreateNewProject,
     handleClickDetail,
     handleClickProduct,
-    handleClickCorrectionProduct,
-    handleClickHoldFailureProduct,
+    handleClickMessageProduct,
   }
 }

@@ -461,6 +461,14 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
       note: `${holdFailureCastName}: ${holdFailureComment}`,
     }]
 
+    // チャットメッセージとしても送信
+    updates.chatMessages = [...(product.chatMessages ?? []), {
+      channel: "マネジメント部",
+      author: "マネジメント部",
+      content: `【${statusLabel}】${holdFailureCastName}さん: ${holdFailureComment}`,
+      timestamp: now,
+    }]
+
     repository.updateProduct(product.id, updates)
     setShowHoldFailureModal(false)
     refresh()

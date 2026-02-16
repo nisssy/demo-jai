@@ -2,16 +2,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ChevronLeft, Plus } from "lucide-react"
-import type { ProjectInfo, ProductSummary } from "@/new/features/project-detail/model/types"
+import type { ProjectInfo, ProductSummary, DepartmentActivitySummary } from "@/new/features/project-detail/model/types"
 import type { TentativeCompletedCast } from "@/new/features/project-detail/hooks/useProjectDetail"
 import { ProjectInfoCard } from "./components/ProjectInfoCard"
 import { ProjectSummaryCard } from "./components/ProjectSummaryCard"
 import { ProductSummaryCard } from "./components/ProductSummaryCard"
+import { DepartmentActivityCard } from "./components/DepartmentActivityCard"
 import { OrderReceivedConfirmModal } from "./components/OrderReceivedConfirmModal"
 
 export type ProjectDetailViewProps = {
   projectInfo: ProjectInfo | null
   products: ProductSummary[]
+  departmentActivity: DepartmentActivitySummary
   // 受注確認
   orderReceivedModalOpen: boolean
   orderReceivedTargetProduct?: ProductSummary
@@ -30,6 +32,7 @@ export type ProjectDetailViewProps = {
 export const ProjectDetailView = ({
   projectInfo,
   products,
+  departmentActivity,
   orderReceivedModalOpen,
   orderReceivedTargetProduct,
   tentativeCompletedCasts,
@@ -79,6 +82,7 @@ export const ProjectDetailView = ({
           {products.length > 0 && (
             <ProjectSummaryCard products={products} onCreateQuote={onCreateQuote} />
           )}
+          <DepartmentActivityCard activity={departmentActivity} />
         </div>
 
         {/* 右カラム: 商材一覧 */}
@@ -104,7 +108,7 @@ export const ProjectDetailView = ({
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {products.map((product) => (
                     <ProductSummaryCard
                       key={product.id}

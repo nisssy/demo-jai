@@ -3,6 +3,7 @@
 import { Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { ProjectRegistration } from "@/new/features/project-registration/ui/project-registration"
+import { ProductChat } from "@/new/features/product-chat/ui/product-chat"
 import type { RegistrationMode } from "@/new/features/project-registration/model/types"
 
 function ProjectRegistrationContent() {
@@ -12,13 +13,30 @@ function ProjectRegistrationContent() {
   const productId = productIdParam ? Number(productIdParam) : undefined
   const correctionRequest = searchParams?.get("correctionRequest") ?? undefined
 
+  const showChat = mode === "product-edit" && productId != null
+
   return (
-    <main className="px-8 py-8 max-w-7xl mx-auto">
-      <ProjectRegistration
-        mode={mode}
-        productId={productId}
-        correctionRequest={correctionRequest}
-      />
+    <main className="px-8 py-8 max-w-[1400px] mx-auto">
+      {showChat ? (
+        <div className="flex gap-6 items-start">
+          <div className="flex-1 min-w-0">
+            <ProjectRegistration
+              mode={mode}
+              productId={productId}
+              correctionRequest={correctionRequest}
+            />
+          </div>
+          <div className="w-96 shrink-0 sticky top-8 h-[calc(100vh-8rem)]">
+            <ProductChat productId={productId} />
+          </div>
+        </div>
+      ) : (
+        <ProjectRegistration
+          mode={mode}
+          productId={productId}
+          correctionRequest={correctionRequest}
+        />
+      )}
     </main>
   )
 }

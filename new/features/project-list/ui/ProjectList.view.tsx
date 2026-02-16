@@ -7,7 +7,7 @@ import type { ProjectGroupViewModel } from "@/new/features/project-list/hooks/us
 import type { Company, Hall } from "@/new/api/types"
 import { ProjectCard } from "./components/ProjectCard"
 import { ProductCard } from "./components/ProductCard"
-import { ProductAlertCard } from "./components/ProductAlertCard"
+import { MessageCard } from "./components/MessageCard"
 import { ProjectListFilters } from "./components/ProjectListFilters"
 
 export type ProjectListViewProps = {
@@ -16,10 +16,8 @@ export type ProjectListViewProps = {
   onActiveTabChange: (tab: ProjectListTab) => void
   // データ
   projectsTabGroups: ProjectGroupViewModel[]
-  correctionsTabGroups: ProjectGroupViewModel[]
-  holdFailureTabGroups: ProjectGroupViewModel[]
-  correctionsCount: number
-  holdFailureCount: number
+  messagesTabGroups: ProjectGroupViewModel[]
+  messagesCount: number
   // フィルタ
   filters: FilterState
   onFiltersChange: (filters: FilterState) => void
@@ -38,8 +36,7 @@ export type ProjectListViewProps = {
   // ナビゲーション
   onCreateNewProject: () => void
   onClickDetail: (projectNumber: string) => void
-  onClickCorrectionProduct: (productId: number) => void
-  onClickHoldFailureProduct: (productId: number) => void
+  onClickMessageProduct: (productId: number) => void
 }
 
 const tabTriggerClass = "relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
@@ -48,10 +45,8 @@ export const ProjectListView = ({
   activeTab,
   onActiveTabChange,
   projectsTabGroups,
-  correctionsTabGroups,
-  holdFailureTabGroups,
-  correctionsCount,
-  holdFailureCount,
+  messagesTabGroups,
+  messagesCount,
   filters,
   onFiltersChange,
   companyHallSearchOpen,
@@ -67,8 +62,7 @@ export const ProjectListView = ({
   onSelectCompany,
   onCreateNewProject,
   onClickDetail,
-  onClickCorrectionProduct,
-  onClickHoldFailureProduct,
+  onClickMessageProduct,
 }: ProjectListViewProps) => {
   return (
     <div className="space-y-6">
@@ -88,19 +82,11 @@ export const ProjectListView = ({
             <TabsTrigger value="projects" className={tabTriggerClass}>
               案件一覧
             </TabsTrigger>
-            <TabsTrigger value="corrections" className={tabTriggerClass}>
-              修正確認依頼
-              {correctionsCount > 0 && (
+            <TabsTrigger value="messages" className={tabTriggerClass}>
+              新着メッセージ
+              {messagesCount > 0 && (
                 <Badge className="ml-1.5 bg-red-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
-                  {correctionsCount}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="temporaryHoldFailure" className={tabTriggerClass}>
-              仮押さえ不可
-              {holdFailureCount > 0 && (
-                <Badge className="ml-1.5 bg-red-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
-                  {holdFailureCount}
+                  {messagesCount}
                 </Badge>
               )}
             </TabsTrigger>
@@ -149,55 +135,23 @@ export const ProjectListView = ({
           )}
         </TabsContent>
 
-        {/* 修正確認依頼タブ */}
-        <TabsContent value="corrections" className="mt-0 space-y-4">
-          {correctionsTabGroups.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">修正依頼はありません</div>
+        {/* 新着メッセージタブ */}
+        <TabsContent value="messages" className="mt-0 space-y-4">
+          {messagesTabGroups.length === 0 ? (
+            <div className="text-center py-12 text-slate-500">新着メッセージはありません</div>
           ) : (
             <div className="space-y-6">
-              {correctionsTabGroups.map((group) => (
+              {messagesTabGroups.map((group) => (
                 <div key={group.projectNumber} className="border rounded-lg bg-white">
                   <div className="p-4 border-b border-slate-100">
                     <ProjectCard project={group} onClickDetail={onClickDetail} />
                   </div>
                   <div className="p-4 space-y-3">
                     {group.products.map((product) => (
-                      <ProductAlertCard
+                      <MessageCard
                         key={product.id}
                         product={product}
-                        alertTitle="修正依頼内容"
-                        alertText={product.comments?.[product.comments.length - 1]?.content ?? ""}
-                        actionLabel="修正"
-                        onAction={onClickCorrectionProduct}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* 仮押さえ不可タブ */}
-        <TabsContent value="temporaryHoldFailure" className="mt-0 space-y-4">
-          {holdFailureTabGroups.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">仮押さえ不可の案件はありません</div>
-          ) : (
-            <div className="space-y-6">
-              {holdFailureTabGroups.map((group) => (
-                <div key={group.projectNumber} className="border rounded-lg bg-white">
-                  <div className="p-4 border-b border-slate-100">
-                    <ProjectCard project={group} onClickDetail={onClickDetail} />
-                  </div>
-                  <div className="p-4 space-y-3">
-                    {group.products.map((product) => (
-                      <ProductAlertCard
-                        key={product.id}
-                        product={product}
-                        alertTitle="仮押さえ不可の理由"
-                        alertText={product.temporaryHoldFailureComment ?? ""}
-                        actionLabel="編集"
-                        onAction={onClickHoldFailureProduct}
+                        onAction={onClickMessageProduct}
                       />
                     ))}
                   </div>
