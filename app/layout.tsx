@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ProjectProvider } from "@/contexts/project-context"
-import { Header } from "@/components/layout/header"
+
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 
@@ -43,7 +43,6 @@ export default function RootLayout({
       <body className={`font-sans antialiased`}>
         <ProjectProvider>
           <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-            <Header />
         {children}
             <Toaster />
           </div>

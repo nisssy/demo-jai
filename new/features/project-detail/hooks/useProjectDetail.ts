@@ -173,7 +173,7 @@ export function useProjectDetail({ repository, projectNumber }: UseProjectDetail
 
   // 戻る
   const handleBack = useCallback(() => {
-    router.push("/new?role=Sales")
+    router.push("/?role=Sales")
   }, [router])
 
   return {

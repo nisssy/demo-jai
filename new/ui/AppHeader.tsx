@@ -36,7 +36,7 @@ export const AppHeader = ({ currentRole }: AppHeaderProps) => {
   const router = useRouter()
 
   const handleBackToRoleSelection = useCallback(() => {
-    router.push("/new")
+    router.push("/")
   }, [router])
 
   const handleResetDemoData = useCallback(() => {
@@ -50,7 +50,7 @@ export const AppHeader = ({ currentRole }: AppHeaderProps) => {
         localStorage.removeItem(key)
       }
     }
-    router.push("/new")
+    router.push("/")
     window.location.reload()
   }, [router])
 

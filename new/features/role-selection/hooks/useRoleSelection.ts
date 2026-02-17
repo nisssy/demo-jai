@@ -8,7 +8,7 @@ export function useRoleSelection() {
   const router = useAppRouter()
 
   const handleSelectRole = useCallback((role: Role) => {
-    router.push(`/new?role=${role}`)
+    router.push(`/?role=${role}`)
   }, [router])
 
   return {
