@@ -48,7 +48,7 @@ export const ChatChannelView = ({ department, messages, onSendMessage, currentAu
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && e.shiftKey) {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
       handleSend()
     }
@@ -110,7 +110,7 @@ export const ChatChannelView = ({ department, messages, onSendMessage, currentAu
             <Send className="h-3.5 w-3.5" />
           </Button>
         </div>
-        <p className="text-[10px] text-slate-400 mt-1 ml-1">Shift + Enter で送信</p>
+        <p className="text-[10px] text-slate-400 mt-1 ml-1">Cmd + Enter で送信</p>
       </div>
     </div>
   )
