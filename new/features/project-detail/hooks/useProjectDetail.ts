@@ -3,9 +3,10 @@
 import { useState, useMemo, useCallback } from "react"
 import { useAppRouter } from "@/hooks/use-app-router"
 import type { ProjectRepository } from "@/new/api/project-repository"
-import type { DesignRequest } from "@/new/api/types"
+import type { DesignRequest, Product } from "@/new/api/types"
 import { PROPOSAL_STATUS_LABELS } from "@/new/api/display"
 import type { ProposalStatus } from "@/new/api/types"
+import type { BookingStatus } from "@/new/api/types"
 import type { ProjectInfo, ProductSummary, CastSummary, DepartmentActivitySummary } from "@/new/features/project-detail/model/types"
 
 export type UseProjectDetailArgs = {
@@ -23,13 +24,13 @@ function resolveDesignStatus(requests: DesignRequest[]): DesignRequest["status"]
 function toCastSummaries(product: Product): CastSummary[] {
   const casts: CastSummary[] = []
   for (const name of product.selectedCompanions ?? []) {
-    casts.push({ name, type: "コンパニオン", bookingStatus: product.companionBookingStatus?.[name] ?? "tentative_requesting" })
+    casts.push({ productId: product.id, name, type: "コンパニオン", bookingStatus: product.companionBookingStatus?.[name] ?? "tentative_requesting" })
   }
   for (const name of product.selectedDirectors ?? []) {
-    casts.push({ name, type: "ディレクター", bookingStatus: product.directorBookingStatus?.[name] ?? "tentative_requesting" })
+    casts.push({ productId: product.id, name, type: "ディレクター", bookingStatus: product.directorBookingStatus?.[name] ?? "tentative_requesting" })
   }
   for (const name of product.selectedMcs ?? []) {
-    casts.push({ name, type: "MC", bookingStatus: product.mcBookingStatus?.[name] ?? "tentative_requesting" })
+    casts.push({ productId: product.id, name, type: "MC", bookingStatus: product.mcBookingStatus?.[name] ?? "tentative_requesting" })
   }
   return casts
 }
@@ -171,6 +172,44 @@ export function useProjectDetail({ repository, projectNumber }: UseProjectDetail
     router.push(`/new/project-number/${projectNumber}/quote`)
   }, [router, projectNumber])
 
+  // キャスト予約ステータス変更（仮押さえ↔本押さえ）
+  const handleUpdateCastBookingStatus = useCallback((productId: number, castName: string, castType: string, targetStatus: BookingStatus) => {
+    const product = repository.getProducts().find(p => p.id === productId)
+    if (!product) return
+
+    const now = new Date().toISOString()
+    const statusField = castType === "コンパニオン" ? "companionBookingStatus"
+      : castType === "ディレクター" ? "directorBookingStatus"
+      : "mcBookingStatus"
+
+    const currentStatuses = { ...(product[statusField] ?? {}) }
+    const previousStatus = currentStatuses[castName]
+    currentStatuses[castName] = targetStatus
+
+    // 依頼中から別の依頼に切り替えた場合は特別なメッセージ
+    const wasRequesting = previousStatus === "tentative_requesting" || previousStatus === "confirmed_requesting"
+    const actionLabel = targetStatus === "confirmed_requesting" ? "本押さえ依頼"
+      : targetStatus === "tentative_requesting" ? "仮押さえ再依頼"
+      : targetStatus
+
+    const message = wasRequesting
+      ? `【${actionLabel}】${castName}さん（${castType}）は仮押さえ依頼中でしたが、取り下げて${actionLabel}に変更しました`
+      : `【${actionLabel}】${castName}さん（${castType}）の${actionLabel}を行いました`
+
+    repository.updateProduct(productId, {
+      [statusField]: currentStatuses,
+      statusHistory: [
+        ...(product.statusHistory ?? []),
+        { status: actionLabel, timestamp: now, changedBy: "営業", note: `${castName}（${castType}）${wasRequesting ? "（依頼中から変更）" : ""}` },
+      ],
+      chatMessages: [
+        ...(product.chatMessages ?? []),
+        { channel: "マネジメント部", author: "営業", content: message, timestamp: now },
+      ],
+    })
+    setRefreshKey(k => k + 1)
+  }, [repository])
+
   // 戻る
   const handleBack = useCallback(() => {
     router.push("/?role=Sales")
@@ -186,5 +225,6 @@ export function useProjectDetail({ repository, projectNumber }: UseProjectDetail
     onEditProduct: handleEditProduct,
     onCreateQuote: handleCreateQuote,
     onBack: handleBack,
+    onUpdateCastBookingStatus: handleUpdateCastBookingStatus,
   }
 }

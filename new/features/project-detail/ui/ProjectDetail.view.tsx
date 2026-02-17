@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ChevronLeft, Plus } from "lucide-react"
+import type { BookingStatus } from "@/new/api/types"
 import type { ProjectInfo, ProductSummary, DepartmentActivitySummary } from "@/new/features/project-detail/model/types"
 import { ProjectInfoCard } from "./components/ProjectInfoCard"
 import { ProjectSummaryCard } from "./components/ProjectSummaryCard"
@@ -18,6 +19,7 @@ export type ProjectDetailViewProps = {
   onEditProduct: (productId: number) => void
   onCreateQuote: () => void
   onBack: () => void
+  onUpdateCastBookingStatus: (productId: number, castName: string, castType: string, targetStatus: BookingStatus) => void
 }
 
 export const ProjectDetailView = ({
@@ -29,6 +31,7 @@ export const ProjectDetailView = ({
   onEditProduct,
   onCreateQuote,
   onBack,
+  onUpdateCastBookingStatus,
 }: ProjectDetailViewProps) => {
   if (!projectInfo) {
     return (
@@ -100,6 +103,7 @@ export const ProjectDetailView = ({
                       product={product}
                       salesPersonName={projectInfo.salesPersonName}
                       onEdit={() => onEditProduct(product.id)}
+                      onUpdateCastBookingStatus={onUpdateCastBookingStatus}
                     />
                   ))}
                 </div>

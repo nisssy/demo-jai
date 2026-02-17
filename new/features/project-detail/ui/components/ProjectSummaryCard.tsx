@@ -18,19 +18,6 @@ export const ProjectSummaryCard = ({ products, onCreateQuote }: ProjectSummaryCa
   return (
     <Card className="border-slate-200">
       <CardContent className="p-5 space-y-4">
-        {/* 合計金額 */}
-        <div>
-          <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
-            <Banknote className="h-3.5 w-3.5" />
-            合計見積金額
-          </div>
-          <div className="text-2xl font-bold text-slate-900">
-            ¥{totalAmount.toLocaleString()}
-          </div>
-        </div>
-
-        <Separator />
-
         {/* 商材数 */}
         <div>
           <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
@@ -51,11 +38,24 @@ export const ProjectSummaryCard = ({ products, onCreateQuote }: ProjectSummaryCa
         </div>
 
         <Separator />
+        
+        {/* 合計金額 */}
+        <div>
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
+            <Banknote className="h-3.5 w-3.5" />
+            合計見積金額
+          </div>
+          <div className="text-2xl font-bold text-slate-900">
+            ¥{totalAmount.toLocaleString()}
+          </div>
+        </div>
+
+        <Separator />
 
         {/* アクション */}
         <Button onClick={onCreateQuote} className="w-full gap-2">
           <FileText className="h-4 w-4" />
-          見積作成
+          見積書作成・送付
         </Button>
       </CardContent>
     </Card>

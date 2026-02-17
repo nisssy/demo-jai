@@ -201,6 +201,13 @@ export function useProjectList({ repository }: UseProjectListArgs) {
       const project = projectMap.get(pn)
       if (!project) continue
 
+      // 案件レベルのフィルタ
+      if (filters.projectNumber && !project.projectNumber.includes(filters.projectNumber)) continue
+      if (filters.projectName && !project.projectName.includes(filters.projectName)) continue
+      if (filters.hallName && project.hallName !== filters.hallName) continue
+      if (filters.companyId && project.companyId !== filters.companyId) continue
+      if (filters.salesPersonId && !project.salesPersonName.includes(filters.salesPersonId)) continue
+
       const productVMs = prods.map((prod) => {
         const designRequests = repository.getDesignRequestsByProjectId(prod.id)
         const posterReqs = designRequests.filter((dr) => dr.requestType === "poster")
@@ -214,6 +221,27 @@ export function useProjectList({ repository }: UseProjectListArgs) {
         })
       })
 
+      // 商材レベルのフィルタ（カテゴリ・イベント区分・日付）
+      const filteredProducts = productVMs.filter((p) => {
+        if (filters.category && p.category !== filters.category) return false
+        if (filters.eventType && p.eventType !== filters.eventType) return false
+        if (filters.dateFrom || filters.dateTo) {
+          const dateValue = filters.dateMode === "execution" ? p.eventDate : project.createdAt
+          if (dateValue) {
+            const d = dateValue.replace(/\//g, "-").slice(0, 10)
+            if (filters.dateFrom && d < filters.dateFrom) return false
+            if (filters.dateTo && d > filters.dateTo) return false
+          } else {
+            // 日付がない商材はフィルタ時に除外
+            if (filters.dateFrom || filters.dateTo) return false
+          }
+        }
+        return true
+      })
+
+      // フィルタ後に商材が0件なら案件ごとスキップ
+      if (filteredProducts.length === 0) continue
+
       const group: ProjectGroupViewModel = {
         projectNumber: project.projectNumber,
         projectName: project.projectName,
@@ -224,7 +252,7 @@ export function useProjectList({ repository }: UseProjectListArgs) {
         salesPersonName: project.salesPersonName,
         requestDate: project.requestDate,
         createdAt: project.createdAt,
-        products: productVMs,
+        products: filteredProducts,
       }
 
       // 新着メッセージタブ（営業以外からのメッセージがある商材）
@@ -255,7 +283,7 @@ export function useProjectList({ repository }: UseProjectListArgs) {
       projectsTabGroups: allGroups,
       messagesTabGroups: messageGroups,
     }
-  }, [repository])
+  }, [repository, filters])
 
   const messagesCount = messagesTabGroups.reduce((sum, g) => sum + g.products.length, 0)
 

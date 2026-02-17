@@ -14,6 +14,7 @@ export type ProjectInfo = {
 
 /** キャスト情報（表示用） */
 export type CastSummary = {
+  productId: number
   name: string
   type: string
   bookingStatus: BookingStatus

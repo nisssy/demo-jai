@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Users, CheckCircle2, Play, FileText, Gift, Mail, Image, BarChart3 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Calendar, Users, CheckCircle2, Play, FileText, Gift, Mail, Image, BarChart3, ArrowUpCircle, RotateCcw } from "lucide-react"
 import { PROPOSAL_STATUS_LABELS, BOOKING_STATUS_LABELS, EXECUTION_STATUS_LABELS, DESIGN_REQUEST_STATUS_LABELS } from "@/new/api/display"
 import type { BookingStatus } from "@/new/api/types"
 import type { ProductSummary } from "@/new/features/project-detail/model/types"
@@ -17,9 +18,10 @@ type ProductSummaryCardProps = {
   product: ProductSummary
   salesPersonName?: string
   onEdit: () => void
+  onUpdateCastBookingStatus?: (productId: number, castName: string, castType: string, targetStatus: BookingStatus) => void
 }
 
-export const ProductSummaryCard = ({ product, salesPersonName, onEdit }: ProductSummaryCardProps) => {
+export const ProductSummaryCard = ({ product, salesPersonName, onEdit, onUpdateCastBookingStatus }: ProductSummaryCardProps) => {
   const isLottery = product.category === "ポイント" && product.eventType === "合同抽選会"
 
   return (
@@ -134,6 +136,62 @@ export const ProductSummaryCard = ({ product, salesPersonName, onEdit }: Product
                       <Badge className={`${color} text-xs px-2 py-0.5`}>
                         {label}
                       </Badge>
+                      {cast.bookingStatus === "tentative_requesting" && onUpdateCastBookingStatus && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-xs gap-1 text-purple-700 border-purple-300 hover:bg-purple-50"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onUpdateCastBookingStatus(product.id, cast.name, cast.type, "confirmed_requesting")
+                          }}
+                        >
+                          <ArrowUpCircle className="h-3 w-3" />
+                          本押さえに変更
+                        </Button>
+                      )}
+                      {cast.bookingStatus === "tentative_completed" && onUpdateCastBookingStatus && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-xs gap-1 text-purple-700 border-purple-300 hover:bg-purple-50"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onUpdateCastBookingStatus(product.id, cast.name, cast.type, "confirmed_requesting")
+                          }}
+                        >
+                          <ArrowUpCircle className="h-3 w-3" />
+                          本押さえ依頼
+                        </Button>
+                      )}
+                      {cast.bookingStatus === "tentative_failed" && onUpdateCastBookingStatus && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-xs gap-1 text-orange-700 border-orange-300 hover:bg-orange-50"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onUpdateCastBookingStatus(product.id, cast.name, cast.type, "tentative_requesting")
+                          }}
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          仮押さえ再依頼
+                        </Button>
+                      )}
+                      {cast.bookingStatus === "confirmed_failed" && onUpdateCastBookingStatus && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-xs gap-1 text-purple-700 border-purple-300 hover:bg-purple-50"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onUpdateCastBookingStatus(product.id, cast.name, cast.type, "confirmed_requesting")
+                          }}
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          本押さえ再依頼
+                        </Button>
+                      )}
                     </div>
                   )
                 })}
