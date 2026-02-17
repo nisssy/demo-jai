@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { History, Send, Mail } from "lucide-react"
+import { History, Send, Mail, MessageCircle } from "lucide-react"
 import type { Product, Project } from "@/new/api/types"
 import type { ArrangementSubTab } from "../../hooks/useEventTeamDashboard"
 
@@ -17,6 +17,7 @@ export type ArrangementTabViewProps = {
   onOpenCostumeArrangement: (product: Product) => void
   onOpenStatusHistory: (product: Product) => void
   onSendTargetMachineForm: (product: Product) => void
+  onOpenChat: (product: Product) => void
 }
 
 const subTabTriggerClass = "relative px-3 py-2 text-sm font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
@@ -26,11 +27,13 @@ function TrinityGirlTable({
   onOpenAutoArrangement,
   onOpenCostumeArrangement,
   onOpenStatusHistory,
+  onOpenChat,
 }: {
   products: Product[]
   onOpenAutoArrangement: (product: Product) => void
   onOpenCostumeArrangement: (product: Product) => void
   onOpenStatusHistory: (product: Product) => void
+  onOpenChat: (product: Product) => void
 }) {
   if (products.length === 0) {
     return <div className="text-center py-8 text-slate-500">トリニティガールの手配案件はありません</div>
@@ -143,6 +146,9 @@ function TrinityGirlTable({
                   </TableCell>
                   <TableCell className="sticky right-0 bg-white z-10">
                     <div className="flex gap-2">
+                      <Button size="sm" variant="ghost" className="text-slate-500 hover:text-blue-600" onClick={() => onOpenChat(product)}>
+                        <MessageCircle className="h-4 w-4" />
+                      </Button>
                       <Button size="sm" variant="outline" onClick={() => onOpenStatusHistory(product)} className="gap-2">
                         <History className="h-4 w-4" />
                         履歴
@@ -170,10 +176,12 @@ function SloseleTable({
   products,
   onOpenStatusHistory,
   onSendTargetMachineForm,
+  onOpenChat,
 }: {
   products: Product[]
   onOpenStatusHistory: (product: Product) => void
   onSendTargetMachineForm: (product: Product) => void
+  onOpenChat: (product: Product) => void
 }) {
   if (products.length === 0) {
     return <div className="text-center py-8 text-slate-500">スロセレの手配案件はありません</div>
@@ -253,6 +261,9 @@ function SloseleTable({
                   </TableCell>
                   <TableCell className="sticky right-0 bg-white z-10">
                     <div className="flex gap-2">
+                      <Button size="sm" variant="ghost" className="text-slate-500 hover:text-blue-600" onClick={() => onOpenChat(product)}>
+                        <MessageCircle className="h-4 w-4" />
+                      </Button>
                       <Button size="sm" variant="outline" onClick={() => onOpenStatusHistory(product)} className="gap-2">
                         <History className="h-4 w-4" />
                         履歴
@@ -284,6 +295,7 @@ export function ArrangementTabView({
   onOpenCostumeArrangement,
   onOpenStatusHistory,
   onSendTargetMachineForm,
+  onOpenChat,
 }: ArrangementTabViewProps) {
   return (
     <Card>
@@ -320,6 +332,7 @@ export function ArrangementTabView({
               onOpenAutoArrangement={onOpenAutoArrangement}
               onOpenCostumeArrangement={onOpenCostumeArrangement}
               onOpenStatusHistory={onOpenStatusHistory}
+              onOpenChat={onOpenChat}
             />
           </TabsContent>
 
@@ -328,6 +341,7 @@ export function ArrangementTabView({
               products={sloseleProducts}
               onOpenStatusHistory={onOpenStatusHistory}
               onSendTargetMachineForm={onSendTargetMachineForm}
+              onOpenChat={onOpenChat}
             />
           </TabsContent>
         </Tabs>

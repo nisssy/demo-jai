@@ -35,6 +35,21 @@ function toCastSummaries(product: Product): CastSummary[] {
   return casts
 }
 
+/** Product → 未定キャスト数にマッピング */
+function toUndecidedCasts(product: Product): { type: string; count: number }[] {
+  const result: { type: string; count: number }[] = []
+  const companionCount = parseInt(product.companionCount || "0")
+  const directorCount = parseInt(product.directorCount || "0")
+  const mcCount = parseInt(product.mcCount || "0")
+  const undecidedCompanions = Math.max(0, companionCount - (product.selectedCompanions?.length ?? 0))
+  const undecidedDirectors = Math.max(0, directorCount - (product.selectedDirectors?.length ?? 0))
+  const undecidedMcs = Math.max(0, mcCount - (product.selectedMcs?.length ?? 0))
+  if (undecidedCompanions > 0) result.push({ type: "コンパニオン", count: undecidedCompanions })
+  if (undecidedDirectors > 0) result.push({ type: "ディレクター", count: undecidedDirectors })
+  if (undecidedMcs > 0) result.push({ type: "MC", count: undecidedMcs })
+  return result
+}
+
 export function useProjectDetail({ repository, projectNumber }: UseProjectDetailArgs) {
   const router = useAppRouter()
   const [refreshKey, setRefreshKey] = useState(0)
@@ -78,6 +93,7 @@ export function useProjectDetail({ repository, projectNumber }: UseProjectDetail
         executionStatus: p.executionStatus,
         // キャスト
         casts: toCastSummaries(p),
+        undecidedCasts: toUndecidedCasts(p),
         // コメント
         comments: p.comments ?? [],
         commentCount: p.comments?.length ?? 0,
@@ -204,7 +220,7 @@ export function useProjectDetail({ repository, projectNumber }: UseProjectDetail
       ],
       chatMessages: [
         ...(product.chatMessages ?? []),
-        { channel: "マネジメント部", author: "営業", content: message, timestamp: now },
+        { channel: "BS・CS", author: "営業", content: message, timestamp: now },
       ],
     })
     setRefreshKey(k => k + 1)

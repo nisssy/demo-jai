@@ -532,7 +532,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
           if (existingProduct?.companionBookingStatus[name]) continue
           const holdLabel = companionHoldTypes[name] === "confirmed" ? "本押さえ" : "仮押さえ"
           messages.push({
-            channel: "マネジメント部",
+            channel: "BS・CS",
             author: "営業",
             content: `${name}さん（コンパニオン）の${holdLabel}をお願いします`,
             timestamp: now,
@@ -543,7 +543,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
         if (existingProduct?.directorBookingStatus[name]) continue
         const holdLabel = directorHoldTypes[name] === "confirmed" ? "本押さえ" : "仮押さえ"
         messages.push({
-          channel: "マネジメント部",
+          channel: "BS・CS",
           author: "営業",
           content: `${name}さん（ディレクター）の${holdLabel}をお願いします`,
           timestamp: now,
@@ -561,7 +561,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
       // スロセレはコンパニオン不要のためスキップ
       if (eventType !== "スロセレ" && newUndecidedCompanions > 0) {
         messages.push({
-          channel: "マネジメント部",
+          channel: "BS・CS",
           author: "営業",
           content: `コンパニオン${newUndecidedCompanions}名の手配をお願いします`,
           timestamp: now,
@@ -569,7 +569,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
       }
       if (newUndecidedDirectors > 0) {
         messages.push({
-          channel: "マネジメント部",
+          channel: "BS・CS",
           author: "営業",
           content: `ディレクター${newUndecidedDirectors}名の手配をお願いします`,
           timestamp: now,
@@ -848,7 +848,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
     const existing = repository.getProducts().find(ep => ep.id === p.id)
     const now = new Date().toISOString()
     const message: ChatMessage = {
-      channel: "マネジメント部",
+      channel: "BS・CS",
       author: "営業",
       content: `商材情報の確認をお願いします（商材名: ${p.eventProductName || p.eventType}）`,
       timestamp: now,

@@ -121,10 +121,20 @@ export const ProductSummaryCard = ({ product, salesPersonName, onEdit, onUpdateC
           )}
 
           {/* イベント系キャスティング */}
-          {!isLottery && product.casts && product.casts.length > 0 && (
+          {!isLottery && (product.casts.length > 0 || product.undecidedCasts.length > 0) && (
             <>
               <div className="text-xs text-slate-500 mt-2">キャスティング</div>
               <div className="space-y-1">
+                {product.undecidedCasts.map((uc, index) => (
+                  <div key={`undecided-${index}`} className="flex items-center gap-2 text-xs">
+                    <Users className="h-3.5 w-3.5 text-slate-500" />
+                    <span className="text-slate-600 min-w-[80px]">{uc.type}:</span>
+                    <span className="text-slate-500">{uc.count}名</span>
+                    <Badge className="bg-orange-100 text-orange-800 text-xs px-2 py-0.5">
+                      手配依頼中
+                    </Badge>
+                  </div>
+                ))}
                 {product.casts.map((cast, index) => {
                   const label = BOOKING_STATUS_LABELS[cast.bookingStatus] ?? cast.bookingStatus
                   const color = BOOKING_STATUS_COLORS[cast.bookingStatus] ?? "bg-slate-100 text-slate-600"
@@ -147,7 +157,7 @@ export const ProductSummaryCard = ({ product, salesPersonName, onEdit, onUpdateC
                           }}
                         >
                           <ArrowUpCircle className="h-3 w-3" />
-                          本押さえに変更
+                          本押さえ依頼に変更
                         </Button>
                       )}
                       {cast.bookingStatus === "tentative_completed" && onUpdateCastBookingStatus && (

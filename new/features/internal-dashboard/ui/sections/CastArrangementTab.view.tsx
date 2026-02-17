@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Users } from "lucide-react"
+import { Users, MessageCircle } from "lucide-react"
 import { BOOKING_STATUS_LABELS } from "@/new/api/display"
 import type { ProductionGroup, CastSubTab, UndecidedCastRequest } from "../../hooks/useEventTeamDashboard"
 import type { BookingStatus, Product } from "@/new/api/types"
@@ -19,6 +19,7 @@ export type CastArrangementTabViewProps = {
   onCompleteCast: (castName: string, castRole: "companion" | "director" | "mc", productId: number) => void
   onOpenHoldFailure: (castName: string, castRole: "companion" | "director" | "mc", productId: number) => void
   onOpenCastAssignment: (product: Product) => void
+  onOpenChat: (product: Product) => void
 }
 
 const subTabTriggerClass = "relative px-3 py-2 text-sm font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
@@ -32,9 +33,11 @@ function getStatusBadgeClass(status: BookingStatus): string {
 function ProductionGroupList({
   groups,
   renderActions,
+  onOpenChat,
 }: {
   groups: ProductionGroup[]
   renderActions: (castName: string, roleKey: "companion" | "director" | "mc", productId: number, status: BookingStatus) => React.ReactNode
+  onOpenChat: (product: Product) => void
 }) {
   if (groups.length === 0) {
     return <div className="text-center py-8 text-slate-500">対象のキャストはありません</div>
@@ -85,6 +88,9 @@ function ProductionGroupList({
                           <TableCell>
                             <div className="flex gap-2">
                               {renderActions(cast.castName, roleKey, entry.product.id, entry.bookingStatus)}
+                              <Button size="sm" variant="ghost" className="text-slate-500 hover:text-blue-600" onClick={() => onOpenChat(entry.product)}>
+                                <MessageCircle className="h-4 w-4" />
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -112,6 +118,7 @@ export function CastArrangementTabView({
   onCompleteCast,
   onOpenHoldFailure,
   onOpenCastAssignment,
+  onOpenChat,
 }: CastArrangementTabViewProps) {
   return (
     <Card>
@@ -145,6 +152,7 @@ export function CastArrangementTabView({
           <TabsContent value="tentative" className="mt-0">
             <ProductionGroupList
               groups={tentativeGroups}
+              onOpenChat={onOpenChat}
               renderActions={(castName, roleKey, productId, status) => (
                 <>
                   <Button size="sm" variant="outline" onClick={() => onCompleteCast(castName, roleKey, productId)}>
@@ -163,6 +171,7 @@ export function CastArrangementTabView({
           <TabsContent value="confirmed" className="mt-0">
             <ProductionGroupList
               groups={confirmedGroups}
+              onOpenChat={onOpenChat}
               renderActions={(castName, roleKey, productId, status) => (
                 <>
                   <Button size="sm" variant="outline" onClick={() => onCompleteCast(castName, roleKey, productId)}>
@@ -224,9 +233,14 @@ export function CastArrangementTabView({
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Button size="sm" variant="outline" onClick={() => onOpenCastAssignment(req.product)}>
-                        キャスト割り当て
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="ghost" className="text-slate-500 hover:text-blue-600" onClick={() => onOpenChat(req.product)}>
+                          <MessageCircle className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => onOpenCastAssignment(req.product)}>
+                          キャスト割り当て
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

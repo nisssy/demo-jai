@@ -19,6 +19,7 @@ export type ProductViewModel = {
   readingCertainty?: "A" | "B" | "C"
   // キャスト（マッピング済み）
   casts: { name: string; type: string; bookingStatus: BookingStatus }[]
+  undecidedCasts: { type: string; count: number }[]
   // コメント・チャット
   comments?: ProductComment[]
   temporaryHoldFailureComment?: string
@@ -78,6 +79,18 @@ function toProductViewModel(product: Product, designStatuses: { poster: DesignRe
     casts.push({ name, type: "MC", bookingStatus: product.mcBookingStatus?.[name] ?? "tentative_requesting" })
   }
 
+  // 未定キャスト数
+  const undecidedCasts: ProductViewModel["undecidedCasts"] = []
+  const companionCount = parseInt(product.companionCount || "0")
+  const directorCount = parseInt(product.directorCount || "0")
+  const mcCount = parseInt(product.mcCount || "0")
+  const undecidedCompanions = Math.max(0, companionCount - (product.selectedCompanions?.length ?? 0))
+  const undecidedDirectors = Math.max(0, directorCount - (product.selectedDirectors?.length ?? 0))
+  const undecidedMcs = Math.max(0, mcCount - (product.selectedMcs?.length ?? 0))
+  if (undecidedCompanions > 0) undecidedCasts.push({ type: "コンパニオン", count: undecidedCompanions })
+  if (undecidedDirectors > 0) undecidedCasts.push({ type: "ディレクター", count: undecidedDirectors })
+  if (undecidedMcs > 0) undecidedCasts.push({ type: "MC", count: undecidedMcs })
+
   // 営業以外からの最新受信メッセージを特定
   const incomingMessages: { author: string; content: string; timestamp: string }[] = []
   for (const msg of product.chatMessages ?? []) {
@@ -102,6 +115,7 @@ function toProductViewModel(product: Product, designStatuses: { poster: DesignRe
     estimatedBillingAmount: product.estimatedBillingAmount,
     proposalStatus: product.proposalStatus,
     casts,
+    undecidedCasts,
     comments: product.comments,
     temporaryHoldFailureComment: product.temporaryHoldFailureComment,
     chatMessages: product.chatMessages,

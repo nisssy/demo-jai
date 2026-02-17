@@ -7,7 +7,7 @@
 import type { Project, Product, DesignRequest, Company, Hall, Employee, CastSchedule, MachineMaster } from "./types"
 
 /** シードデータのスキーマバージョン。型定義やシードデータを変更したらインクリメントする */
-export const SEED_VERSION = 18
+export const SEED_VERSION = 19
 
 // ─── Projects ───
 
@@ -125,9 +125,9 @@ export const SEED_PRODUCTS: Product[] = [
     pachitownLinked: false,
     bannerGenerated: false,
     chatMessages: [
-      { channel: "マネジメント部", author: "営業", content: "3月15日のトリニティガールの件、佐藤花子さんと田中美咲さんの仮押さえをお願いします。", timestamp: "2026-02-05T10:00:00Z" },
-      { channel: "マネジメント部", author: "マネジメント部", content: "承知しました。佐藤花子さん・田中美咲さんともに仮押さえ完了しました。ディレクター鈴木一郎さんも本押さえ済みです。", timestamp: "2026-02-07T11:30:00Z" },
-      { channel: "マネジメント部", author: "営業", content: "ありがとうございます！衣装はAでお願いします。", timestamp: "2026-02-07T14:00:00Z" },
+      { channel: "BS・CS", author: "営業", content: "3月15日のトリニティガールの件、佐藤花子さんと田中美咲さんの仮押さえをお願いします。", timestamp: "2026-02-05T10:00:00Z" },
+      { channel: "BS・CS", author: "BS・CS", content: "承知しました。佐藤花子さん・田中美咲さんともに仮押さえ完了しました。ディレクター鈴木一郎さんも本押さえ済みです。", timestamp: "2026-02-07T11:30:00Z" },
+      { channel: "BS・CS", author: "営業", content: "ありがとうございます！衣装はAでお願いします。", timestamp: "2026-02-07T14:00:00Z" },
     ],
   },
   // Product 2: スロセレ（イベント終了）
@@ -190,8 +190,10 @@ export const SEED_PRODUCTS: Product[] = [
     surveySent: true,
     surveySentDate: "2026-02-02",
     chatMessages: [
-      { channel: "マネジメント部", author: "営業", content: "2月1日のスロセレ、MC山田太郎さんの本押さえ状況を確認したいです。", timestamp: "2026-01-20T09:00:00Z" },
-      { channel: "マネジメント部", author: "マネジメント部", content: "MC山田太郎さん、本押さえ完了しています。コンパニオン高橋優子さんも確定済みです。", timestamp: "2026-01-20T11:30:00Z" },
+      { channel: "BS・CS", author: "営業", content: "2月1日のスロセレ、MC山田太郎さんの本押さえ状況を確認したいです。", timestamp: "2026-01-20T09:00:00Z" },
+      { channel: "BS・CS", author: "BS・CS", content: "MC山田太郎さん、本押さえ完了しています。コンパニオン高橋優子さんも確定済みです。", timestamp: "2026-01-20T11:30:00Z" },
+      { channel: "外注業者", author: "BS・CS", content: "2月1日のスロセレで使用する対象機種フォームを送付しました。ご確認ください。", timestamp: "2026-01-21T10:00:00Z" },
+      { channel: "外注業者", author: "外注業者", content: "確認しました。対象機種の情報を入力済みです。", timestamp: "2026-01-22T14:00:00Z" },
     ],
   },
   // Product 3: 合同抽選会（受注済み - 事務管理課用）

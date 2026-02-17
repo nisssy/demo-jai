@@ -7,11 +7,12 @@ import { ProductChatView } from "./ProductChat.view"
 
 type ProductChatContainerProps = {
   productId: number
+  author?: string
 }
 
-export const ProductChatContainer = ({ productId }: ProductChatContainerProps) => {
+export const ProductChatContainer = ({ productId, author }: ProductChatContainerProps) => {
   const repository = useMemo(() => new LocalStorageProjectRepository(), [])
-  const result = useProductChat({ repository, productId })
+  const result = useProductChat({ repository, productId, author })
 
   return (
     <ProductChatView

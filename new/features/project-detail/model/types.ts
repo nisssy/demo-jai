@@ -35,6 +35,7 @@ export type ProductSummary = {
   executionStatus?: ExecutionStatus
   // キャスト
   casts: CastSummary[]
+  undecidedCasts: { type: string; count: number }[]
   // コメント（部門間チャット）
   comments: ProductComment[]
   commentCount: number

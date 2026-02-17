@@ -15,6 +15,7 @@ import { CostumeArrangementModalView } from "./modals/CostumeArrangementModal.vi
 import { ProductConfirmationDetailModalView } from "./modals/ProductConfirmationDetailModal.view"
 import { CostInputModalView } from "./modals/CostInputModal.view"
 import { CastAssignmentModalView } from "./modals/CastAssignmentModal.view"
+import { ChatDrawerView } from "./modals/ChatDrawer.view"
 import type { UseEventTeamDashboardReturn } from "../hooks/useEventTeamDashboard"
 import type { ArrangementChecks, CostExportStatuses } from "../hooks/useEventTeamDashboard"
 import type { UseLotteryFormReturn } from "@/new/features/project-registration/hooks/useLotteryForm"
@@ -97,6 +98,7 @@ export function EventTeamDashboardView(props: EventTeamDashboardViewProps) {
             onCompleteCast={props.completeCastHold}
             onOpenHoldFailure={props.openHoldFailure}
             onOpenCastAssignment={props.openCastAssignment}
+            onOpenChat={props.openChatDrawer}
           />
         </TabsContent>
 
@@ -105,6 +107,7 @@ export function EventTeamDashboardView(props: EventTeamDashboardViewProps) {
             products={props.confirmationProducts}
             getProjectForProduct={props.getProjectForProduct}
             onOpenDetail={props.openConfirmationDetail}
+            onOpenChat={props.openChatDrawer}
           />
         </TabsContent>
 
@@ -119,6 +122,7 @@ export function EventTeamDashboardView(props: EventTeamDashboardViewProps) {
             onOpenStatusHistory={props.openStatusHistory}
             onOpenCostumeArrangement={props.openCostumeArrangement}
             onSendTargetMachineForm={props.sendTargetMachineForm}
+            onOpenChat={props.openChatDrawer}
           />
         </TabsContent>
 
@@ -249,6 +253,13 @@ export function EventTeamDashboardView(props: EventTeamDashboardViewProps) {
         showDirectorSection={props.maxAssignDirectors > 0}
         productionNames={props.productionNameRecord}
         onSubmit={props.submitCastAssignment}
+      />
+
+      <ChatDrawerView
+        open={props.showChatDrawer}
+        onOpenChange={props.setShowChatDrawer}
+        productId={props.chatProductId}
+        productName={props.chatProductName}
       />
     </div>
   )

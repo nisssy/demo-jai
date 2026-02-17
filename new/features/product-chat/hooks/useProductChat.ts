@@ -6,16 +6,17 @@ import type { ChatChannel } from "@/new/features/product-chat/model/types"
 
 /** イベント区分ごとのチャット対象部門 */
 const CHAT_DEPARTMENTS: Record<string, string[]> = {
-  "トリニティガール": ["マネジメント部"],
-  "スロセレ": ["マネジメント部"],
+  "トリニティガール": ["BS・CS"],
+  "スロセレ": ["BS・CS", "外注業者"],
 }
 
 export type UseProductChatArgs = {
   repository: ProjectRepository
   productId: number
+  author?: string
 }
 
-export function useProductChat({ repository, productId }: UseProductChatArgs) {
+export function useProductChat({ repository, productId, author = "営業" }: UseProductChatArgs) {
   const [refreshKey, setRefreshKey] = useState(0)
 
   // 他コンポーネントからの chatMessages 更新を検知して再読み込み
@@ -58,7 +59,7 @@ export function useProductChat({ repository, productId }: UseProductChatArgs) {
     if (!product) return
     const newMessage = {
       channel,
-      author: "営業",
+      author,
       content,
       timestamp: new Date().toISOString(),
     }

@@ -1,18 +1,21 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { MessageCircle } from "lucide-react"
 import type { Product, Project } from "@/new/api/types"
 
 type ProductConfirmationTabViewProps = {
   products: Product[]
   getProjectForProduct: (product: Product) => Project | undefined
   onOpenDetail: (product: Product) => void
+  onOpenChat: (product: Product) => void
 }
 
 export function ProductConfirmationTabView({
   products,
   getProjectForProduct,
   onOpenDetail,
+  onOpenChat,
 }: ProductConfirmationTabViewProps) {
   if (products.length === 0) {
     return (
@@ -59,9 +62,14 @@ export function ProductConfirmationTabView({
                   <TableCell>{product.eventType}</TableCell>
                   <TableCell>{product.eventDate || "-"}</TableCell>
                   <TableCell className="text-right">
-                    <Button size="sm" variant="outline" onClick={() => onOpenDetail(product)}>
-                      確認する
-                    </Button>
+                    <div className="flex gap-2 justify-end">
+                      <Button size="sm" variant="ghost" className="text-slate-500 hover:text-blue-600" onClick={() => onOpenChat(product)}>
+                        <MessageCircle className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => onOpenDetail(product)}>
+                        確認する
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               )

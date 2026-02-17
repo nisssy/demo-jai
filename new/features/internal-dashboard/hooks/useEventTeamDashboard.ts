@@ -614,8 +614,8 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
 
     // チャットメッセージとしても送信
     updates.chatMessages = [...(product.chatMessages ?? []), {
-      channel: "マネジメント部",
-      author: "マネジメント部",
+      channel: "BS・CS",
+      author: "BS・CS",
       content: `【${statusLabel}】${holdFailureCastName}さん: ${holdFailureComment}`,
       timestamp: now,
     }]
@@ -769,8 +769,8 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
     }]
 
     updates.chatMessages = [...(product.chatMessages ?? []), {
-      channel: "マネジメント部",
-      author: "マネジメント部",
+      channel: "BS・CS",
+      author: "BS・CS",
       content: `${assignedNames.join("、")}を割り当てました（仮押さえ依頼中）`,
       timestamp: now,
     }]
@@ -904,8 +904,8 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
     if (!selectedConfirmationProduct) return
     const now = new Date().toISOString()
     const message: ChatMessage = {
-      channel: "マネジメント部",
-      author: "マネジメント部",
+      channel: "BS・CS",
+      author: "BS・CS",
       content: `商材情報を承認しました（商材名: ${selectedConfirmationProduct.eventProductName || selectedConfirmationProduct.eventType}）`,
       timestamp: now,
     }
@@ -921,13 +921,13 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
     if (!selectedConfirmationProduct || !confirmationComment.trim()) return
     const now = new Date().toISOString()
     const chatMessage: ChatMessage = {
-      channel: "マネジメント部",
-      author: "マネジメント部",
+      channel: "BS・CS",
+      author: "BS・CS",
       content: `【修正依頼】${confirmationComment}`,
       timestamp: now,
     }
     const comment = {
-      author: "マネジメント部",
+      author: "BS・CS",
       content: confirmationComment,
       timestamp: now,
     }
@@ -958,6 +958,17 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
     }
     setCostumeDraft(draft)
     setShowCostumeModal(true)
+  }, [])
+
+  // チャットドロワー
+  const [chatProductId, setChatProductId] = useState<number | null>(null)
+  const [chatProductName, setChatProductName] = useState("")
+  const [showChatDrawer, setShowChatDrawer] = useState(false)
+
+  const openChatDrawer = useCallback((product: Product) => {
+    setChatProductId(product.id)
+    setChatProductName(product.eventProductName || product.eventType)
+    setShowChatDrawer(true)
   }, [])
 
   const saveCostumeArrangement = useCallback(() => {
@@ -1023,6 +1034,8 @@ export function useEventTeamDashboard({ repository }: { repository: ProjectRepos
     confirmationProductForm,
     confirmationComment, setConfirmationComment,
     openConfirmationDetail, handleApproveProduct, handleRequestRevision,
+    // チャット
+    chatProductId, chatProductName, showChatDrawer, setShowChatDrawer, openChatDrawer,
     // 共通
     showStatusHistoryModal, setShowStatusHistoryModal, openStatusHistory,
   }
