@@ -8,11 +8,12 @@ import { ProductChatView } from "./ProductChat.view"
 type ProductChatContainerProps = {
   productId: number
   author?: string
+  departments?: string[]
 }
 
-export const ProductChatContainer = ({ productId, author }: ProductChatContainerProps) => {
+export const ProductChatContainer = ({ productId, author, departments }: ProductChatContainerProps) => {
   const repository = useMemo(() => new LocalStorageProjectRepository(), [])
-  const result = useProductChat({ repository, productId, author })
+  const result = useProductChat({ repository, productId, author, departments })
 
   return (
     <ProductChatView
@@ -22,6 +23,7 @@ export const ProductChatContainer = ({ productId, author }: ProductChatContainer
       activeChannel={result.activeChannel}
       onActiveChannelChange={result.setActiveChannel}
       onSendMessage={result.onSendMessage}
+      currentAuthor={author ?? "営業"}
     />
   )
 }

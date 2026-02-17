@@ -81,6 +81,12 @@ export function useOutsourcingVendorDashboard({ repository }: UseOutsourcingVend
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null)
   const [transactionResultDraft, setTransactionResultDraft] = useState("")
   const [machineDataDraft, setMachineDataDraft] = useState("")
+  const [showChatDrawer, setShowChatDrawer] = useState(false)
+
+  const openChatDrawer = useCallback(() => {
+    if (selectedProductId === null) return
+    setShowChatDrawer(true)
+  }, [selectedProductId])
 
   // スロセレ商材かつ（イベント日が過去 OR executionStatus === "終了"）のみ
   const filteredProducts = useMemo(() => {
@@ -164,5 +170,8 @@ export function useOutsourcingVendorDashboard({ repository }: UseOutsourcingVend
     onMachineDataChange: setMachineDataDraft,
     onUploadReport: handleUploadReport,
     onSavePostEventData: handleSavePostEventData,
+    showChatDrawer,
+    setShowChatDrawer,
+    openChatDrawer,
   }
 }

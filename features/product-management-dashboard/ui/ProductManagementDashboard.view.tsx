@@ -5,6 +5,7 @@ import { MachineMasterSectionView } from "@/features/product-management-dashboar
 import { ProjectMachinesSectionView } from "@/features/product-management-dashboard/ui/sections/ProjectMachinesSection.view"
 import type { ProjectWithMachines } from "@/features/product-management-dashboard/ui/sections/ProjectMachinesSection.view"
 import { BannerCreateModalView } from "@/features/product-management-dashboard/ui/sections/BannerCreateModal.view"
+import { ChatDrawerView } from "@/new/features/product-management-dashboard/ui/modals/ChatDrawer.view"
 import type { BannerEditState, MachineMaster } from "@/features/product-management-dashboard/model/types"
 
 export type ProductManagementDashboardViewProps = {
@@ -37,7 +38,12 @@ export type ProductManagementDashboardViewProps = {
   bannerEdit: BannerEditState
   onBannerEditChange: (updates: Partial<BannerEditState>) => void
   onCloseBannerModal: () => void
-  onBannerModalOpenChange: (open: boolean) => void
+  // チャット
+  onOpenChat: (productId: number) => void
+  showChatDrawer: boolean
+  onChatDrawerOpenChange: (open: boolean) => void
+  chatProductId: number | null
+  chatProductName: string
 }
 
 
@@ -67,6 +73,11 @@ export const ProductManagementDashboardView = ({
   bannerEdit,
   onBannerEditChange,
   onCloseBannerModal,
+  onOpenChat,
+  showChatDrawer,
+  onChatDrawerOpenChange,
+  chatProductId,
+  chatProductName,
 }: ProductManagementDashboardViewProps) => {
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -115,6 +126,7 @@ export const ProductManagementDashboardView = ({
             projects={projectMachinesList}
             onOpenBanner={onOpenBanner}
             onPachitownLink={onPachitownLink}
+            onOpenChat={onOpenChat}
             editingProductId={editingProductId}
             editingMachineIndex={editingMachineIndex}
             editingMachineName={editingMachineName}
@@ -132,6 +144,13 @@ export const ProductManagementDashboardView = ({
         bannerEdit={bannerEdit}
         onBannerEditChange={onBannerEditChange}
         onClose={onCloseBannerModal}
+      />
+
+      <ChatDrawerView
+        open={showChatDrawer}
+        onOpenChange={onChatDrawerOpenChange}
+        productId={chatProductId}
+        productName={chatProductName}
       />
     </div>
   )

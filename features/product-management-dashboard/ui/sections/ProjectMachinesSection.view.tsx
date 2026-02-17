@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { FileText, CheckCircle2, AlertCircle, Link2, ImageIcon, Edit2, Check, X } from "lucide-react"
+import { FileText, CheckCircle2, AlertCircle, Link2, ImageIcon, Edit2, Check, X, MessageCircle } from "lucide-react"
 import { BannerPreviewView } from "@/features/product-management-dashboard/ui/components/BannerPreview.view"
 import type { BannerData } from "@/features/product-management-dashboard/model/types"
 
@@ -23,6 +23,7 @@ export type ProjectMachinesSectionViewProps = {
   projects: ProjectWithMachines[]
   onOpenBanner: (productId: number) => void
   onPachitownLink: (productId: number) => void
+  onOpenChat: (productId: number) => void
   editingProductId: number | null
   editingMachineIndex: number | null
   editingMachineName: string
@@ -36,6 +37,7 @@ export const ProjectMachinesSectionView = ({
   projects,
   onOpenBanner,
   onPachitownLink,
+  onOpenChat,
   editingProductId,
   editingMachineIndex,
   editingMachineName,
@@ -221,6 +223,15 @@ export const ProjectMachinesSectionView = ({
                         )}
                       </div>
                       <div className="flex flex-col gap-2 shrink-0">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() => onOpenChat(p.id)}
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                          チャット
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"

@@ -8,6 +8,7 @@ type ChatChannelViewProps = {
   department: string
   messages: ChatMessage[]
   onSendMessage: (content: string) => void
+  currentAuthor?: string
 }
 
 /** 発言者ロールごとの色 */
@@ -36,7 +37,7 @@ function formatTimestamp(ts: string): string {
   }
 }
 
-export const ChatChannelView = ({ department, messages, onSendMessage }: ChatChannelViewProps) => {
+export const ChatChannelView = ({ department, messages, onSendMessage, currentAuthor }: ChatChannelViewProps) => {
   const [inputValue, setInputValue] = useState("")
 
   const handleSend = () => {
@@ -69,7 +70,7 @@ export const ChatChannelView = ({ department, messages, onSendMessage }: ChatCha
           </div>
         ) : (
           messages.map((msg, i) => {
-            const isSelf = msg.author === "営業"
+            const isSelf = msg.author === (currentAuthor ?? "営業")
             const colors = AUTHOR_COLORS[msg.author] ?? DEFAULT_COLOR
 
             return (

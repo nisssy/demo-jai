@@ -19,6 +19,9 @@ export const OutsourcingVendorDashboardContainer = () => {
     onMachineDataChange,
     onUploadReport,
     onSavePostEventData,
+    showChatDrawer,
+    setShowChatDrawer,
+    openChatDrawer,
   } = useOutsourcingVendorDashboard({ repository })
 
   return (
@@ -33,6 +36,9 @@ export const OutsourcingVendorDashboardContainer = () => {
       onMachineDataChange={onMachineDataChange}
       onUploadReport={onUploadReport}
       onSavePostEventData={onSavePostEventData}
+      onOpenChat={openChatDrawer}
+      showChatDrawer={showChatDrawer}
+      onChatDrawerOpenChange={setShowChatDrawer}
     />
   )
 }

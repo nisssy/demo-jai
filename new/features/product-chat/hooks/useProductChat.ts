@@ -7,16 +7,17 @@ import type { ChatChannel } from "@/new/features/product-chat/model/types"
 /** イベント区分ごとのチャット対象部門 */
 const CHAT_DEPARTMENTS: Record<string, string[]> = {
   "トリニティガール": ["BS・CS"],
-  "スロセレ": ["BS・CS", "外注業者"],
+  "スロセレ": ["BS・CS"],
 }
 
 export type UseProductChatArgs = {
   repository: ProjectRepository
   productId: number
   author?: string
+  departments?: string[]
 }
 
-export function useProductChat({ repository, productId, author = "営業" }: UseProductChatArgs) {
+export function useProductChat({ repository, productId, author = "営業", departments: departmentsOverride }: UseProductChatArgs) {
   const [refreshKey, setRefreshKey] = useState(0)
 
   // 他コンポーネントからの chatMessages 更新を検知して再読み込み
@@ -40,7 +41,10 @@ export function useProductChat({ repository, productId, author = "営業" }: Use
   const productName = product?.eventProductName ?? eventType
 
   // このイベント区分で使えるチャンネル
-  const departments = useMemo(() => CHAT_DEPARTMENTS[eventType] ?? [], [eventType])
+  const departments = useMemo(
+    () => departmentsOverride ?? CHAT_DEPARTMENTS[eventType] ?? [],
+    [departmentsOverride, eventType],
+  )
 
   // 部門ごとのメッセージを分類
   const channels = useMemo<ChatChannel[]>(() => {

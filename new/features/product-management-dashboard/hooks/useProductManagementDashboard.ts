@@ -237,6 +237,22 @@ export function useProductManagementDashboard(repository: ProjectRepository) {
     setEditingMachineName("");
   }, []);
 
+  // チャットドロワー
+  const [chatProductId, setChatProductId] = useState<number | null>(null);
+  const [chatProductName, setChatProductName] = useState("");
+  const [showChatDrawer, setShowChatDrawer] = useState(false);
+
+  const openChatDrawer = useCallback(
+    (productId: number) => {
+      const product = allProducts.find((p) => p.id === productId);
+      if (!product) return;
+      setChatProductId(productId);
+      setChatProductName(product.eventProductName || product.eventType);
+      setShowChatDrawer(true);
+    },
+    [allProducts]
+  );
+
   // バナー編集状態（旧 View の BannerCreateModal 用）
   const [bannerEdit, setBannerEdit] = useState<BannerEditState>(DEFAULT_BANNER_EDIT);
 
@@ -348,6 +364,12 @@ export function useProductManagementDashboard(repository: ProjectRepository) {
     openBannerModal,
     closeBannerModal,
     saveBanner,
+    // チャット
+    chatProductId,
+    chatProductName,
+    showChatDrawer,
+    setShowChatDrawer,
+    openChatDrawer,
     // 旧 View 用（インライン機種名編集）
     editingProductId,
     editingMachineIndex,

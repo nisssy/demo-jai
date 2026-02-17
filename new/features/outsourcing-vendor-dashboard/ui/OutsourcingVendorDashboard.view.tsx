@@ -2,9 +2,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
+import { MessageCircle } from "lucide-react"
 import { PRODUCT_PROGRESS_STATUS_LABELS } from "@/new/api/display"
 import type { ProductProgressStatus } from "@/new/api/types"
 import type { OutsourcingProductViewModel, GroupedProducts } from "../hooks/useOutsourcingVendorDashboard"
+import { ChatDrawerView } from "./modals/ChatDrawer.view"
 
 // ─── ステータスバッジ色 ───
 
@@ -190,6 +192,7 @@ type DetailPanelProps = {
   onMachineDataChange: (value: string) => void
   onUploadReport: () => void
   onSavePostEventData: () => void
+  onOpenChat: () => void
 }
 
 const DetailPanel = ({
@@ -200,6 +203,7 @@ const DetailPanel = ({
   onMachineDataChange,
   onUploadReport,
   onSavePostEventData,
+  onOpenChat,
 }: DetailPanelProps) => {
   if (!selectedProduct) {
     return (
@@ -211,11 +215,17 @@ const DetailPanel = ({
 
   return (
     <div className="flex-1 overflow-y-auto p-6 space-y-4">
-      <div className="mb-2">
-        <h2 className="text-lg font-bold">{selectedProduct.eventProductName}</h2>
-        <p className="text-sm text-gray-500">
-          {selectedProduct.projectNumber} / {selectedProduct.eventDate}
-        </p>
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <h2 className="text-lg font-bold">{selectedProduct.eventProductName}</h2>
+          <p className="text-sm text-gray-500">
+            {selectedProduct.projectNumber} / {selectedProduct.eventDate}
+          </p>
+        </div>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={onOpenChat}>
+          <MessageCircle className="h-4 w-4" />
+          チャット
+        </Button>
       </div>
 
       <ReportCard
@@ -247,6 +257,9 @@ export type OutsourcingVendorDashboardViewProps = {
   onMachineDataChange: (value: string) => void
   onUploadReport: () => void
   onSavePostEventData: () => void
+  onOpenChat: () => void
+  showChatDrawer: boolean
+  onChatDrawerOpenChange: (open: boolean) => void
 }
 
 export const OutsourcingVendorDashboardView = ({
@@ -260,6 +273,9 @@ export const OutsourcingVendorDashboardView = ({
   onMachineDataChange,
   onUploadReport,
   onSavePostEventData,
+  onOpenChat,
+  showChatDrawer,
+  onChatDrawerOpenChange,
 }: OutsourcingVendorDashboardViewProps) => {
   return (
     <div className="flex h-full min-h-screen bg-gray-50">
@@ -276,6 +292,13 @@ export const OutsourcingVendorDashboardView = ({
         onMachineDataChange={onMachineDataChange}
         onUploadReport={onUploadReport}
         onSavePostEventData={onSavePostEventData}
+        onOpenChat={onOpenChat}
+      />
+      <ChatDrawerView
+        open={showChatDrawer}
+        onOpenChange={onChatDrawerOpenChange}
+        productId={selectedProductId}
+        productName={selectedProduct?.eventProductName ?? ""}
       />
     </div>
   )

@@ -63,6 +63,11 @@ export const ProductManagementDashboardContainer = ({
       bannerEdit={state.bannerEdit}
       onBannerEditChange={state.updateBannerEdit}
       onCloseBannerModal={state.closeBannerModal}
+      onOpenChat={state.openChatDrawer}
+      showChatDrawer={state.showChatDrawer}
+      onChatDrawerOpenChange={state.setShowChatDrawer}
+      chatProductId={state.chatProductId}
+      chatProductName={state.chatProductName}
     />
   )
 }

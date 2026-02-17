@@ -7,7 +7,7 @@
 import type { Project, Product, DesignRequest, Company, Hall, Employee, CastSchedule, MachineMaster } from "./types"
 
 /** シードデータのスキーマバージョン。型定義やシードデータを変更したらインクリメントする */
-export const SEED_VERSION = 19
+export const SEED_VERSION = 21
 
 // ─── Projects ───
 
@@ -192,8 +192,9 @@ export const SEED_PRODUCTS: Product[] = [
     chatMessages: [
       { channel: "BS・CS", author: "営業", content: "2月1日のスロセレ、MC山田太郎さんの本押さえ状況を確認したいです。", timestamp: "2026-01-20T09:00:00Z" },
       { channel: "BS・CS", author: "BS・CS", content: "MC山田太郎さん、本押さえ完了しています。コンパニオン高橋優子さんも確定済みです。", timestamp: "2026-01-20T11:30:00Z" },
-      { channel: "外注業者", author: "BS・CS", content: "2月1日のスロセレで使用する対象機種フォームを送付しました。ご確認ください。", timestamp: "2026-01-21T10:00:00Z" },
-      { channel: "外注業者", author: "外注業者", content: "確認しました。対象機種の情報を入力済みです。", timestamp: "2026-01-22T14:00:00Z" },
+      { channel: "商材管理課", author: "商材管理課", content: "スロセレ春の特別企画のレポート提出をお願いします。期限は2/10です。", timestamp: "2026-02-03T09:00:00Z" },
+      { channel: "商材管理課", author: "外注業者", content: "承知しました。2/8までにアップロードいたします。", timestamp: "2026-02-03T10:30:00Z" },
+      { channel: "商材管理課", author: "商材管理課", content: "ありがとうございます。事後データの入力もよろしくお願いします。", timestamp: "2026-02-03T11:00:00Z" },
     ],
   },
   // Product 3: 合同抽選会（受注済み - 事務管理課用）

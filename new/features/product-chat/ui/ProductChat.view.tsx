@@ -11,22 +11,26 @@ export type ProductChatViewProps = {
   activeChannel: string
   onActiveChannelChange: (channel: string) => void
   onSendMessage: (channel: string, content: string) => void
+  currentAuthor?: string
 }
 
 /** 部門ごとのアクセントカラー */
 const DEPARTMENT_ACCENT: Record<string, string> = {
   "マネジメント部": "border-purple-200",
   "外注業者": "border-orange-200",
+  "商材管理課": "border-teal-200",
 }
 
 const DEPARTMENT_TAB_ACTIVE: Record<string, string> = {
   "マネジメント部": "bg-purple-50 text-purple-800 border-purple-300",
   "外注業者": "bg-orange-50 text-orange-800 border-orange-300",
+  "商材管理課": "bg-teal-50 text-teal-800 border-teal-300",
 }
 
 const DEPARTMENT_TAB_INACTIVE: Record<string, string> = {
   "マネジメント部": "text-purple-600 hover:bg-purple-50",
   "外注業者": "text-orange-600 hover:bg-orange-50",
+  "商材管理課": "text-teal-600 hover:bg-teal-50",
 }
 
 export const ProductChatView = ({
@@ -36,6 +40,7 @@ export const ProductChatView = ({
   activeChannel,
   onActiveChannelChange,
   onSendMessage,
+  currentAuthor,
 }: ProductChatViewProps) => {
   if (departments.length === 0) {
     return null
@@ -91,6 +96,7 @@ export const ProductChatView = ({
             department={activeChannelData.department}
             messages={activeChannelData.messages}
             onSendMessage={(content) => onSendMessage(activeChannelData.department, content)}
+            currentAuthor={currentAuthor}
           />
         )}
       </CardContent>
