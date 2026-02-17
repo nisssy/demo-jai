@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useAppRouter } from "@/hooks/use-app-router"
 import { LogOut, Briefcase, Users, RotateCcw, Ticket, Package, Palette } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -33,7 +33,7 @@ type AppHeaderProps = {
 }
 
 export const AppHeader = ({ currentRole }: AppHeaderProps) => {
-  const router = useRouter()
+  const router = useAppRouter()
 
   const handleBackToRoleSelection = useCallback(() => {
     router.push("/")
