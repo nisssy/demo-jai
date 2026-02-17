@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { ProjectProvider } from "@/contexts/project-context"
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 
@@ -39,10 +40,12 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body className={`font-sans antialiased`}>
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-          {children}
-          <Toaster />
-        </div>
+        <ProjectProvider>
+          <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+            {children}
+            <Toaster />
+          </div>
+        </ProjectProvider>
         <Analytics />
       </body>
     </html>
