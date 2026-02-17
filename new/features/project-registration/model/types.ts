@@ -82,5 +82,5 @@ export const EMPTY_PRODUCT: ProductFormState = {
   eventBaseFeeDiscount: "",
   proposalStatus: "before-proposal",
   readingCertainty: "",
-  executionStatus: null,
+  executionStatus: "実施前",
 }

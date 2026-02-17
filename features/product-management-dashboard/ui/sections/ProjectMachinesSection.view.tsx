@@ -111,8 +111,13 @@ export const ProjectMachinesSectionView = ({
                           )}
                         </div>
                         <p className="font-medium text-slate-900 truncate">
-                          {p.projectName || p.eventProductName || "無題"}
+                          {p.eventProductName || "無題"}
                         </p>
+                        {p.projectName && p.projectName !== p.eventProductName && (
+                          <p className="text-xs text-slate-500 truncate">
+                            {p.projectName}
+                          </p>
+                        )}
                         {registered ? (
                           <div className="mt-3 space-y-2">
                             <div>
