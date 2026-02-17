@@ -7,7 +7,7 @@ import type { ChatChannel } from "@/new/features/product-chat/model/types"
 /** イベント区分ごとのチャット対象部門 */
 const CHAT_DEPARTMENTS: Record<string, string[]> = {
   "トリニティガール": ["マネジメント部"],
-  "スロセレ": ["マネジメント部", "外注業者"],
+  "スロセレ": ["マネジメント部"],
 }
 
 export type UseProductChatArgs = {

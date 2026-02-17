@@ -7,7 +7,7 @@
 import type { Project, Product, DesignRequest, Company, Hall, Employee, CastSchedule, MachineMaster } from "./types"
 
 /** シードデータのスキーマバージョン。型定義やシードデータを変更したらインクリメントする */
-export const SEED_VERSION = 17
+export const SEED_VERSION = 18
 
 // ─── Projects ───
 
@@ -130,7 +130,7 @@ export const SEED_PRODUCTS: Product[] = [
       { channel: "マネジメント部", author: "営業", content: "ありがとうございます！衣装はAでお願いします。", timestamp: "2026-02-07T14:00:00Z" },
     ],
   },
-  // Product 2: スロセレ（イベント終了 - 外注業者用）
+  // Product 2: スロセレ（イベント終了）
   {
     id: 2,
     projectId: 1,
@@ -192,10 +192,6 @@ export const SEED_PRODUCTS: Product[] = [
     chatMessages: [
       { channel: "マネジメント部", author: "営業", content: "2月1日のスロセレ、MC山田太郎さんの本押さえ状況を確認したいです。", timestamp: "2026-01-20T09:00:00Z" },
       { channel: "マネジメント部", author: "マネジメント部", content: "MC山田太郎さん、本押さえ完了しています。コンパニオン高橋優子さんも確定済みです。", timestamp: "2026-01-20T11:30:00Z" },
-      { channel: "外注業者", author: "営業", content: "2月1日のスロセレ、レポートのアップロードをお願いします。", timestamp: "2026-02-02T09:00:00Z" },
-      { channel: "外注業者", author: "外注業者", content: "レポートをアップロードしました。稼働率データも添付しています。", timestamp: "2026-02-03T10:15:00Z" },
-      { channel: "外注業者", author: "営業", content: "確認しました。事後データの入力もお願いできますか？", timestamp: "2026-02-03T14:00:00Z" },
-      { channel: "外注業者", author: "外注業者", content: "入力完了しました。ご確認ください。", timestamp: "2026-02-04T11:00:00Z" },
     ],
   },
   // Product 3: 合同抽選会（受注済み - 事務管理課用）
@@ -407,7 +403,7 @@ export const SEED_PRODUCTS: Product[] = [
     ],
     targetMachineNames: ["エヴァンゲリオン", "リゼロ"],
   },
-  // Product 6: スロセレ（仮押さえ依頼中 - マネジメント部・外注業者用）
+  // Product 6: スロセレ（仮押さえ依頼中 - マネジメント部用）
   {
     id: 6,
     projectId: 5,

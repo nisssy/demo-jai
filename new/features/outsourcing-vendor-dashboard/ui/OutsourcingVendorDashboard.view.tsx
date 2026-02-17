@@ -97,84 +97,6 @@ const ProductListPanel = ({ groupedProducts, selectedProductId, onSelectProduct 
   )
 }
 
-// ─── サブコンポーネント: アンケート結果カード ───
-
-type SurveyCardProps = {
-  product: OutsourcingProductViewModel
-}
-
-const SurveyCard = ({ product }: SurveyCardProps) => {
-  const survey = product.surveyResult
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">アンケート結果</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {survey ? (
-          <div className="space-y-2 text-sm">
-            {survey.satisfaction && (
-              <div>
-                <span className="font-medium text-gray-600">満足度: </span>
-                <span>{survey.satisfaction}</span>
-              </div>
-            )}
-            {survey.comment && (
-              <div>
-                <span className="font-medium text-gray-600">コメント: </span>
-                <span>{survey.comment}</span>
-              </div>
-            )}
-            {survey.nextEventDesired && (
-              <div>
-                <span className="font-medium text-gray-600">次回イベント希望: </span>
-                <span>{survey.nextEventDesired}</span>
-              </div>
-            )}
-            {survey.improvementRequest && (
-              <div>
-                <span className="font-medium text-gray-600">改善要望: </span>
-                <span>{survey.improvementRequest}</span>
-              </div>
-            )}
-          </div>
-        ) : (
-          <p className="text-sm text-gray-500">アンケート結果がありません</p>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
-
-// ─── サブコンポーネント: イベント写真カード ───
-
-type PhotosCardProps = {
-  photos: string[]
-}
-
-const PhotosCard = ({ photos }: PhotosCardProps) => {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">イベント写真</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {photos.length > 0 ? (
-          <ul className="space-y-1">
-            {photos.map((photo, index) => (
-              <li key={index} className="text-sm text-blue-600">
-                {photo}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-gray-500">イベント写真がありません</p>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
-
 // ─── サブコンポーネント: レポートカード ───
 
 type ReportCardProps = {
@@ -296,8 +218,6 @@ const DetailPanel = ({
         </p>
       </div>
 
-      <SurveyCard product={selectedProduct} />
-      <PhotosCard photos={selectedProduct.eventPhotos} />
       <ReportCard
         reportUploaded={selectedProduct.reportUploaded}
         reportUploadedAt={selectedProduct.reportUploadedAt}
