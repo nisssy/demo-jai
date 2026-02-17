@@ -3,8 +3,8 @@
 import { useMemo } from "react"
 import type { ProjectRepository } from "@/new/api/project-repository"
 import { useProductManagementDashboard } from "../hooks/useProductManagementDashboard"
+import type { TabValue } from "../hooks/useProductManagementDashboard"
 import { ProductManagementDashboardView } from "@/features/product-management-dashboard/ui/ProductManagementDashboard.view"
-import type { ProductManagementDashboardTab } from "@/features/product-management-dashboard/hooks/useProductManagementDashboard"
 import type { ProjectWithMachines } from "@/features/product-management-dashboard/ui/sections/ProjectMachinesSection.view"
 import type { DuringEventProduct } from "@/features/product-management-dashboard/ui/sections/DuringEventSection.view"
 import type { PostEventProduct } from "@/features/product-management-dashboard/ui/sections/PostEventSection.view"
@@ -70,8 +70,8 @@ export const ProductManagementDashboardContainer = ({
 
   return (
     <ProductManagementDashboardView
-      activeTab={state.activeTab as ProductManagementDashboardTab}
-      onActiveTabChange={state.setActiveTab as (tab: ProductManagementDashboardTab) => void}
+      activeTab={state.activeTab as TabValue}
+      onActiveTabChange={state.setActiveTab as (tab: TabValue) => void}
       machineMasters={state.machineMasters}
       newMachineName={state.newMasterName}
       newPachitownName={state.newMasterPachitownName}

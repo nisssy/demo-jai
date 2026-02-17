@@ -4,11 +4,11 @@
   "private": true,
   "scripts": {
     "build": "bun run next build",
-    "dev": "bun run next dev",
+    "dev": "bun run next dev --port ${PORT:-3000}",
     "lint": "eslint .",
-    "start": "bun run next start",
+    "start": "bun run next start --port ${PORT:-3000}",
     "test": "bun test",
-    "zip": "zip -r ../demo-jai.zip . -x \"node_modules/*\" \".next/*\" \".git/*\""
+    "zip": "zip -r ../demo-jai.zip . -x \"node_modules/*\" \".next/*\" \".git/*\" \".claude/*\" \".cursor/*\""
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

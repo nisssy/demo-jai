@@ -1,3 +1,5 @@
+export type ProductManagementDashboardTab = "machineMaster" | "projectMachines"
+
 /** 機種マスタ（スロット機種名とパチタウン用名称の対応） */
 export type MachineMaster = {
   id: number

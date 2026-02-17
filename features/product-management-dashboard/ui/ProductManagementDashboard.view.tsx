@@ -1,7 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Package, FileText } from "lucide-react"
-import type { ProductManagementDashboardTab } from "@/features/product-management-dashboard/hooks/useProductManagementDashboard"
+import type { ProductManagementDashboardTab } from "@/features/product-management-dashboard/model/types"
 import { MachineMasterSectionView } from "@/features/product-management-dashboard/ui/sections/MachineMasterSection.view"
 import { ProjectMachinesSectionView } from "@/features/product-management-dashboard/ui/sections/ProjectMachinesSection.view"
 import type { ProjectWithMachines } from "@/features/product-management-dashboard/ui/sections/ProjectMachinesSection.view"
