@@ -114,14 +114,10 @@ export function EventTeamDashboardView(props: EventTeamDashboardViewProps) {
         <TabsContent value="arrangement" className="mt-0">
           <ArrangementTabView
             trinityGirlProducts={props.trinityGirlArrangementProducts}
-            sloseleProducts={props.sloseleArrangementProducts}
-            subTab={props.arrangementSubTab}
-            onSubTabChange={props.setArrangementSubTab}
             getProjectForProduct={props.getProjectForProduct}
             onOpenAutoArrangement={props.openAutoArrangement}
             onOpenStatusHistory={props.openStatusHistory}
             onOpenCostumeArrangement={props.openCostumeArrangement}
-            onSendTargetMachineForm={props.sendTargetMachineForm}
             onOpenChat={props.openChatDrawer}
           />
         </TabsContent>

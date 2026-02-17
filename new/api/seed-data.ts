@@ -7,7 +7,7 @@
 import type { Project, Product, DesignRequest, Company, Hall, Employee, CastSchedule, MachineMaster } from "./types"
 
 /** シードデータのスキーマバージョン。型定義やシードデータを変更したらインクリメントする */
-export const SEED_VERSION = 21
+export const SEED_VERSION = 23
 
 // ─── Projects ───
 
@@ -176,8 +176,19 @@ export const SEED_PRODUCTS: Product[] = [
     eventPhotos: ["/images/event1-photo1.jpg", "/images/event1-photo2.jpg", "/images/event1-photo3.jpg"],
     reportUploaded: true,
     reportUploadedAt: "2026-02-03T10:00:00Z",
-    postEventTransactionResult: "稼働率120%達成。来場者数約500名。",
-    postEventMachineData: "北斗の拳: 稼働率135%、からくりサーカス: 稼働率110%",
+    postEventReport: {
+      slot20Count: "120",
+      slot20TotalDiff: "+45000",
+      slot20AvgGames: "8500",
+      slot20AvgDiff: "+375",
+      machineReports: [
+        { machineName: "スマスロ北斗の拳", count: "8", avgGames: "9200", avgDiff: "+520" },
+        { machineName: "からくりサーカス", count: "6", avgGames: "7800", avgDiff: "+210" },
+      ],
+      uploadedAt: "2026-02-03",
+    },
+    postEventPachitownLinked: true,
+    postEventPachitownLinkedDate: "2026-02-05",
     statusHistory: [
       { status: "受注", timestamp: "2026-01-15T09:00:00Z", changedBy: "山田 太郎" },
       { status: "手配進行中", timestamp: "2026-01-20T10:00:00Z", changedBy: "佐藤 マネージャー" },
@@ -503,6 +514,66 @@ export const SEED_PRODUCTS: Product[] = [
     statusHistory: [
       { status: "受注", timestamp: "2026-03-01T09:00:00Z", changedBy: "佐藤 次郎" },
       { status: "キャスト手配完了", timestamp: "2026-03-10T10:00:00Z", changedBy: "マネジメント部" },
+    ],
+  },
+  // Product 9: スロセレ（実施中 - 商材管理課 実施中タブ + 外注業者 中間レポート用）
+  {
+    id: 9,
+    projectId: 4,
+    projectNumber: "PJ-004",
+    category: "イベント",
+    eventType: "スロセレ",
+    eventProductName: "スロセレ 2月中旬イベント",
+    eventDate: "2026/02/15",
+    estimatedBillingAmount: 350000,
+    proposalStatus: "order-received",
+    managementConfirmationStatus: "approved",
+    executionStatus: "実施中",
+    companionCount: "1",
+    directorCount: "0",
+    mcCount: "0",
+    selectedCompanions: ["鈴木 さくら"],
+    selectedDirectors: [],
+    selectedMcs: [],
+    companionBookingStatus: { "鈴木 さくら": "confirmed_completed" },
+    directorBookingStatus: {},
+    mcBookingStatus: {},
+    startTime: "11:00",
+    endTime: "17:00",
+    reportRequired: "要",
+    targetMachineFormSent: true,
+    targetMachineNames: ["ハナハナ", "ジャグラー"],
+    pachitownMachineNames: ["Sハナハナホウオウ天翔", "Sマイジャグラー5"],
+    pachitownLinked: true,
+    pachitownLinkedDate: "2026-02-12",
+    bannerGenerated: true,
+    bannerData: {
+      date: "2/15",
+      dayOfWeek: "日曜日",
+      prefecture: "東京都",
+      storeName: "パチンコパーラー池袋",
+      targetMachines: ["Sハナハナホウオウ天翔", "Sマイジャグラー5"],
+    },
+    interimReport: {
+      slot20Count: "85",
+      slot20TotalDiff: "+22000",
+      slot20AvgGames: "6800",
+      slot20AvgDiff: "+259",
+      machineReports: [
+        { machineName: "ハナハナ", count: "5", avgGames: "7200", avgDiff: "+310" },
+        { machineName: "ジャグラー", count: "4", avgGames: "6300", avgDiff: "+195" },
+      ],
+      uploadedAt: "2026-02-16",
+    },
+    statusHistory: [
+      { status: "受注", timestamp: "2026-01-25T09:00:00Z", changedBy: "山田 太郎" },
+      { status: "キャスト手配完了", timestamp: "2026-02-01T10:00:00Z", changedBy: "マネジメント部" },
+      { status: "対象機種フォーム送信", timestamp: "2026-02-05T14:00:00Z", changedBy: "商材管理課" },
+      { status: "実施中", timestamp: "2026-02-15T10:00:00Z", changedBy: "システム" },
+    ],
+    chatMessages: [
+      { channel: "商材管理課", author: "商材管理課", content: "2月中旬イベント、中間レポートの入力をお願いします。", timestamp: "2026-02-16T09:00:00Z" },
+      { channel: "商材管理課", author: "外注業者", content: "中間レポートを入力しました。ご確認ください。", timestamp: "2026-02-16T14:00:00Z" },
     ],
   },
 ]

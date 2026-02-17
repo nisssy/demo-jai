@@ -15,9 +15,11 @@ export type UseProductChatArgs = {
   productId: number
   author?: string
   departments?: string[]
+  /** チャンネル内部名 → 画面表示名のマッピング（例: { "BS・CS": "マネジメント部" }） */
+  channelDisplayNames?: Record<string, string>
 }
 
-export function useProductChat({ repository, productId, author = "営業", departments: departmentsOverride }: UseProductChatArgs) {
+export function useProductChat({ repository, productId, author = "営業", departments: departmentsOverride, channelDisplayNames = {} }: UseProductChatArgs) {
   const [refreshKey, setRefreshKey] = useState(0)
 
   // 他コンポーネントからの chatMessages 更新を検知して再読み込み
@@ -81,5 +83,6 @@ export function useProductChat({ repository, productId, author = "営業", depar
     activeChannel,
     setActiveChannel,
     onSendMessage: handleSendMessage,
+    channelDisplayNames,
   }
 }

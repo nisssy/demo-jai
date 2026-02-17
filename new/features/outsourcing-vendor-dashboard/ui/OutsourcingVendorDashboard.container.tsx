@@ -9,16 +9,14 @@ export const OutsourcingVendorDashboardContainer = () => {
   const repository = useMemo(() => new LocalStorageProjectRepository(), [])
 
   const {
-    groupedProducts,
+    phaseGroups,
     selectedProduct,
     selectedProductId,
-    transactionResultDraft,
-    machineDataDraft,
+    reportDraft,
     onSelectProduct,
-    onTransactionResultChange,
-    onMachineDataChange,
-    onUploadReport,
-    onSavePostEventData,
+    onUpdateDraftField,
+    onUpdateMachineField,
+    onSaveReport,
     showChatDrawer,
     setShowChatDrawer,
     openChatDrawer,
@@ -26,16 +24,14 @@ export const OutsourcingVendorDashboardContainer = () => {
 
   return (
     <OutsourcingVendorDashboardView
-      groupedProducts={groupedProducts}
+      phaseGroups={phaseGroups}
       selectedProduct={selectedProduct}
       selectedProductId={selectedProductId}
-      transactionResultDraft={transactionResultDraft}
-      machineDataDraft={machineDataDraft}
+      reportDraft={reportDraft}
       onSelectProduct={onSelectProduct}
-      onTransactionResultChange={onTransactionResultChange}
-      onMachineDataChange={onMachineDataChange}
-      onUploadReport={onUploadReport}
-      onSavePostEventData={onSavePostEventData}
+      onUpdateDraftField={onUpdateDraftField}
+      onUpdateMachineField={onUpdateMachineField}
+      onSaveReport={onSaveReport}
       onOpenChat={openChatDrawer}
       showChatDrawer={showChatDrawer}
       onChatDrawerOpenChange={setShowChatDrawer}

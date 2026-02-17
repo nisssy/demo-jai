@@ -19,7 +19,7 @@ function ProductEditContent() {
             <ProjectRegistration mode="product-edit" productId={productId} />
           </div>
           <div className="w-96 shrink-0 sticky top-24 h-[calc(100vh-8rem)]">
-            <ProductChat productId={productId} />
+            <ProductChat productId={productId} channelDisplayNames={{ "BS・CS": "マネジメント部" }} />
           </div>
         </div>
       </main>

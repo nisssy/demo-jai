@@ -18,7 +18,7 @@ export function ChatDrawerView({ open, onOpenChange, productId, productName }: C
         </SheetHeader>
         <div className="flex-1 overflow-hidden">
           {productId && (
-            <ProductChat productId={productId} author="商材管理課" departments={["商材管理課"]} />
+            <ProductChat productId={productId} author="商材管理課" departments={["商材管理課"]} channelDisplayNames={{ "商材管理課": "外注業者" }} />
           )}
         </div>
       </SheetContent>

@@ -2,6 +2,9 @@ import { useState, useCallback, useMemo } from "react";
 import type { ProjectRepository } from "@/new/api/project-repository";
 import type { Product, MachineMaster } from "@/new/api/types";
 import type { BannerEditState } from "@/features/product-management-dashboard/model/types";
+import { SEED_MACHINE_MASTERS } from "@/new/api/seed-data";
+
+export type ProjectMachinesSubTab = "pre-event" | "during-event" | "post-event";
 
 export type TabValue = "machineMaster" | "projectMachines";
 
@@ -69,7 +72,7 @@ function getDateAndDayOfWeek(eventDate: string): {
 }
 
 export function useProductManagementDashboard(repository: ProjectRepository) {
-  const [activeTab, setActiveTab] = useState<TabValue>("machineMaster");
+  const [activeTab, setActiveTab] = useState<TabValue>("projectMachines");
   const [newMasterName, setNewMasterName] = useState("");
   const [newMasterPachitownName, setNewMasterPachitownName] = useState("");
   const [bannerModalOpen, setBannerModalOpen] = useState(false);
@@ -78,6 +81,8 @@ export function useProductManagementDashboard(repository: ProjectRepository) {
   const [editingMachineNames, setEditingMachineNames] = useState<
     Record<number, string[]>
   >({});
+  const [projectMachinesSubTab, setProjectMachinesSubTab] = useState<ProjectMachinesSubTab>("pre-event");
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // ─── リフレッシュ（repository更新後にデータ再取得を強制する） ───
   const [refreshKey, setRefreshKey] = useState(0);
@@ -121,6 +126,19 @@ export function useProductManagementDashboard(repository: ProjectRepository) {
       };
     });
   }, [slotSelectProducts, repository]);
+
+  // ─── フェーズ別フィルタ ───
+  const preEventProducts = useMemo(() =>
+    slotSelectProducts.filter(p => p.executionStatus === "実施前")
+  , [slotSelectProducts]);
+
+  const duringEventProducts = useMemo(() =>
+    slotSelectProducts.filter(p => p.executionStatus === "実施中")
+  , [slotSelectProducts]);
+
+  const postEventProducts = useMemo(() =>
+    slotSelectProducts.filter(p => p.executionStatus === "終了")
+  , [slotSelectProducts]);
 
   const addMachineMaster = useCallback(() => {
     if (!newMasterName.trim()) return;
@@ -338,6 +356,70 @@ export function useProductManagementDashboard(repository: ProjectRepository) {
     [bannerEdit, repository, refresh]
   );
 
+  // ─── 対象機種入力フォーム送信（マネジメント部から移管） ───
+  const sendTargetMachineForm = useCallback(
+    (productId: number) => {
+      const product = allProducts.find((p) => p.id === productId);
+      if (!product) return;
+      const now = new Date().toISOString();
+      const shuffled = [...SEED_MACHINE_MASTERS].sort(() => Math.random() - 0.5);
+      const count = 2 + Math.floor(Math.random() * 2);
+      const picked = shuffled.slice(0, count);
+      const targetMachineNames = picked.map((m) => m.name);
+      const pachitownMachineNames = picked.map((m) => m.pachitownName);
+
+      repository.updateProduct(productId, {
+        targetMachineFormSent: true,
+        targetMachineFormSentDate: now.split("T")[0],
+        targetMachineNames,
+        pachitownMachineNames,
+        statusHistory: [
+          ...(product.statusHistory ?? []),
+          {
+            status: "対象機種入力フォーム送信",
+            timestamp: now,
+            changedBy: "商材管理課",
+            note: "顧客へ対象機種入力フォームを送信",
+          },
+        ],
+      });
+      setToastMessage("対象機種入力フォームを送信しました");
+      refresh();
+      setTimeout(() => setToastMessage(null), 3000);
+    },
+    [allProducts, repository, refresh]
+  );
+
+  // ─── パチタウン連携（実施中・中間レポート） ───
+  const linkInterimPachitown = useCallback(
+    (productId: number) => {
+      const linkedDate = new Date().toISOString().split("T")[0];
+      repository.updateProduct(productId, {
+        interimPachitownLinked: true,
+        interimPachitownLinkedDate: linkedDate,
+      });
+      setToastMessage("中間レポートをパチタウンに連携しました");
+      refresh();
+      setTimeout(() => setToastMessage(null), 3000);
+    },
+    [repository, refresh]
+  );
+
+  // ─── パチタウン連携（実施後・事後レポート） ───
+  const linkPostEventPachitown = useCallback(
+    (productId: number) => {
+      const linkedDate = new Date().toISOString().split("T")[0];
+      repository.updateProduct(productId, {
+        postEventPachitownLinked: true,
+        postEventPachitownLinkedDate: linkedDate,
+      });
+      setToastMessage("事後レポートをパチタウンに連携しました");
+      refresh();
+      setTimeout(() => setToastMessage(null), 3000);
+    },
+    [repository, refresh]
+  );
+
   return {
     activeTab,
     setActiveTab,
@@ -378,6 +460,16 @@ export function useProductManagementDashboard(repository: ProjectRepository) {
     handleEditMachineNameChange,
     handleSaveEditMachine,
     handleCancelEditMachine,
+    // フェーズ別
+    projectMachinesSubTab,
+    setProjectMachinesSubTab,
+    preEventProducts,
+    duringEventProducts,
+    postEventProducts,
+    sendTargetMachineForm,
+    linkInterimPachitown,
+    linkPostEventPachitown,
+    toastMessage,
   };
 }
 

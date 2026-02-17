@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { FileText, CheckCircle2, AlertCircle, Link2, ImageIcon, Edit2, Check, X, MessageCircle } from "lucide-react"
+import { FileText, CheckCircle2, AlertCircle, Link2, ImageIcon, Edit2, Check, X, MessageCircle, Mail } from "lucide-react"
 import { BannerPreviewView } from "@/features/product-management-dashboard/ui/components/BannerPreview.view"
 import type { BannerData } from "@/features/product-management-dashboard/model/types"
 
@@ -17,6 +17,7 @@ export type ProjectWithMachines = {
   pachitownLinkedDate?: string
   bannerGenerated?: boolean
   bannerData?: BannerData
+  targetMachineFormSent?: boolean
 }
 
 export type ProjectMachinesSectionViewProps = {
@@ -24,6 +25,7 @@ export type ProjectMachinesSectionViewProps = {
   onOpenBanner: (productId: number) => void
   onPachitownLink: (productId: number) => void
   onOpenChat: (productId: number) => void
+  onSendTargetMachineForm: (productId: number) => void
   editingProductId: number | null
   editingMachineIndex: number | null
   editingMachineName: string
@@ -38,6 +40,7 @@ export const ProjectMachinesSectionView = ({
   onOpenBanner,
   onPachitownLink,
   onOpenChat,
+  onSendTargetMachineForm,
   editingProductId,
   editingMachineIndex,
   editingMachineName,
@@ -223,6 +226,20 @@ export const ProjectMachinesSectionView = ({
                         )}
                       </div>
                       <div className="flex flex-col gap-2 shrink-0">
+                        {!p.targetMachineFormSent && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="gap-1.5"
+                            onClick={() => onSendTargetMachineForm(p.id)}
+                          >
+                            <Mail className="h-4 w-4" />
+                            フォーム送信
+                          </Button>
+                        )}
+                        {p.targetMachineFormSent && !registered && (
+                          <Badge className="bg-green-100 text-green-800 text-xs">フォーム送信済み</Badge>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"

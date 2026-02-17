@@ -16,6 +16,24 @@ export type ExecutionStatus = "実施前" | "実施中" | "終了"
 /** 外注業者進捗ステータス */
 export type ProductProgressStatus = "not_started" | "report_uploaded" | "pachitown_linked" | "post_event_done"
 
+/** スロセレ中間/事後レポート: 機種別データ */
+export type SlotMachineReportEntry = {
+  machineName: string
+  count?: string       // 台数
+  avgGames?: string    // 平均G数
+  avgDiff?: string     // 平均差枚
+}
+
+/** スロセレ中間/事後レポート */
+export type SlotReport = {
+  slot20Count?: string       // 20スロ台数
+  slot20TotalDiff?: string   // 20スロ総差枚
+  slot20AvgGames?: string    // 20スロ平均G数
+  slot20AvgDiff?: string     // 20スロ平均差枚
+  machineReports?: SlotMachineReportEntry[]
+  uploadedAt?: string
+}
+
 /** マネジメント部確認ステータス */
 export type ManagementConfirmationStatus = "unconfirmed" | "under-review" | "revision-requested" | "approved"
 
@@ -91,8 +109,10 @@ export type Product = {
   reportUploaded?: boolean
   reportUploadedAt?: string
   reportNote?: string
-  postEventTransactionResult?: string
-  postEventMachineData?: string
+  // 中間レポート（外注業者用・構造化）
+  interimReport?: SlotReport
+  // 事後レポート（外注業者用・構造化）
+  postEventReport?: SlotReport
   // スロセレ: 対象機種入力フォーム送信
   targetMachineFormSent?: boolean
   targetMachineFormSentDate?: string
@@ -101,6 +121,12 @@ export type Product = {
   pachitownMachineNames?: string[]
   pachitownLinked?: boolean
   pachitownLinkedDate?: string
+  // パチタウン連携（実施中・中間レポート）
+  interimPachitownLinked?: boolean
+  interimPachitownLinkedDate?: string
+  // パチタウン連携（実施後・事後レポート）
+  postEventPachitownLinked?: boolean
+  postEventPachitownLinkedDate?: string
   bannerGenerated?: boolean
   bannerData?: BannerData
   // 合同抽選会

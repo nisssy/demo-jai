@@ -48,7 +48,7 @@ export const ChatChannelView = ({ department, messages, onSendMessage, currentAu
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && e.shiftKey) {
       e.preventDefault()
       handleSend()
     }
@@ -91,23 +91,26 @@ export const ChatChannelView = ({ department, messages, onSendMessage, currentAu
       </div>
 
       {/* 入力エリア */}
-      <div className="border-t p-3 flex items-end gap-2">
-        <textarea
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={`${department}にメッセージを送信...`}
-          className="flex-1 resize-none border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[36px] max-h-[100px]"
-          rows={1}
-        />
-        <Button
-          size="sm"
-          onClick={handleSend}
-          disabled={!inputValue.trim()}
-          className="shrink-0"
-        >
-          <Send className="h-3.5 w-3.5" />
-        </Button>
+      <div className="border-t p-3">
+        <div className="flex items-end gap-2">
+          <textarea
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={`${department}にメッセージを送信...`}
+            className="flex-1 resize-none border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[36px] max-h-[100px]"
+            rows={1}
+          />
+          <Button
+            size="sm"
+            onClick={handleSend}
+            disabled={!inputValue.trim()}
+            className="shrink-0"
+          >
+            <Send className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+        <p className="text-[10px] text-slate-400 mt-1 ml-1">Shift + Enter で送信</p>
       </div>
     </div>
   )

@@ -12,6 +12,8 @@ export type ProductChatViewProps = {
   onActiveChannelChange: (channel: string) => void
   onSendMessage: (channel: string, content: string) => void
   currentAuthor?: string
+  /** チャンネル内部名 → 画面表示名のマッピング */
+  channelDisplayNames?: Record<string, string>
 }
 
 /** 部門ごとのアクセントカラー */
@@ -41,13 +43,15 @@ export const ProductChatView = ({
   onActiveChannelChange,
   onSendMessage,
   currentAuthor,
+  channelDisplayNames = {},
 }: ProductChatViewProps) => {
   if (departments.length === 0) {
     return null
   }
 
   const activeChannelData = channels.find((c) => c.department === activeChannel)
-  const accentBorder = DEPARTMENT_ACCENT[activeChannel] ?? "border-slate-200"
+  const activeDisplayName = channelDisplayNames[activeChannel] ?? activeChannel
+  const accentBorder = DEPARTMENT_ACCENT[activeDisplayName] ?? "border-slate-200"
 
   return (
     <Card className={`h-full flex flex-col ${accentBorder}`}>
@@ -62,10 +66,11 @@ export const ProductChatView = ({
         {departments.length > 1 ? (
           <div className="flex gap-1.5 mt-2">
             {departments.map((dept) => {
+              const displayName = channelDisplayNames[dept] ?? dept
               const isActive = dept === activeChannel
               const msgCount = channels.find((c) => c.department === dept)?.messages.length ?? 0
-              const activeClass = DEPARTMENT_TAB_ACTIVE[dept] ?? "bg-slate-100 text-slate-800 border-slate-300"
-              const inactiveClass = DEPARTMENT_TAB_INACTIVE[dept] ?? "text-slate-600 hover:bg-slate-50"
+              const activeClass = DEPARTMENT_TAB_ACTIVE[displayName] ?? "bg-slate-100 text-slate-800 border-slate-300"
+              const inactiveClass = DEPARTMENT_TAB_INACTIVE[displayName] ?? "text-slate-600 hover:bg-slate-50"
 
               return (
                 <button
@@ -73,7 +78,7 @@ export const ProductChatView = ({
                   onClick={() => onActiveChannelChange(dept)}
                   className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${isActive ? activeClass : `border-transparent ${inactiveClass}`}`}
                 >
-                  {dept}
+                  {displayName}
                   {msgCount > 0 && (
                     <Badge className="ml-1.5 text-[9px] px-1 py-0 bg-white/50">{msgCount}</Badge>
                   )}
@@ -83,9 +88,14 @@ export const ProductChatView = ({
           </div>
         ) : (
           <div className="mt-2">
-            <Badge className={`${DEPARTMENT_TAB_ACTIVE[departments[0]] ?? "bg-slate-100 text-slate-800"} text-xs px-2 py-0.5 border-0`}>
-              {departments[0]}
-            </Badge>
+            {(() => {
+              const displayName = channelDisplayNames[departments[0]] ?? departments[0]
+              return (
+                <Badge className={`${DEPARTMENT_TAB_ACTIVE[displayName] ?? "bg-slate-100 text-slate-800"} text-xs px-2 py-0.5 border-0`}>
+                  {displayName}
+                </Badge>
+              )
+            })()}
           </div>
         )}
       </CardHeader>
@@ -93,7 +103,7 @@ export const ProductChatView = ({
       <CardContent className="flex-1 min-h-0 p-0">
         {activeChannelData && (
           <ChatChannelView
-            department={activeChannelData.department}
+            department={channelDisplayNames[activeChannelData.department] ?? activeChannelData.department}
             messages={activeChannelData.messages}
             onSendMessage={(content) => onSendMessage(activeChannelData.department, content)}
             currentAuthor={currentAuthor}
