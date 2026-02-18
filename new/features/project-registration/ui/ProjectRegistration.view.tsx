@@ -5,9 +5,11 @@ import type { Company, Hall, ProductComment, ManagementConfirmationStatus } from
 import type { RegistrationMode, ProjectFormState, ProductFormState, FormErrors } from "@/new/features/project-registration/model/types"
 import type { UseLotteryFormReturn } from "@/new/features/project-registration/hooks/useLotteryForm"
 import type { UseCastCalendarReturn } from "@/new/features/project-registration/hooks/useCastCalendar"
+import type { ProductContentProps } from "./components/ProductContent"
 import { BasicInfoSection } from "./components/BasicInfoSection"
 import { ProductSection } from "./components/ProductSection"
 import { ProductContent } from "./components/ProductContent"
+import { ThreeSetSection } from "./components/ThreeSetSection"
 import { ActionButtons } from "./components/ActionButtons"
 import { ConfirmationStatusBar } from "./components/ConfirmationStatusBar"
 import { CastCalendarModal } from "./components/CastCalendarModal"
@@ -52,6 +54,9 @@ export type ProjectRegistrationViewProps = {
   handleAddProduct: () => void
   handleRemoveProduct: (index: number) => void
   handleToggleProductOpen: (index: number) => void
+  handleThreeSetModeChange: (index: number, isThreeSet: boolean) => void
+  threeSetActiveTabs: Record<number, string>
+  handleThreeSetTabChange: (groupIndex: number, tab: string) => void
   calculateDuration: (startTime: string, endTime: string) => string
   // 請求予定金額
   hallAddress: string
@@ -100,6 +105,9 @@ export const ProjectRegistrationView = ({
   handleAddProduct,
   handleRemoveProduct,
   handleToggleProductOpen,
+  handleThreeSetModeChange,
+  threeSetActiveTabs,
+  handleThreeSetTabChange,
   calculateDuration,
   hallAddress,
   handleCastCountChange,
@@ -115,6 +123,125 @@ export const ProjectRegistrationView = ({
 }: ProjectRegistrationViewProps) => {
   const isProductMode = mode === "product-add" || mode === "product-edit"
   const isProjectEditMode = mode === "project-edit"
+
+  const buildContentProps = (index: number, product: ProductFormState): ProductContentProps => ({
+    index,
+    product,
+    errors,
+    eventTypeSearchOpen: eventTypeSearchOpen[index] ?? false,
+    onEventTypeSearchOpenChange: (open: boolean) => handleEventTypeSearchOpenChange(index, open),
+    eventTypes: getEventTypesForProduct(product.category),
+    onSelectEventType: (eventType: string) => handleSelectEventType(index, eventType),
+    onCategoryChange: (category: string) => handleCategoryChange(index, category),
+    onFieldChange: (field: keyof ProductFormState, value: string) => updateProduct(index, field, value),
+    calculateDuration,
+    hallAddress,
+    onCastCountChange: (role: "companion" | "director", count: string) => handleCastCountChange(index, role, count),
+    onToggleCast: (role: "companion" | "director", name: string) => handleToggleCast(index, role, name),
+    onToggleNomination: (role: "companion" | "director", name: string) => handleToggleNomination(index, role, name),
+    onCastHoldTypeChange: (role: "companion" | "director", name: string, ht: "tentative" | "confirmed") => handleCastHoldTypeChange(index, role, name, ht),
+    checkAvailability: castCalendar.checkAvailability,
+    onOpenCalendar: (name: string, status: Parameters<typeof castCalendar.openModal>[1], type: "companion" | "director") => castCalendar.openModal(name, status, type),
+    onStatusChange: (status: Parameters<typeof updateProduct>[2] & string) => updateProduct(index, "proposalStatus", status),
+    onReadingCertaintyChange: (value: "A" | "B" | "C" | "") => updateProduct(index, "readingCertainty", value),
+    onExecutionStatusChange: (status: string) => updateProduct(index, "executionStatus", status),
+    onConfirmOrder: () => {
+      updateProduct(index, "proposalStatus", "order-received")
+      updateProduct(index, "readingCertainty", "")
+    },
+    isThreeSetMode: product.threeSetPlan,
+    onThreeSetModeChange: (isThreeSet: boolean) => handleThreeSetModeChange(index, isThreeSet),
+    canSwitchToThreeSet: (5 - form.products.length) >= 2,
+    lotteryForm: product.category === "ポイント" ? lotteryForm : undefined,
+  })
+
+  const renderProducts = () => {
+    if (isProjectEditMode) return null
+
+    const elements: React.ReactElement[] = []
+    let i = 0
+
+    while (i < form.products.length) {
+      const idx = i // クロージャ用にループ変数を固定
+      const product = form.products[idx]
+
+      // 3点セットグループ検出: 3つ連続で threeSetPlan が true
+      if (
+        product.threeSetPlan &&
+        form.products[idx + 1]?.threeSetPlan &&
+        form.products[idx + 2]?.threeSetPlan
+      ) {
+        const cp0 = buildContentProps(idx, form.products[idx])
+        const cp1 = buildContentProps(idx + 1, form.products[idx + 1])
+        const cp2 = buildContentProps(idx + 2, form.products[idx + 2])
+
+        if (mode === "product-edit") {
+          // product-edit モードでは3つそれぞれを表示（通常は発生しないが安全策）
+          for (let j = 0; j < 3; j++) {
+            const cp = buildContentProps(idx + j, form.products[idx + j])
+            elements.push(
+              <Card key={idx + j}>
+                <CardContent className="pt-6">
+                  <ConfirmationStatusBar
+                    status={managementConfirmationStatus}
+                    onRequestConfirmation={handleRequestConfirmation}
+                  />
+                  <ProductContent {...cp} />
+                </CardContent>
+              </Card>
+            )
+          }
+        } else {
+          elements.push(
+            <ThreeSetSection
+              key={idx}
+              contentProps={[cp0, cp1, cp2]}
+              isOpen={product.isOpen}
+              canDelete={!isProductMode && form.products.length > 3}
+              activeTab={threeSetActiveTabs[idx] ?? "event-0"}
+              onTabChange={(tab) => handleThreeSetTabChange(idx, tab)}
+              onToggleOpen={() => handleToggleProductOpen(idx)}
+              onRemove={() => handleRemoveProduct(idx)}
+              onThreeSetModeChange={(isThreeSet) => handleThreeSetModeChange(idx, isThreeSet)}
+              hallAddress={hallAddress}
+            />
+          )
+        }
+        i += 3
+        continue
+      }
+
+      // 通常の商材
+      const contentProps = buildContentProps(idx, product)
+
+      if (mode === "product-edit") {
+        elements.push(
+          <Card key={idx}>
+            <CardContent className="pt-6">
+              <ConfirmationStatusBar
+                status={managementConfirmationStatus}
+                onRequestConfirmation={handleRequestConfirmation}
+              />
+              <ProductContent {...contentProps} />
+            </CardContent>
+          </Card>
+        )
+      } else {
+        elements.push(
+          <ProductSection
+            key={idx}
+            {...contentProps}
+            canDelete={!isProductMode && form.products.length > 1}
+            onToggleOpen={() => handleToggleProductOpen(idx)}
+            onRemove={() => handleRemoveProduct(idx)}
+          />
+        )
+      }
+      i += 1
+    }
+
+    return elements
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -175,59 +302,7 @@ export const ProjectRegistrationView = ({
       )}
 
       {/* 商材情報 */}
-      {!isProjectEditMode && form.products.map((product, index) => {
-        const contentProps = {
-          index,
-          product,
-          errors,
-          eventTypeSearchOpen: eventTypeSearchOpen[index] ?? false,
-          onEventTypeSearchOpenChange: (open: boolean) => handleEventTypeSearchOpenChange(index, open),
-          eventTypes: getEventTypesForProduct(product.category),
-          onSelectEventType: (eventType: string) => handleSelectEventType(index, eventType),
-          onCategoryChange: (category: string) => handleCategoryChange(index, category),
-          onFieldChange: (field: keyof ProductFormState, value: string) => updateProduct(index, field, value),
-          calculateDuration,
-          hallAddress,
-          onCastCountChange: (role: "companion" | "director", count: string) => handleCastCountChange(index, role, count),
-          onToggleCast: (role: "companion" | "director", name: string) => handleToggleCast(index, role, name),
-          onToggleNomination: (role: "companion" | "director", name: string) => handleToggleNomination(index, role, name),
-          onCastHoldTypeChange: (role: "companion" | "director", name: string, ht: "tentative" | "confirmed") => handleCastHoldTypeChange(index, role, name, ht),
-          checkAvailability: castCalendar.checkAvailability,
-          onOpenCalendar: (name: string, status: Parameters<typeof castCalendar.openModal>[1], type: "companion" | "director") => castCalendar.openModal(name, status, type),
-          onStatusChange: (status: Parameters<typeof updateProduct>[2] & string) => updateProduct(index, "proposalStatus", status),
-          onReadingCertaintyChange: (value: "A" | "B" | "C" | "") => updateProduct(index, "readingCertainty", value),
-          onExecutionStatusChange: (status: string) => updateProduct(index, "executionStatus", status),
-          onConfirmOrder: () => {
-            updateProduct(index, "proposalStatus", "order-received")
-            updateProduct(index, "readingCertainty", "")
-          },
-          lotteryForm: product.category === "ポイント" ? lotteryForm : undefined,
-        }
-
-        if (mode === "product-edit") {
-          return (
-            <Card key={index}>
-              <CardContent className="pt-6">
-                <ConfirmationStatusBar
-                  status={managementConfirmationStatus}
-                  onRequestConfirmation={handleRequestConfirmation}
-                />
-                <ProductContent {...contentProps} />
-              </CardContent>
-            </Card>
-          )
-        }
-
-        return (
-          <ProductSection
-            key={index}
-            {...contentProps}
-            canDelete={!isProductMode && form.products.length > 1}
-            onToggleOpen={() => handleToggleProductOpen(index)}
-            onRemove={() => handleRemoveProduct(index)}
-          />
-        )
-      })}
+      {renderProducts()}
 
       {/* アクションボタン */}
       <ActionButtons

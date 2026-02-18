@@ -8,6 +8,7 @@ import {
   getAverageDirectorRate,
   getEventBaseFee,
   computeTransportFee,
+  THREE_SET_BASE_FEE_PER_EVENT,
 } from "@/new/api/cast-data"
 import type { ProductFormState } from "@/new/features/project-registration/model/types"
 
@@ -53,7 +54,9 @@ export const BillingSection = ({ product, hallAddress, onFieldChange }: BillingS
 
   const transportFee = computeTransportFee(product.selectedCompanions, hallAddress)
 
-  const eventBaseFee = getEventBaseFee(product.eventType)
+  const isThreeSet = product.threeSetPlan && product.eventType === "スロセレ"
+  const normalBaseFee = getEventBaseFee(product.eventType)
+  const eventBaseFee = isThreeSet ? THREE_SET_BASE_FEE_PER_EVENT : normalBaseFee
   const eventDiscount = parseInt(product.eventBaseFeeDiscount, 10) || 0
   const eventFeeAfterDiscount = Math.round(Math.max(0, eventBaseFee - eventDiscount))
 
@@ -184,12 +187,26 @@ export const BillingSection = ({ product, hallAddress, onFieldChange }: BillingS
       </div>
 
       {/* イベント基本料金 */}
-      <div className="bg-slate-50/50 border border-slate-200/50 rounded-lg p-4">
+      <div className={`border rounded-lg p-4 ${isThreeSet ? "bg-amber-50/50 border-amber-200" : "bg-slate-50/50 border-slate-200/50"}`}>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <Label className="text-base font-semibold text-slate-900">イベント基本料金</Label>
+            <div>
+              <Label className="text-base font-semibold text-slate-900">イベント基本料金</Label>
+              {isThreeSet && (
+                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                  3点セット割引適用
+                </span>
+              )}
+            </div>
             <div className="text-right">
-              <div className="text-xl font-bold text-slate-900">¥{eventBaseFee.toLocaleString()}</div>
+              {isThreeSet ? (
+                <>
+                  <div className="text-xs text-slate-400 line-through">¥{normalBaseFee.toLocaleString()}</div>
+                  <div className="text-xl font-bold text-amber-700">¥{eventBaseFee.toLocaleString()}</div>
+                </>
+              ) : (
+                <div className="text-xl font-bold text-slate-900">¥{eventBaseFee.toLocaleString()}</div>
+              )}
               <div className="text-xs text-slate-500 mt-1">（{product.eventType}）</div>
             </div>
           </div>

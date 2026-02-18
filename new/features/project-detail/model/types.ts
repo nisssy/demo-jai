@@ -28,6 +28,8 @@ export type ProductSummary = {
   eventProductName?: string
   eventDate?: string
   estimatedBillingAmount?: number
+  // 3点セット
+  threeSetPlan?: boolean
   // ステータス
   proposalStatus?: string
   proposalStatusRaw?: ProposalStatus

@@ -33,6 +33,7 @@ export type ProductViewModel = {
   dmStatus: DesignRequest["status"] | null
   winnerListStatus: DesignRequest["status"] | null
   prizeOrdered: boolean
+  threeSetPlan: boolean
 }
 
 export type ProjectGroupViewModel = {
@@ -127,6 +128,7 @@ function toProductViewModel(product: Product, designStatuses: { poster: DesignRe
     winnerListStatus: designStatuses.winnerList,
     readingCertainty: product.readingCertainty,
     prizeOrdered: !!product.prizeOrderedAt,
+    threeSetPlan: !!product.threeSetPlan,
   }
 }
 

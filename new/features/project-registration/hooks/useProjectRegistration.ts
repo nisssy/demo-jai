@@ -8,7 +8,24 @@ import { getCategoryByEventType, getEventTypesByCategory } from "@/new/api/displ
 import type { RegistrationMode, ProjectFormState, ProductFormState, FormErrors } from "@/new/features/project-registration/model/types"
 import type { LotteryFormState } from "@/new/features/project-registration/model/lottery-types"
 import { EMPTY_PRODUCT } from "@/new/features/project-registration/model/types"
-import { computeEstimatedBilling } from "@/new/api/cast-data"
+import { computeEstimatedBilling, THREE_SET_BASE_FEE_PER_EVENT } from "@/new/api/cast-data"
+
+/** 日付文字列から年月を "YYYY-MM" 形式で取得 */
+function getYearMonth(dateStr: string): string | null {
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return null
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+}
+
+/** 日付が属する週の月曜日を "YYYY-MM-DD" 形式で取得（月曜起点） */
+function getMondayOfWeek(dateStr: string): string | null {
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return null
+  const day = d.getDay() // 0=日, 1=月, ..., 6=土
+  const diff = day === 0 ? -6 : 1 - day // 日曜なら-6、それ以外は1-day
+  d.setDate(d.getDate() + diff)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+}
 
 export type UseProjectRegistrationArgs = {
   repository: ProjectRepository
@@ -53,6 +70,9 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
 
   // ─── イベント区分検索UI (per product) ───
   const [eventTypeSearchOpen, setEventTypeSearchOpen] = useState<Record<number, boolean>>({})
+
+  // ─── 3点セットタブ (groupStartIndex → "event-0"|"event-1"|"event-2") ───
+  const [threeSetActiveTabs, setThreeSetActiveTabs] = useState<Record<number, string>>({})
 
   // ─── リフレッシュ（repository更新後にuseMemo再計算を強制する） ───
   const [refreshKey, setRefreshKey] = useState(0)
@@ -140,6 +160,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
         performanceFeeDiscount: (product as Record<string, unknown>).performanceFeeDiscount as string ?? "",
         accommodationFeePerPerson: (product as Record<string, unknown>).accommodationFeePerPerson as string ?? "",
         eventBaseFeeDiscount: (product as Record<string, unknown>).eventBaseFeeDiscount as string ?? "",
+        threeSetPlan: product.threeSetPlan ?? false,
         // ステータス
         proposalStatus: product.proposalStatus ?? "before-proposal",
         readingCertainty: product.readingCertainty ?? "",
@@ -305,9 +326,37 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
     })
   }, [])
 
+  const handleThreeSetModeChange = useCallback((index: number, isThreeSet: boolean) => {
+    setForm((prev) => {
+      const products = [...prev.products]
+      if (isThreeSet) {
+        // 3点セットに切り替え: 現在のproduct + 2つ追加
+        const remaining = 5 - products.length
+        if (remaining < 2) return prev
+        products[index] = { ...products[index], threeSetPlan: true, category: "イベント", eventType: "スロセレ" }
+        const newProduct1: ProductFormState = { ...EMPTY_PRODUCT, category: "イベント", eventType: "スロセレ", threeSetPlan: true }
+        const newProduct2: ProductFormState = { ...EMPTY_PRODUCT, category: "イベント", eventType: "スロセレ", threeSetPlan: true }
+        products.splice(index + 1, 0, newProduct1, newProduct2)
+      } else {
+        // 通常に切り替え: 後ろの2つのthreeSetPlan productを削除
+        products[index] = { ...products[index], threeSetPlan: false }
+        // index+1, index+2 の threeSetPlan products を削除（逆順で削除）
+        if (products[index + 2]?.threeSetPlan) products.splice(index + 2, 1)
+        if (products[index + 1]?.threeSetPlan) products.splice(index + 1, 1)
+      }
+      return { ...prev, products }
+    })
+  }, [])
+
   const handleRemoveProduct = useCallback((index: number) => {
     setForm((prev) => {
       if (prev.products.length <= 1) return prev
+      const p = prev.products[index]
+      // 3点セットグループの場合は3つまとめて削除
+      if (p.threeSetPlan && prev.products[index + 1]?.threeSetPlan && prev.products[index + 2]?.threeSetPlan) {
+        const products = prev.products.filter((_, i) => i < index || i > index + 2)
+        return { ...prev, products: products.length > 0 ? products : [{ ...EMPTY_PRODUCT }] }
+      }
       const products = prev.products.filter((_, i) => i !== index)
       return { ...prev, products }
     })
@@ -449,6 +498,11 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
     return mins > 0 ? `${hours}時間${String(mins).padStart(2, "0")}分` : `${hours}時間`
   }, [])
 
+  // ─── 3点セットタブ切替 ───
+  const handleThreeSetTabChange = useCallback((groupIndex: number, tab: string) => {
+    setThreeSetActiveTabs((prev) => ({ ...prev, [groupIndex]: tab }))
+  }, [])
+
   // ─── バリデーション ───
   const validate = useCallback((): boolean => {
     const newErrors: FormErrors = {}
@@ -483,8 +537,117 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
       }
     }
 
+    // ─── 3点セット日付バリデーション ───
+    {
+      let i = 0
+      while (i < form.products.length) {
+        const p = form.products[i]
+        if (
+          p.threeSetPlan &&
+          form.products[i + 1]?.threeSetPlan &&
+          form.products[i + 2]?.threeSetPlan
+        ) {
+          const dates = [form.products[i], form.products[i + 1], form.products[i + 2]]
+            .map((pr) => pr.eventDate)
+          const filledDates = dates.filter((d) => d.trim())
+
+          if (filledDates.length >= 2) {
+            // 同月チェック
+            const months = filledDates.map((d) => getYearMonth(d)).filter(Boolean)
+            const uniqueMonths = new Set(months)
+            if (uniqueMonths.size > 1) {
+              for (let j = 0; j < 3; j++) {
+                if (dates[j].trim()) {
+                  newErrors[`product_${i + j}_eventDate`] = "3点セットの実施日は同じ月にしてください"
+                }
+              }
+            }
+
+            // 同週重複チェック（月曜起点）
+            const weekMap = new Map<string, number[]>()
+            for (let j = 0; j < 3; j++) {
+              if (!dates[j].trim()) continue
+              const monday = getMondayOfWeek(dates[j])
+              if (!monday) continue
+              const existing = weekMap.get(monday) ?? []
+              existing.push(i + j)
+              weekMap.set(monday, existing)
+            }
+            for (const [, indices] of weekMap) {
+              if (indices.length > 1) {
+                for (const idx of indices) {
+                  if (!newErrors[`product_${idx}_eventDate`]) {
+                    newErrors[`product_${idx}_eventDate`] = "3点セットは同じ週に複数設定できません（月曜起点）"
+                  }
+                }
+              }
+            }
+          }
+
+          i += 3
+          continue
+        }
+        i += 1
+      }
+    }
+
     setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    const hasErrors = Object.keys(newErrors).length > 0
+
+    if (hasErrors) {
+      // エラーのある商材インデックスを特定
+      const errorProductIndices = new Set<number>()
+      for (const key of Object.keys(newErrors)) {
+        const match = key.match(/^product_(\d+)_/)
+        if (match) errorProductIndices.add(Number(match[1]))
+      }
+
+      // 折りたたまれたセクションを展開 & 3点セットタブを切替
+      if (errorProductIndices.size > 0) {
+        setForm((prev) => {
+          const products = prev.products.map((p, idx) => {
+            if (errorProductIndices.has(idx) && !p.isOpen) {
+              return { ...p, isOpen: true }
+            }
+            return p
+          })
+          return { ...prev, products }
+        })
+
+        // 3点セットグループのタブ切替
+        const newTabs: Record<number, string> = {}
+        let gi = 0
+        while (gi < form.products.length) {
+          if (
+            form.products[gi]?.threeSetPlan &&
+            form.products[gi + 1]?.threeSetPlan &&
+            form.products[gi + 2]?.threeSetPlan
+          ) {
+            // グループ内で最初にエラーがあるタブを選択
+            for (let j = 0; j < 3; j++) {
+              if (errorProductIndices.has(gi + j)) {
+                newTabs[gi] = `event-${j}`
+                break
+              }
+            }
+            gi += 3
+          } else {
+            gi += 1
+          }
+        }
+        if (Object.keys(newTabs).length > 0) {
+          setThreeSetActiveTabs((prev) => ({ ...prev, ...newTabs }))
+        }
+      }
+
+      // DOM更新後にスクロール
+      setTimeout(() => {
+        const firstError = document.querySelector(".border-red-500")
+        firstError?.scrollIntoView({ behavior: "smooth", block: "center" })
+      }, 150)
+    }
+
+    return !hasErrors
   }, [form, mode])
 
   // ─── 送信 ───
@@ -595,6 +758,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
         eventBaseFeeDiscount: p.eventBaseFeeDiscount,
         eventType: p.eventType,
         hallAddress,
+        eventBaseFeeOverride: p.threeSetPlan && p.eventType === "スロセレ" ? THREE_SET_BASE_FEE_PER_EVENT : undefined,
       })
     }
 
@@ -653,6 +817,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
             directorSelected.map(name => [name, p.directorHoldTypes[name] === "confirmed" ? "confirmed_requesting" as const : "tentative_requesting" as const])
           ),
           mcBookingStatus: {},
+          threeSetPlan: p.threeSetPlan || undefined,
           chatMessages: castMessages.length > 0 ? castMessages : undefined,
           ...buildLotteryFields(p),
         })
@@ -723,6 +888,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
                 return [name, existing?.directorBookingStatus[name] ?? fallback]
               })
             ),
+            threeSetPlan: p.threeSetPlan || undefined,
             ...(castMessages.length > 0 ? { chatMessages: [...(existing?.chatMessages ?? []), ...castMessages] } : {}),
             ...buildLotteryFields(p),
           })
@@ -770,6 +936,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
               directorSelected.map(name => [name, p.directorHoldTypes[name] === "confirmed" ? "confirmed_requesting" as const : "tentative_requesting" as const])
             ),
             mcBookingStatus: {},
+            threeSetPlan: p.threeSetPlan || undefined,
             chatMessages: castMessages.length > 0 ? castMessages : undefined,
             ...buildLotteryFields(p),
           })
@@ -819,6 +986,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
               return [name, existing?.directorBookingStatus[name] ?? fallback]
             })
           ),
+          threeSetPlan: p.threeSetPlan || undefined,
           ...(castMessages.length > 0 ? { chatMessages: [...(existing?.chatMessages ?? []), ...castMessages] } : {}),
           ...buildLotteryFields(p),
         })
@@ -896,6 +1064,9 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
     updateProduct,
     handleProjectNameChange,
     handleAddProduct,
+    handleThreeSetModeChange,
+    threeSetActiveTabs,
+    handleThreeSetTabChange,
     handleRemoveProduct,
     handleToggleProductOpen,
     calculateDuration,
@@ -906,8 +1077,6 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
     handleToggleCast,
     handleToggleNomination,
     handleCastHoldTypeChange,
-    // ステータス
-    updateProduct,
     // マネジメント部確認
     managementConfirmationStatus,
     handleRequestConfirmation,

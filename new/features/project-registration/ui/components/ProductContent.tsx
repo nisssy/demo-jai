@@ -36,6 +36,11 @@ export type ProductContentProps = {
   onReadingCertaintyChange: (value: "A" | "B" | "C" | "") => void
   onExecutionStatusChange: (status: ExecutionStatus) => void
   onConfirmOrder: () => void
+  // 3点セット
+  hideBasicHeader?: boolean
+  isThreeSetMode?: boolean
+  onThreeSetModeChange?: (isThreeSet: boolean) => void
+  canSwitchToThreeSet?: boolean
   // 合同抽選会
   lotteryForm?: UseLotteryFormReturn
 }
@@ -62,6 +67,10 @@ export const ProductContent = ({
   onReadingCertaintyChange,
   onExecutionStatusChange,
   onConfirmOrder,
+  hideBasicHeader,
+  isThreeSetMode,
+  onThreeSetModeChange,
+  canSwitchToThreeSet,
   lotteryForm,
 }: ProductContentProps) => {
   const isLottery = product.category === "ポイント" && !!product.eventType.trim()
@@ -79,6 +88,10 @@ export const ProductContent = ({
       onCategoryChange={onCategoryChange}
       onFieldChange={onFieldChange}
       calculateDuration={calculateDuration}
+      hideHeader={hideBasicHeader}
+      isThreeSetMode={isThreeSetMode}
+      onThreeSetModeChange={onThreeSetModeChange}
+      canSwitchToThreeSet={canSwitchToThreeSet}
     />
   )
 

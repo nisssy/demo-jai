@@ -36,6 +36,9 @@ export const ProductSummaryCard = ({ product, salesPersonName, onEdit, onUpdateC
             <div className="flex items-center gap-2">
               <Badge className="bg-slate-700 text-white text-xs">{product.category}</Badge>
               <Badge variant="outline" className="text-xs">{product.eventType}</Badge>
+              {product.threeSetPlan && (
+                <Badge className="bg-amber-100 text-amber-800 text-xs">3点セット</Badge>
+              )}
             </div>
             <h4 className="font-medium text-slate-900">
               {product.eventProductName || "商材名未設定"}

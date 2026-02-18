@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Check, ChevronsUpDown, AlertTriangle } from "lucide-react"
 import type { ProductFormState, FormErrors } from "@/new/features/project-registration/model/types"
 
@@ -21,6 +22,11 @@ type ProductBasicFieldsProps = {
   onFieldChange: (field: keyof ProductFormState, value: string) => void
   // 時間計算
   calculateDuration: (startTime: string, endTime: string) => string
+  // 3点セット
+  hideHeader?: boolean
+  isThreeSetMode?: boolean
+  onThreeSetModeChange?: (isThreeSet: boolean) => void
+  canSwitchToThreeSet?: boolean
 }
 
 export const ProductBasicFields = ({
@@ -34,6 +40,10 @@ export const ProductBasicFields = ({
   onCategoryChange,
   onFieldChange,
   calculateDuration,
+  hideHeader,
+  isThreeSetMode,
+  onThreeSetModeChange,
+  canSwitchToThreeSet,
 }: ProductBasicFieldsProps) => {
   const isLottery = product.category === "ポイント"
   const isSloCele = product.eventType === "スロセレ"
@@ -42,77 +52,112 @@ export const ProductBasicFields = ({
 
   return (
     <div className="space-y-4">
-      {/* 基本情報 */}
-      <div className="border-b border-slate-200 pb-4">
-        <h4 className="text-sm font-semibold text-slate-600 mb-3">基本情報</h4>
-        <div className="grid grid-cols-2 gap-4">
-          {/* カテゴリ */}
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold">カテゴリ</Label>
-            <Select
-              value={product.category || "placeholder"}
-              onValueChange={(v) => {
-                if (v === "placeholder") return
-                onCategoryChange(v)
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="カテゴリを選択" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="placeholder" disabled>カテゴリを選択</SelectItem>
-                <SelectItem value="イベント">イベント</SelectItem>
-                <SelectItem value="オプション">オプション</SelectItem>
-                <SelectItem value="ポイント">ポイント</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* イベント区分 */}
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold">イベント区分</Label>
-            <Popover open={eventTypeSearchOpen} onOpenChange={onEventTypeSearchOpenChange}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={eventTypeSearchOpen}
-                  className={`w-full justify-between ${errors[`product_${index}_eventType`] ? "border-red-500" : ""}`}
+      {/* ヘッダー（カテゴリ/イベント区分/登録タイプ） */}
+      {!hideHeader && (
+        <>
+          <div className="border-b border-slate-200 pb-4">
+            <h4 className="text-sm font-semibold text-slate-600 mb-3">基本情報</h4>
+            <div className="grid grid-cols-2 gap-4">
+              {/* カテゴリ */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">カテゴリ</Label>
+                <Select
+                  value={product.category || "placeholder"}
+                  onValueChange={(v) => {
+                    if (v === "placeholder") return
+                    onCategoryChange(v)
+                  }}
                 >
-                  {product.eventType || "イベント区分を選択..."}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[300px] p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="イベント区分を検索..." />
-                  <CommandList>
-                    <CommandEmpty>イベント区分が見つかりませんでした</CommandEmpty>
-                    <CommandGroup>
-                      {eventTypes.map((et) => (
-                        <CommandItem key={et} value={et} onSelect={() => onSelectEventType(et)}>
-                          <Check className={`mr-2 h-4 w-4 ${product.eventType === et ? "opacity-100" : "opacity-0"}`} />
-                          {et}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-            {errors[`product_${index}_eventType`] && (
-              <p className="text-xs text-red-500">{errors[`product_${index}_eventType`]}</p>
-            )}
-          </div>
-        </div>
-      </div>
+                  <SelectTrigger>
+                    <SelectValue placeholder="カテゴリを選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="placeholder" disabled>カテゴリを選択</SelectItem>
+                    <SelectItem value="イベント">イベント</SelectItem>
+                    <SelectItem value="オプション">オプション</SelectItem>
+                    <SelectItem value="ポイント">ポイント</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-      {/* イベント区分未選択時のメッセージ */}
-      {!hasEventType && (
-        <div className="flex items-center gap-2 text-sm text-slate-500 py-4">
-          <AlertTriangle className="h-4 w-4" />
-          まず「イベント区分」を選択してください...
-        </div>
+              {/* イベント区分 */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">イベント区分</Label>
+                <Popover open={eventTypeSearchOpen} onOpenChange={onEventTypeSearchOpenChange}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={eventTypeSearchOpen}
+                      className={`w-full justify-between ${errors[`product_${index}_eventType`] ? "border-red-500" : ""}`}
+                    >
+                      {product.eventType || "イベント区分を選択..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[300px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="イベント区分を検索..." />
+                      <CommandList>
+                        <CommandEmpty>イベント区分が見つかりませんでした</CommandEmpty>
+                        <CommandGroup>
+                          {eventTypes.map((et) => (
+                            <CommandItem key={et} value={et} onSelect={() => onSelectEventType(et)}>
+                              <Check className={`mr-2 h-4 w-4 ${product.eventType === et ? "opacity-100" : "opacity-0"}`} />
+                              {et}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {errors[`product_${index}_eventType`] && (
+                  <p className="text-xs text-red-500">{errors[`product_${index}_eventType`]}</p>
+                )}
+              </div>
+
+              {/* 3点セット登録タイプ（スロセレのみ） */}
+              {isSloCele && onThreeSetModeChange && (
+                <div className="col-span-2 space-y-2">
+                  <Label className="text-sm font-semibold">登録タイプ</Label>
+                  <RadioGroup
+                    value={isThreeSetMode ? "three-set" : "normal"}
+                    onValueChange={(v) => onThreeSetModeChange(v === "three-set")}
+                    className="flex items-center gap-6"
+                    disabled={!canSwitchToThreeSet && !isThreeSetMode}
+                  >
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="normal" id={`reg-type-normal-${index}`} />
+                      <Label htmlFor={`reg-type-normal-${index}`} className="text-sm cursor-pointer">通常登録</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem
+                        value="three-set"
+                        id={`reg-type-three-set-${index}`}
+                        disabled={!canSwitchToThreeSet && !isThreeSetMode}
+                      />
+                      <Label htmlFor={`reg-type-three-set-${index}`} className="text-sm cursor-pointer">
+                        3点セット登録
+                      </Label>
+                      {!canSwitchToThreeSet && !isThreeSetMode && (
+                        <span className="text-xs text-slate-400">（商材枠が不足）</span>
+                      )}
+                    </div>
+                  </RadioGroup>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* イベント区分未選択時のメッセージ */}
+          {!hasEventType && (
+            <div className="flex items-center gap-2 text-sm text-slate-500 py-4">
+              <AlertTriangle className="h-4 w-4" />
+              まず「イベント区分」を選択してください...
+            </div>
+          )}
+        </>
       )}
 
       {/* イベント系の詳細フィールド */}

@@ -129,6 +129,8 @@ export type Product = {
   postEventPachitownLinkedDate?: string
   bannerGenerated?: boolean
   bannerData?: BannerData
+  // 3点セットプラン（スロセレ: 同月3回・週1回の割引プラン）
+  threeSetPlan?: boolean
   // 合同抽選会
   dmMailing?: "yes" | "no"
   hallNames?: string[]

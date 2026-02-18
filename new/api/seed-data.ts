@@ -7,7 +7,7 @@
 import type { Project, Product, DesignRequest, Company, Hall, Employee, CastSchedule, MachineMaster } from "./types"
 
 /** シードデータのスキーマバージョン。型定義やシードデータを変更したらインクリメントする */
-export const SEED_VERSION = 23
+export const SEED_VERSION = 24
 
 // ─── Projects ───
 
@@ -449,6 +449,65 @@ export const SEED_PRODUCTS: Product[] = [
     targetMachineFormSent: true,
     targetMachineNames: ["ジャグラー", "マイジャグラーV"],
     pachitownMachineNames: ["Sマイジャグラー5", "SマイジャグラーV"],
+    threeSetPlan: true,
+  },
+  // Product 10: スロセレ 3点セット 3月第1週（PJ-005）
+  {
+    id: 10,
+    projectId: 5,
+    projectNumber: "PJ-005",
+    category: "イベント",
+    eventType: "スロセレ",
+    eventProductName: "スロセレ 3月第1週",
+    eventDate: "2026/03/04",
+    estimatedBillingAmount: 380000,
+    proposalStatus: "order-received",
+    managementConfirmationStatus: "approved",
+    executionStatus: "実施前",
+    companionCount: "1",
+    directorCount: "0",
+    mcCount: "0",
+    selectedCompanions: ["鈴木 さくら"],
+    selectedDirectors: [],
+    selectedMcs: [],
+    companionBookingStatus: { "鈴木 さくら": "confirmed_completed" },
+    directorBookingStatus: {},
+    mcBookingStatus: {},
+    startTime: "11:00",
+    endTime: "17:00",
+    reportRequired: "要",
+    targetMachineFormSent: true,
+    targetMachineNames: ["スマスロ北斗の拳", "エヴァンゲリオン"],
+    threeSetPlan: true,
+  },
+  // Product 11: スロセレ 3点セット 3月第2週（PJ-005）
+  {
+    id: 11,
+    projectId: 5,
+    projectNumber: "PJ-005",
+    category: "イベント",
+    eventType: "スロセレ",
+    eventProductName: "スロセレ 3月第2週",
+    eventDate: "2026/03/11",
+    estimatedBillingAmount: 380000,
+    proposalStatus: "order-received",
+    managementConfirmationStatus: "approved",
+    executionStatus: "実施前",
+    companionCount: "1",
+    directorCount: "0",
+    mcCount: "0",
+    selectedCompanions: ["伊藤 あかり"],
+    selectedDirectors: [],
+    selectedMcs: [],
+    companionBookingStatus: { "伊藤 あかり": "confirmed_completed" },
+    directorBookingStatus: {},
+    mcBookingStatus: {},
+    startTime: "11:00",
+    endTime: "17:00",
+    reportRequired: "要",
+    targetMachineFormSent: true,
+    targetMachineNames: ["リゼロ", "ハナハナ"],
+    threeSetPlan: true,
   },
   // Product 7: トリニティガール（受注・実施前 - 各種手配タブ用）
   {

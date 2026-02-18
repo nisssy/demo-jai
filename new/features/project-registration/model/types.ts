@@ -31,6 +31,8 @@ export type ProductFormState = {
   performanceFeeDiscount: string
   accommodationFeePerPerson: string
   eventBaseFeeDiscount: string
+  // 3点セットプラン（スロセレ専用）
+  threeSetPlan: boolean
   // ステータス（全商材共通）
   proposalStatus: OrderStatus
   readingCertainty: "A" | "B" | "C" | ""
@@ -80,6 +82,7 @@ export const EMPTY_PRODUCT: ProductFormState = {
   performanceFeeDiscount: "",
   accommodationFeePerPerson: "",
   eventBaseFeeDiscount: "",
+  threeSetPlan: false,
   proposalStatus: "before-proposal",
   readingCertainty: "",
   executionStatus: "実施前",

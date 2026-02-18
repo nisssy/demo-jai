@@ -60,6 +60,9 @@ export function getEventBaseFee(eventType: string): number {
   return SEED_EVENT_BASE_FEES[eventType] ?? 0
 }
 
+/** 3点セットプラン適用時のスロセレ基本料金（1回あたり） */
+export const THREE_SET_BASE_FEE_PER_EVENT = 60000
+
 // ─── 交通費自動計算 ───
 
 const ZONES = [
@@ -122,6 +125,7 @@ type BillingInput = {
   eventBaseFeeDiscount: string
   eventType: string
   hallAddress: string
+  eventBaseFeeOverride?: number  // 3点セットプラン時: 60000
 }
 
 /** イベント系商材の請求予定金額（= 見積金額）を算出 */
@@ -161,7 +165,7 @@ export function computeEstimatedBilling(input: BillingInput): number {
   const totalAccommodation = Math.round(accommodationPerPerson * totalCastCount)
 
   // イベント基本料金（割引後）
-  const eventBaseFee = getEventBaseFee(input.eventType)
+  const eventBaseFee = input.eventBaseFeeOverride ?? getEventBaseFee(input.eventType)
   const eventDiscount = parseInt(input.eventBaseFeeDiscount, 10) || 0
   const eventFeeAfterDiscount = Math.round(Math.max(0, eventBaseFee - eventDiscount))
 

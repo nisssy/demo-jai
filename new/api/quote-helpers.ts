@@ -15,6 +15,7 @@ import {
   getAverageDirectorRate,
   getEventBaseFee,
   computeTransportFee,
+  THREE_SET_BASE_FEE_PER_EVENT,
 } from "./cast-data"
 
 let nextId = 1
@@ -47,7 +48,9 @@ function computeEventBilling(product: Product, hallAddress: string): ProductQuot
   const performanceFee = companionCost + directorCost
   const transportFee = computeTransportFee(product.selectedCompanions, hallAddress)
   const accommodationFee = 0 // 宿泊費は手動入力のため初期値0
-  const eventBaseFee = getEventBaseFee(product.eventType)
+  const eventBaseFee = product.threeSetPlan && product.eventType === "スロセレ"
+    ? THREE_SET_BASE_FEE_PER_EVENT
+    : getEventBaseFee(product.eventType)
 
   return {
     id: product.id,

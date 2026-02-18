@@ -86,6 +86,8 @@ export function useProjectDetail({ repository, projectNumber }: UseProjectDetail
         eventProductName: p.eventProductName,
         eventDate: p.eventDate,
         estimatedBillingAmount: p.estimatedBillingAmount,
+        // 3点セット
+        threeSetPlan: p.threeSetPlan,
         // ステータス
         proposalStatus: PROPOSAL_STATUS_LABELS[p.proposalStatus as ProposalStatus] ?? undefined,
         proposalStatusRaw: p.proposalStatus,

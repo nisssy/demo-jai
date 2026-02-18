@@ -39,7 +39,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body className={`font-sans antialiased`}>
+      <body className={`font-sans antialiased`} suppressHydrationWarning>
         <ProjectProvider>
           <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
             {children}
