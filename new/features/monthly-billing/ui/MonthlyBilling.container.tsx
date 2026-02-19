@@ -31,6 +31,10 @@ export const MonthlyBillingContainer = ({ repository }: MonthlyBillingContainerP
     customerBillingRows,
     extractCustomerBillings,
     downloadCustomerBillingCsv,
+    pendingCarryOver,
+    confirmCarryOverAndExtract,
+    cancelCarryOver,
+    carriedOverItems,
   } = useMonthlyBilling(repository)
 
   const [chatText, setChatText] = useState("")
@@ -77,6 +81,10 @@ export const MonthlyBillingContainer = ({ repository }: MonthlyBillingContainerP
       closingReported={closingReported}
       onReportClosing={reportClosing}
       onDownloadCsv={downloadCsv}
+      pendingCarryOver={pendingCarryOver}
+      onConfirmCarryOver={confirmCarryOverAndExtract}
+      onCancelCarryOver={cancelCarryOver}
+      carriedOverItems={carriedOverItems}
       customerBillingRows={customerBillingRows}
       onExtractCustomerBillings={extractCustomerBillings}
       onDownloadCustomerBillingCsv={downloadCustomerBillingCsv}

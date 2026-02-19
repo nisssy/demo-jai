@@ -1,8 +1,10 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { MonthlyBilling } from "@/new/api/types"
-import type { BillingMode, CustomerBillingRow } from "../hooks/useMonthlyBilling"
+import type { BillingMode, CustomerBillingRow, UndeliveredItem } from "../hooks/useMonthlyBilling"
 import { VendorBillingList } from "./components/VendorBillingList"
 import { BillingDetail } from "./components/BillingDetail"
 import { CustomerBillingPreview } from "./components/CustomerBillingPreview"
@@ -28,6 +30,11 @@ export interface MonthlyBillingViewProps {
   closingReported: boolean
   onReportClosing: () => void
   onDownloadCsv: () => void
+  // Carry-over dialog props
+  pendingCarryOver: UndeliveredItem[] | null
+  onConfirmCarryOver: () => void
+  onCancelCarryOver: () => void
+  carriedOverItems: UndeliveredItem[]
   // Invoice mode props
   customerBillingRows: CustomerBillingRow[]
   onExtractCustomerBillings: () => void
@@ -59,6 +66,10 @@ export const MonthlyBillingView = ({
   closingReported,
   onReportClosing,
   onDownloadCsv,
+  pendingCarryOver,
+  onConfirmCarryOver,
+  onCancelCarryOver,
+  carriedOverItems,
   customerBillingRows,
   onExtractCustomerBillings,
   onDownloadCustomerBillingCsv,
@@ -103,6 +114,10 @@ export const MonthlyBillingView = ({
             closingReported={closingReported}
             onReportClosing={onReportClosing}
             onDownloadCsv={onDownloadCsv}
+            pendingCarryOver={pendingCarryOver}
+            onConfirmCarryOver={onConfirmCarryOver}
+            onCancelCarryOver={onCancelCarryOver}
+            carriedOverItems={carriedOverItems}
           />
         ) : (
           <InvoiceModeContent
@@ -138,6 +153,10 @@ const PaymentModeContent = ({
   closingReported,
   onReportClosing,
   onDownloadCsv,
+  pendingCarryOver,
+  onConfirmCarryOver,
+  onCancelCarryOver,
+  carriedOverItems,
 }: {
   selectedMonth: string
   onChangeMonth: (month: string) => void
@@ -156,6 +175,10 @@ const PaymentModeContent = ({
   closingReported: boolean
   onReportClosing: () => void
   onDownloadCsv: () => void
+  pendingCarryOver: UndeliveredItem[] | null
+  onConfirmCarryOver: () => void
+  onCancelCarryOver: () => void
+  carriedOverItems: UndeliveredItem[]
 }) => {
   return (
     <div className="flex h-full">
@@ -207,23 +230,123 @@ const PaymentModeContent = ({
         )}
       </div>
 
-      {/* Right panel: detail */}
-      <div className="flex-1 overflow-y-auto">
-        {!selectedBilling ? (
-          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-            左のリストから業者を選択してください
-          </div>
-        ) : (
-          <BillingDetail
-            billing={selectedBilling}
-            chatText={chatText}
-            onChatTextChange={onChatTextChange}
-            onSendChat={onSendChat}
-            onSendToVendor={onSendToVendor}
-            onResendToVendor={onResendToVendor}
-            onSendAgreement={onSendAgreement}
-          />
+      {/* Right panel: detail + carried-over notice */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Carried-over items notice */}
+        {carriedOverItems.length > 0 && (
+          <CarriedOverNotice items={carriedOverItems} />
         )}
+
+        <div className="flex-1 overflow-y-auto">
+          {!selectedBilling ? (
+            <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+              左のリストから業者を選択してください
+            </div>
+          ) : (
+            <BillingDetail
+              billing={selectedBilling}
+              chatText={chatText}
+              onChatTextChange={onChatTextChange}
+              onSendChat={onSendChat}
+              onSendToVendor={onSendToVendor}
+              onResendToVendor={onResendToVendor}
+              onSendAgreement={onSendAgreement}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Carry-over confirmation dialog */}
+      <CarryOverDialog
+        pendingCarryOver={pendingCarryOver}
+        onConfirm={onConfirmCarryOver}
+        onCancel={onCancelCarryOver}
+      />
+    </div>
+  )
+}
+
+/* ---- Carry-over confirmation dialog ---- */
+
+const CarryOverDialog = ({
+  pendingCarryOver,
+  onConfirm,
+  onCancel,
+}: {
+  pendingCarryOver: UndeliveredItem[] | null
+  onConfirm: () => void
+  onCancel: () => void
+}) => {
+  const isOpen = pendingCarryOver !== null && pendingCarryOver.length > 0
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onCancel() }}>
+      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>発送未完了の景品があります</DialogTitle>
+          <DialogDescription>
+            以下の景品は発送完了日が未入力のため、翌月に繰り越されます。完了済みの景品のみで支払データを作成します。
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex-1 overflow-y-auto border rounded-md">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>業者名</TableHead>
+                <TableHead>景品名</TableHead>
+                <TableHead>当選者名</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(pendingCarryOver ?? []).map((item) => (
+                <TableRow key={`${item.vendorId}-${item.winnerId}`}>
+                  <TableCell className="text-sm">{item.vendorName}</TableCell>
+                  <TableCell className="text-sm">{item.prizeName}</TableCell>
+                  <TableCell className="text-sm">{item.winnerName}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={onCancel}>
+            キャンセル
+          </Button>
+          <Button onClick={onConfirm}>
+            繰り越して抽出
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/* ---- Carried-over items notice ---- */
+
+const CarriedOverNotice = ({ items }: { items: UndeliveredItem[] }) => {
+  return (
+    <div className="border-b bg-amber-50 p-3 shrink-0">
+      <p className="text-sm font-medium text-amber-800 mb-2">
+        翌月繰越: {items.length}件の景品が未発送のため繰り越されました
+      </p>
+      <div className="border rounded-md bg-white overflow-auto max-h-[200px]">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-xs">業者名</TableHead>
+              <TableHead className="text-xs">景品名</TableHead>
+              <TableHead className="text-xs">当選者名</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((item) => (
+              <TableRow key={`${item.vendorId}-${item.winnerId}`}>
+                <TableCell className="text-xs py-1">{item.vendorName}</TableCell>
+                <TableCell className="text-xs py-1">{item.prizeName}</TableCell>
+                <TableCell className="text-xs py-1">{item.winnerName}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
     </div>
   )

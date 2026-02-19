@@ -4,6 +4,16 @@ import type { MonthlyBilling, BillingLineItem, BillingChatMessage } from "@/new/
 
 export type BillingMode = "payment" | "invoice"
 
+export type UndeliveredItem = {
+  vendorId: string
+  vendorName: string
+  productName: string
+  projectNumber: string
+  prizeName: string
+  winnerName: string
+  winnerId: string
+}
+
 const DESIGN_NOTIFICATION_FEE = 50000
 
 function buildVendorCsvContent(billings: MonthlyBilling[], month: string): string {
@@ -84,6 +94,8 @@ export function useMonthlyBilling(repository: ProjectRepository) {
   const [selectedBillingId, setSelectedBillingId] = useState<string | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [customerBillingRows, setCustomerBillingRows] = useState<CustomerBillingRow[]>([])
+  const [pendingCarryOver, setPendingCarryOver] = useState<UndeliveredItem[] | null>(null)
+  const [carriedOverItems, setCarriedOverItems] = useState<UndeliveredItem[]>([])
 
   const billings = useMemo(() => {
     return repository.getMonthlyBillingsByMonth(selectedMonth)
@@ -108,101 +120,204 @@ export function useMonthlyBilling(repository: ProjectRepository) {
     }
   }, [])
 
+  // Collect undelivered items across all lottery products and vendors
+  const collectUndeliveredItems = useCallback(
+    (lotteryProducts: ReturnType<ProjectRepository["getProducts"]>): UndeliveredItem[] => {
+      const undelivered: UndeliveredItem[] = []
+      for (const product of lotteryProducts) {
+        if (!product.prizeOrderRequestedAt || !product.prizeInfo) continue
+        if (!product.prizeDeliveryInfoByVendor || !product.winnerList) continue
+
+        for (const deliveryVendor of product.prizeDeliveryInfoByVendor) {
+          if (!deliveryVendor.deliveries) continue
+          for (const delivery of deliveryVendor.deliveries) {
+            if (!delivery.deliveredAt) {
+              // Find prize name from winnerList
+              const winner = product.winnerList.find((w) => w.id === delivery.winnerId)
+              undelivered.push({
+                vendorId: deliveryVendor.vendorId,
+                vendorName: deliveryVendor.vendorName,
+                productName: product.eventProductName,
+                projectNumber: product.projectNumber,
+                prizeName: winner?.prize ?? "不明",
+                winnerName: delivery.winnerName,
+                winnerId: delivery.winnerId,
+              })
+            }
+          }
+        }
+      }
+      return undelivered
+    },
+    []
+  )
+
+  // Build prize vendor billing items, optionally excluding undelivered winners
+  const buildPrizeVendorBillings = useCallback(
+    (
+      lotteryProducts: ReturnType<ProjectRepository["getProducts"]>,
+      excludedWinnerIds?: Set<string>
+    ) => {
+      const prizeVendorMap: Record<string, { vendorName: string; items: BillingLineItem[] }> = {}
+      for (const product of lotteryProducts) {
+        if (!product.prizeOrderRequestedAt || !product.prizeInfo) continue
+        for (const prize of product.prizeInfo) {
+          const vId = prize.vendorId ?? "unknown"
+          const vName = prize.vendorName ?? "不明"
+          if (!prizeVendorMap[vId]) {
+            prizeVendorMap[vId] = { vendorName: vName, items: [] }
+          }
+          let qty = Math.max(0, parseInt(prize.quantity, 10) || 0)
+          const unitPrice = prize.unitPrice ?? 0
+
+          // If excluding, count how many winners of this prize are undelivered
+          if (excludedWinnerIds && product.winnerList) {
+            const winnersOfThisPrize = product.winnerList.filter((w) => w.prize === prize.name)
+            const excludedCount = winnersOfThisPrize.filter((w) => excludedWinnerIds.has(w.id)).length
+            qty = Math.max(0, qty - excludedCount)
+          }
+
+          if (qty <= 0) continue
+          prizeVendorMap[vId].items.push({
+            productId: product.id,
+            productName: product.eventProductName,
+            projectNumber: product.projectNumber,
+            itemName: prize.name,
+            quantity: qty,
+            unitPrice,
+            subtotal: qty * unitPrice,
+          })
+        }
+      }
+      return prizeVendorMap
+    },
+    []
+  )
+
+  // Create billings from vendor maps
+  const createBillingsFromMaps = useCallback(
+    (
+      prizeVendorMap: Record<string, { vendorName: string; items: BillingLineItem[] }>,
+      designVendorMap: Record<string, { vendorName: string; items: BillingLineItem[] }>,
+      existingBillings: MonthlyBilling[]
+    ) => {
+      const now = new Date().toISOString()
+
+      for (const [vendorId, data] of Object.entries(prizeVendorMap)) {
+        const alreadyExists = existingBillings.some(
+          (b) => b.vendorType === "prize" && b.vendorId === vendorId
+        )
+        if (alreadyExists) continue
+        if (data.items.length === 0) continue
+        const totalAmount = data.items.reduce((sum, item) => sum + item.subtotal, 0)
+        repository.createMonthlyBilling({
+          vendorType: "prize",
+          vendorId,
+          vendorName: data.vendorName,
+          billingMonth: selectedMonth,
+          status: "draft",
+          lineItems: data.items,
+          totalAmount,
+          createdAt: now,
+          updatedAt: now,
+          chatMessages: [],
+        })
+      }
+
+      for (const [vendorId, data] of Object.entries(designVendorMap)) {
+        const alreadyExists = existingBillings.some(
+          (b) => b.vendorType === "design" && b.vendorId === vendorId
+        )
+        if (alreadyExists) continue
+        const totalAmount = data.items.reduce((sum, item) => sum + item.subtotal, 0)
+        repository.createMonthlyBilling({
+          vendorType: "design",
+          vendorId,
+          vendorName: data.vendorName,
+          billingMonth: selectedMonth,
+          status: "draft",
+          lineItems: data.items,
+          totalAmount,
+          createdAt: now,
+          updatedAt: now,
+          chatMessages: [],
+        })
+      }
+
+      setRefreshKey((k) => k + 1)
+    },
+    [repository, selectedMonth]
+  )
+
+  // Build design vendor map (shared between extractBillings and confirmCarryOver)
+  const buildDesignVendorMap = useCallback(
+    (lotteryProducts: ReturnType<ProjectRepository["getProducts"]>) => {
+      const designVendorMap: Record<string, { vendorName: string; items: BillingLineItem[] }> = {}
+      for (const product of lotteryProducts) {
+        if (!product.notificationOrderSentAt || !product.notificationOrderDesignVendorId) continue
+        const vId = product.notificationOrderDesignVendorId
+        const vName = product.notificationOrderDesignVendorName ?? "不明"
+        if (!designVendorMap[vId]) {
+          designVendorMap[vId] = { vendorName: vName, items: [] }
+        }
+        designVendorMap[vId].items.push({
+          productId: product.id,
+          productName: product.eventProductName,
+          projectNumber: product.projectNumber,
+          itemName: "当選通知書制作費",
+          quantity: 1,
+          unitPrice: DESIGN_NOTIFICATION_FEE,
+          subtotal: DESIGN_NOTIFICATION_FEE,
+        })
+      }
+      return designVendorMap
+    },
+    []
+  )
+
   const extractBillings = useCallback(() => {
     const products = repository.getProducts()
     const lotteryProducts = products.filter(
       (p) => p.category === "ポイント" && p.eventType === "合同抽選会"
     )
 
+    // Check for undelivered items
+    const undelivered = collectUndeliveredItems(lotteryProducts)
+
+    if (undelivered.length > 0) {
+      // Show confirmation dialog — don't create billings yet
+      setPendingCarryOver(undelivered)
+      return
+    }
+
+    // No undelivered items — create billings immediately
     const existingBillings = repository.getMonthlyBillingsByMonth(selectedMonth)
-    const now = new Date().toISOString()
+    const prizeVendorMap = buildPrizeVendorBillings(lotteryProducts)
+    const designVendorMap = buildDesignVendorMap(lotteryProducts)
+    createBillingsFromMaps(prizeVendorMap, designVendorMap, existingBillings)
+  }, [repository, selectedMonth, collectUndeliveredItems, buildPrizeVendorBillings, buildDesignVendorMap, createBillingsFromMaps])
 
-    // Prize vendors: group by vendorId from prizeInfo of products with prizeOrderRequestedAt
-    const prizeVendorMap: Record<string, { vendorName: string; items: BillingLineItem[] }> = {}
-    for (const product of lotteryProducts) {
-      if (!product.prizeOrderRequestedAt || !product.prizeInfo) continue
-      for (const prize of product.prizeInfo) {
-        const vId = prize.vendorId ?? "unknown"
-        const vName = prize.vendorName ?? "不明"
-        if (!prizeVendorMap[vId]) {
-          prizeVendorMap[vId] = { vendorName: vName, items: [] }
-        }
-        const qty = Math.max(0, parseInt(prize.quantity, 10) || 0)
-        const unitPrice = prize.unitPrice ?? 0
-        prizeVendorMap[vId].items.push({
-          productId: product.id,
-          productName: product.eventProductName,
-          projectNumber: product.projectNumber,
-          itemName: prize.name,
-          quantity: qty,
-          unitPrice,
-          subtotal: qty * unitPrice,
-        })
-      }
-    }
+  const confirmCarryOverAndExtract = useCallback(() => {
+    if (!pendingCarryOver) return
 
-    for (const [vendorId, data] of Object.entries(prizeVendorMap)) {
-      const alreadyExists = existingBillings.some(
-        (b) => b.vendorType === "prize" && b.vendorId === vendorId
-      )
-      if (alreadyExists) continue
-      const totalAmount = data.items.reduce((sum, item) => sum + item.subtotal, 0)
-      repository.createMonthlyBilling({
-        vendorType: "prize",
-        vendorId,
-        vendorName: data.vendorName,
-        billingMonth: selectedMonth,
-        status: "draft",
-        lineItems: data.items,
-        totalAmount,
-        createdAt: now,
-        updatedAt: now,
-        chatMessages: [],
-      })
-    }
+    const excludedWinnerIds = new Set(pendingCarryOver.map((item) => item.winnerId))
 
-    // Design vendors: products with notificationOrderSentAt
-    const designVendorMap: Record<string, { vendorName: string; items: BillingLineItem[] }> = {}
-    for (const product of lotteryProducts) {
-      if (!product.notificationOrderSentAt || !product.notificationOrderDesignVendorId) continue
-      const vId = product.notificationOrderDesignVendorId
-      const vName = product.notificationOrderDesignVendorName ?? "不明"
-      if (!designVendorMap[vId]) {
-        designVendorMap[vId] = { vendorName: vName, items: [] }
-      }
-      designVendorMap[vId].items.push({
-        productId: product.id,
-        productName: product.eventProductName,
-        projectNumber: product.projectNumber,
-        itemName: "当選通知書制作費",
-        quantity: 1,
-        unitPrice: DESIGN_NOTIFICATION_FEE,
-        subtotal: DESIGN_NOTIFICATION_FEE,
-      })
-    }
+    const products = repository.getProducts()
+    const lotteryProducts = products.filter(
+      (p) => p.category === "ポイント" && p.eventType === "合同抽選会"
+    )
+    const existingBillings = repository.getMonthlyBillingsByMonth(selectedMonth)
+    const prizeVendorMap = buildPrizeVendorBillings(lotteryProducts, excludedWinnerIds)
+    const designVendorMap = buildDesignVendorMap(lotteryProducts)
+    createBillingsFromMaps(prizeVendorMap, designVendorMap, existingBillings)
 
-    for (const [vendorId, data] of Object.entries(designVendorMap)) {
-      const alreadyExists = existingBillings.some(
-        (b) => b.vendorType === "design" && b.vendorId === vendorId
-      )
-      if (alreadyExists) continue
-      const totalAmount = data.items.reduce((sum, item) => sum + item.subtotal, 0)
-      repository.createMonthlyBilling({
-        vendorType: "design",
-        vendorId,
-        vendorName: data.vendorName,
-        billingMonth: selectedMonth,
-        status: "draft",
-        lineItems: data.items,
-        totalAmount,
-        createdAt: now,
-        updatedAt: now,
-        chatMessages: [],
-      })
-    }
+    setCarriedOverItems(pendingCarryOver)
+    setPendingCarryOver(null)
+  }, [pendingCarryOver, repository, selectedMonth, buildPrizeVendorBillings, buildDesignVendorMap, createBillingsFromMaps])
 
-    setRefreshKey((k) => k + 1)
-  }, [repository, selectedMonth])
+  const cancelCarryOver = useCallback(() => {
+    setPendingCarryOver(null)
+  }, [])
 
   const sendToVendor = useCallback(
     (billingId: string) => {
@@ -297,6 +412,7 @@ export function useMonthlyBilling(repository: ProjectRepository) {
   useEffect(() => {
     setClosingReported(false)
     setCustomerBillingRows([])
+    setCarriedOverItems([])
   }, [selectedMonth])
 
   const reportClosing = useCallback(() => {
@@ -378,5 +494,9 @@ export function useMonthlyBilling(repository: ProjectRepository) {
     customerBillingRows,
     extractCustomerBillings,
     downloadCustomerBillingCsv,
+    pendingCarryOver,
+    confirmCarryOverAndExtract,
+    cancelCarryOver,
+    carriedOverItems,
   }
 }
