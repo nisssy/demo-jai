@@ -1,4 +1,4 @@
-import type { BookingStatus, ProposalStatus, ExecutionStatus, ProductProgressStatus, ManagementConfirmationStatus } from "./types"
+import type { BookingStatus, ProposalStatus, ExecutionStatus, ProductProgressStatus, ManagementConfirmationStatus, BillingStatus } from "./types"
 import type { Role } from "@/new/types/role"
 
 // ─── ロールラベル ───
@@ -123,4 +123,16 @@ export const MANAGEMENT_CONFIRMATION_STATUS_LABELS: Record<ManagementConfirmatio
   "under-review": "確認中",
   "revision-requested": "修正依頼",
   "approved": "承認",
+}
+
+// ─── 月次計上ステータス ───
+
+export const BILLING_STATUS_LABELS: Record<BillingStatus, string> = {
+  "draft": "下書き",
+  "sent": "送信済み",
+  "correction-requested": "修正依頼",
+  "confirmed": "確認済み",
+  "invoice-received": "請求書受領",
+  "agreed": "合意送信済み",
+  "acknowledged": "了承確認済み",
 }

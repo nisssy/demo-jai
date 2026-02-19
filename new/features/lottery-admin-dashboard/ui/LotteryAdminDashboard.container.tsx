@@ -4,6 +4,7 @@ import { useMemo } from "react"
 import { LocalStorageProjectRepository } from "@/new/api/impl/local-storage-project-repository"
 import { useLotteryAdminDashboard } from "@/new/features/lottery-admin-dashboard/hooks/useLotteryAdminDashboard"
 import { LotteryAdminDashboardView } from "@/new/features/lottery-admin-dashboard/ui/LotteryAdminDashboard.view"
+import { MonthlyBillingContainer } from "@/new/features/monthly-billing/ui/MonthlyBilling.container"
 
 export const LotteryAdminDashboardContainer = () => {
   const repository = useMemo(() => new LocalStorageProjectRepository(), [])
@@ -13,18 +14,32 @@ export const LotteryAdminDashboardContainer = () => {
     selectedProductId,
     selectProduct,
     selectedProduct,
-    uploadWinnerList,
+    uploadWinnerListPsp,
+    uploadWinnerListPspWithError,
+    uploadWinnerListFile,
+    resetWinnerList,
+    dismissWinnerListError,
+    winnerListHasError,
     validateWinnerList,
     generateNotificationOrder,
-    sendNotificationOrder,
+    selectNotificationVendor,
+    selectedNotificationVendor,
+    requestSendNotificationOrder,
+    confirmSendNotificationOrder,
+    cancelSendNotificationOrder,
+    pendingNotificationVendor,
     designVendors,
+    notificationDesignRequests,
+    notificationCommentText,
+    setNotificationCommentText,
+    addNotificationComment,
     generatePrizeOrders,
-    sendPrizeOrder,
-    checkQuoCardLetter,
-    designRequests,
-    commentText,
-    setCommentText,
-    addComment,
+    desiredDeliveryDate,
+    setDesiredDeliveryDate,
+    requestSendPrizeOrder,
+    confirmSendPrizeOrder,
+    cancelSendPrizeOrder,
+    pendingPrizeVendorId,
   } = useLotteryAdminDashboard(repository)
 
   return (
@@ -33,18 +48,33 @@ export const LotteryAdminDashboardContainer = () => {
       selectedProductId={selectedProductId}
       onSelectProduct={selectProduct}
       selectedProduct={selectedProduct}
-      onUploadWinnerList={uploadWinnerList}
+      onUploadWinnerListPsp={uploadWinnerListPsp}
+      onUploadWinnerListPspWithError={uploadWinnerListPspWithError}
+      onUploadWinnerListFile={uploadWinnerListFile}
+      onResetWinnerList={resetWinnerList}
+      onDismissWinnerListError={dismissWinnerListError}
+      winnerListHasError={winnerListHasError}
       onValidateWinnerList={validateWinnerList}
       onGenerateNotificationOrder={generateNotificationOrder}
-      onSendNotificationOrder={sendNotificationOrder}
+      onSelectNotificationVendor={selectNotificationVendor}
+      selectedNotificationVendor={selectedNotificationVendor}
+      onRequestSendNotification={requestSendNotificationOrder}
+      onConfirmSendNotification={confirmSendNotificationOrder}
+      onCancelSendNotification={cancelSendNotificationOrder}
+      pendingNotificationVendor={pendingNotificationVendor}
       designVendors={designVendors}
+      notificationDesignRequests={notificationDesignRequests}
+      notificationCommentText={notificationCommentText}
+      onNotificationCommentTextChange={setNotificationCommentText}
+      onAddNotificationComment={addNotificationComment}
       onGeneratePrizeOrders={generatePrizeOrders}
-      onSendPrizeOrder={sendPrizeOrder}
-      onCheckQuoCardLetter={checkQuoCardLetter}
-      designRequests={designRequests}
-      commentText={commentText}
-      onCommentTextChange={setCommentText}
-      onAddComment={addComment}
+      desiredDeliveryDate={desiredDeliveryDate}
+      onDesiredDeliveryDateChange={setDesiredDeliveryDate}
+      onRequestSendPrizeOrder={requestSendPrizeOrder}
+      onConfirmSendPrizeOrder={confirmSendPrizeOrder}
+      onCancelSendPrizeOrder={cancelSendPrizeOrder}
+      pendingPrizeVendorId={pendingPrizeVendorId}
+      billingTab={<MonthlyBillingContainer repository={repository} />}
     />
   )
 }

@@ -3,6 +3,7 @@
 import type { ProjectRepository } from "@/new/api/project-repository"
 import { usePrizeVendorDashboard } from "../hooks/usePrizeVendorDashboard"
 import { PrizeVendorDashboardView } from "./PrizeVendorDashboard.view"
+import { PrizeVendorBillingContainer } from "@/new/features/prize-vendor-billing/ui/PrizeVendorBilling.container"
 
 export type PrizeVendorDashboardContainerProps = {
   repository: ProjectRepository
@@ -15,7 +16,6 @@ export const PrizeVendorDashboardContainer = ({
     orderEntries,
     selectedKey,
     selectedEntry,
-    existingDeliveries,
     deliveryForm,
     handleSelect,
     updateDeliveryFormRow,
@@ -27,11 +27,11 @@ export const PrizeVendorDashboardContainer = ({
       orderEntries={orderEntries}
       selectedKey={selectedKey}
       selectedEntry={selectedEntry}
-      existingDeliveries={existingDeliveries}
       deliveryForm={deliveryForm}
       onSelect={handleSelect}
       onUpdateDeliveryRow={updateDeliveryFormRow}
       onSaveDelivery={handleSaveDelivery}
+      billingTab={<PrizeVendorBillingContainer repository={repository} />}
     />
   )
 }

@@ -4,10 +4,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { FileText, Send, Sparkles, Loader2, AlertTriangle, CheckCircle2, Mail, Eye } from "lucide-react"
+import { FileText, Sparkles, Loader2, AlertTriangle, CheckCircle2, Mail } from "lucide-react"
 
 type LotteryProductionProps = {
   productId?: number
@@ -22,9 +21,6 @@ type LotteryProductionProps = {
   showDateError: boolean
   showFontError: boolean
   onAIProofing: () => void
-  posterCommentText: string
-  onPosterCommentTextChange: (value: string) => void
-  onSendPosterComment: () => void
   posterSentToCustomer: boolean
   onSendPosterToCustomer: () => void
   // ポスター発注モーダル
@@ -256,42 +252,6 @@ function PosterTab(props: LotteryProductionProps) {
               </div>
             )}
 
-            {/* コメント */}
-            <div className="space-y-2">
-              <p className="text-xs text-slate-500 font-medium">コメント・修正依頼</p>
-              <div className="rounded border p-2 bg-slate-50 space-y-1.5 max-h-36 overflow-y-auto">
-                {(!props.latestPosterRequest.comments || props.latestPosterRequest.comments.length === 0) ? (
-                  <p className="text-xs text-slate-400">まだコメントはありません</p>
-                ) : (
-                  props.latestPosterRequest.comments.map((c) => (
-                    <div key={c.id} className="text-xs">
-                      <span className="font-medium text-slate-500">
-                        {c.role === "Sales" ? "営業" : "デザイン業者"}
-                        {c.authorName && `（${c.authorName}）`}:
-                      </span>{" "}
-                      {c.text}
-                      <span className="block text-[10px] text-slate-400 mt-0.5">
-                        {new Date(c.createdAt).toLocaleString("ja")}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-              <div className="flex gap-2">
-                <Textarea
-                  placeholder="修正依頼や確認メッセージを入力"
-                  value={props.posterCommentText}
-                  onChange={(e) => props.onPosterCommentTextChange(e.target.value)}
-                  rows={2}
-                  className="resize-none flex-1 text-xs"
-                />
-                <Button size="sm" className="shrink-0 text-xs gap-1" onClick={props.onSendPosterComment}>
-                  <Send className="h-3 w-3" />
-                  送信
-                </Button>
-              </div>
-            </div>
-
             {/* 顧客送信 */}
             {props.latestPosterRequest.status === "uploaded" && (
               <div className="space-y-2 border-t border-slate-200 pt-3">
@@ -320,6 +280,7 @@ function PosterTab(props: LotteryProductionProps) {
 function DmTab(props: LotteryProductionProps & { designPartners: typeof TRADING_PARTNERS }) {
   return (
     <div className="space-y-5">
+      {/* DM作成依頼 */}
       <div className="space-y-3 rounded-lg border p-4">
         <div>
           <Label className="text-sm font-semibold">DM作成依頼</Label>
@@ -335,28 +296,50 @@ function DmTab(props: LotteryProductionProps & { designPartners: typeof TRADING_
         </Button>
       </div>
 
-      {props.dmRequests.length === 0 ? (
-        <p className="text-xs text-slate-400 py-3 text-center">まだDM作成依頼はありません</p>
-      ) : (
-        <div className="space-y-2">
-          <Label className="text-xs text-slate-500 font-medium">依頼一覧</Label>
-          <div className="space-y-2">
-            {props.dmRequests.map((r) => (
-              <div key={r.id} className="flex items-center justify-between gap-3 p-3 border rounded-lg">
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-medium">{r.vendorName ?? "デザイン業者"}</div>
-                  <div className="text-[10px] text-slate-400 mt-0.5">
-                    {new Date(r.requestedAt).toLocaleString("ja")}
+      {/* DMプレビュー */}
+      <div className="space-y-4 rounded-lg border p-4">
+        <div>
+          <Label className="text-sm font-semibold">DM プレビュー</Label>
+          <p className="text-xs text-slate-500 mt-0.5">アップロード確認 → 修正依頼（チャット）</p>
+        </div>
+
+        {!props.latestDmRequest ? (
+          <p className="text-xs text-slate-400 py-3">まだDM作成依頼はありません。上記の「DM作成依頼」から依頼してください。</p>
+        ) : (
+          <>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-500">対象依頼</span>
+              <span className="font-medium">{props.latestDmRequest.vendorName ?? "依頼先"}</span>
+              <Badge className={props.latestDmRequest.status === "uploaded" ? "bg-green-100 text-green-800 text-xs" : "bg-yellow-100 text-yellow-800 text-xs"}>
+                {props.latestDmRequest.status === "uploaded" ? "アップロード済み" : "初稿待ち"}
+              </Badge>
+            </div>
+
+            {/* プレビュー */}
+            <div className="space-y-2">
+              <p className="text-xs text-slate-500 font-medium">プレビュー</p>
+              {props.latestDmRequest.status === "uploaded" ? (
+                <div className="relative bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg p-4 border-2 border-dashed border-slate-300 aspect-[4/3] max-w-[280px]">
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-slate-400 font-medium tracking-wider">DIRECT MAIL</p>
+                    <h3 className="text-sm font-bold">{props.eventName || "大抽選会"}</h3>
+                    <p className="text-xs text-slate-600">開催期間: {props.eventStartDate || "開始日"} 〜 {props.eventEndDate || "終了日"}</p>
+                    <div className="text-xs text-slate-500 space-y-0.5">
+                      {props.halls.filter(h => h.hallName).map((h, i) => (
+                        <p key={i}>{h.hallName}</p>
+                      ))}
+                    </div>
                   </div>
                 </div>
-                <Badge className={r.status === "uploaded" ? "bg-green-100 text-green-800 text-[10px]" : "bg-yellow-100 text-yellow-800 text-[10px]"}>
-                  {r.status === "uploaded" ? "アップロード済み" : "依頼済み"}
-                </Badge>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+              ) : (
+                <div className="border-2 border-dashed border-slate-300 rounded-lg p-5 text-center bg-slate-50 aspect-[4/3] max-w-[280px] flex items-center justify-center">
+                  <p className="text-xs text-slate-400">初稿のアップロード待ち</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   )
 }

@@ -21,18 +21,24 @@ const DEPARTMENT_ACCENT: Record<string, string> = {
   "マネジメント部": "border-purple-200",
   "外注業者": "border-orange-200",
   "商材管理課": "border-teal-200",
+  "ポスター": "border-blue-200",
+  "DM": "border-indigo-200",
 }
 
 const DEPARTMENT_TAB_ACTIVE: Record<string, string> = {
   "マネジメント部": "bg-purple-50 text-purple-800 border-purple-300",
   "外注業者": "bg-orange-50 text-orange-800 border-orange-300",
   "商材管理課": "bg-teal-50 text-teal-800 border-teal-300",
+  "ポスター": "bg-blue-50 text-blue-800 border-blue-300",
+  "DM": "bg-indigo-50 text-indigo-800 border-indigo-300",
 }
 
 const DEPARTMENT_TAB_INACTIVE: Record<string, string> = {
   "マネジメント部": "text-purple-600 hover:bg-purple-50",
   "外注業者": "text-orange-600 hover:bg-orange-50",
   "商材管理課": "text-teal-600 hover:bg-teal-50",
+  "ポスター": "text-blue-600 hover:bg-blue-50",
+  "DM": "text-indigo-600 hover:bg-indigo-50",
 }
 
 export const ProductChatView = ({

@@ -1,14 +1,16 @@
-import type { DesignRequest, DesignRequestComment } from "@/new/api/types"
+import type { ReactNode } from "react"
+import type { DesignRequest, ChatMessage } from "@/new/api/types"
 import {
   DESIGN_REQUEST_TYPE_LABELS,
   DESIGN_REQUEST_STATUS_LABELS,
 } from "@/new/api/display"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Upload, Send, FileText, MessageSquare } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Upload, FileText, MessageSquare } from "lucide-react"
+import { ChatChannelView } from "@/new/features/product-chat/ui/components/ChatChannelView"
 
 // ─── Sub-component: Request Card ───
 
@@ -67,65 +69,34 @@ const StatusBadge = ({ status }: StatusBadgeProps) => {
   )
 }
 
-// ─── Sub-component: Comment Item ───
-
-interface CommentItemProps {
-  comment: DesignRequestComment
-}
-
-const ROLE_BADGE_STYLES: Record<string, string> = {
-  Sales: "bg-blue-100 text-blue-800 border-blue-200",
-  DesignVendor: "bg-green-100 text-green-800 border-green-200",
-}
-
-const ROLE_LABELS: Record<string, string> = {
-  Sales: "営業",
-  DesignVendor: "デザイン業者",
-}
-
-const CommentItem = ({ comment }: CommentItemProps) => {
-  const badgeStyle = ROLE_BADGE_STYLES[comment.role] ?? "bg-gray-100 text-gray-800 border-gray-200"
-  const roleLabel = ROLE_LABELS[comment.role] ?? comment.role
-
-  return (
-    <div className="border rounded-lg p-3 space-y-1">
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium">{comment.authorName ?? "不明"}</span>
-        <Badge variant="outline" className={`text-xs ${badgeStyle}`}>
-          {roleLabel}
-        </Badge>
-        <span className="text-xs text-muted-foreground ml-auto">
-          {formatTimestamp(comment.createdAt)}
-        </span>
-      </div>
-      <p className="text-sm whitespace-pre-wrap">{comment.text}</p>
-    </div>
-  )
-}
-
 // ─── Sub-component: Request Detail ───
+
+const CHANNEL_DISPLAY_NAMES: Record<string, string> = {
+  poster: "営業",
+  dm: "営業",
+  "winner-list": "事務管理課",
+}
 
 interface RequestDetailProps {
   request: DesignRequest
-  commentText: string
-  onCommentTextChange: (text: string) => void
+  chatMessages: ChatMessage[]
   onFileUpload: (id: string) => void
-  onCommentSubmit: (id: string) => void
+  onChatSend: (content: string) => void
 }
 
 const RequestDetail = ({
   request,
-  commentText,
-  onCommentTextChange,
+  chatMessages,
   onFileUpload,
-  onCommentSubmit,
+  onChatSend,
 }: RequestDetailProps) => {
   const dateRange =
     request.eventStartDate && request.eventEndDate
       ? `${request.eventStartDate} ~ ${request.eventEndDate}`
       : request.eventStartDate ?? "-"
 
-  const comments = request.comments ?? []
+  const hasChatChannel = request.requestType === "poster" || request.requestType === "dm" || request.requestType === "winner-list"
+  const channelLabel = CHANNEL_DISPLAY_NAMES[request.requestType] ?? "営業"
 
   return (
     <div className="flex flex-col h-full">
@@ -170,48 +141,28 @@ const RequestDetail = ({
         )}
       </div>
 
-      {/* Comment Thread */}
+      {/* Chat Section */}
       <div className="flex-1 flex flex-col min-h-0">
-        <div className="px-4 pt-3 pb-2 flex items-center gap-2">
-          <MessageSquare className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold">コメント ({comments.length})</h3>
-        </div>
-
-        <ScrollArea className="flex-1 px-4">
-          <div className="space-y-2 pb-3">
-            {comments.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">
-                コメントはありません
-              </p>
-            ) : (
-              comments.map((comment) => (
-                <CommentItem key={comment.id} comment={comment} />
-              ))
-            )}
+        {hasChatChannel ? (
+          <>
+            <div className="px-4 pt-3 pb-1 flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-sm font-semibold">
+                {DESIGN_REQUEST_TYPE_LABELS[request.requestType] ?? request.requestType} チャット
+              </h3>
+            </div>
+            <ChatChannelView
+              department={channelLabel}
+              messages={chatMessages}
+              onSendMessage={onChatSend}
+              currentAuthor={request.vendorName ?? "デザイン業者"}
+            />
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-muted-foreground">
+            <p className="text-sm">この依頼種別ではチャットは利用できません</p>
           </div>
-        </ScrollArea>
-
-        {/* Comment Input */}
-        <div className="p-4 border-t space-y-2">
-          <Textarea
-            placeholder="コメントを入力..."
-            value={commentText}
-            onChange={(e) => onCommentTextChange(e.target.value)}
-            rows={3}
-            className="resize-none"
-          />
-          <div className="flex justify-end">
-            <Button
-              onClick={() => onCommentSubmit(request.id)}
-              disabled={!commentText.trim()}
-              size="sm"
-              className="gap-2"
-            >
-              <Send className="h-3.5 w-3.5" />
-              送信
-            </Button>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   )
@@ -255,11 +206,11 @@ export interface DesignVendorDashboardViewProps {
   uploadedRequests: DesignRequest[]
   selectedRequest: DesignRequest | null
   selectedRequestId: string | null
-  commentText: string
-  onCommentTextChange: (text: string) => void
+  chatMessages: ChatMessage[]
   onSelectRequest: (id: string) => void
   onFileUpload: (id: string) => void
-  onCommentSubmit: (id: string) => void
+  onChatSend: (content: string) => void
+  billingTab: ReactNode
 }
 
 export const DesignVendorDashboardView = ({
@@ -267,90 +218,102 @@ export const DesignVendorDashboardView = ({
   uploadedRequests,
   selectedRequest,
   selectedRequestId,
-  commentText,
-  onCommentTextChange,
+  chatMessages,
   onSelectRequest,
   onFileUpload,
-  onCommentSubmit,
+  onChatSend,
+  billingTab,
 }: DesignVendorDashboardViewProps) => {
   return (
-    <div className="flex h-full">
-      {/* Left Panel: Request List */}
-      <div className="w-[350px] border-r flex flex-col">
-        <div className="p-4 border-b">
-          <h1 className="text-lg font-bold">デザイン依頼一覧</h1>
+    <Tabs defaultValue="requests" className="h-full flex flex-col">
+      <TabsList className="mx-4 mt-4 w-fit">
+        <TabsTrigger value="requests">デザイン依頼</TabsTrigger>
+        <TabsTrigger value="billing">請求確認</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="requests" className="flex-1 overflow-hidden">
+        <div className="flex h-full">
+          {/* Left Panel: Request List */}
+          <div className="w-[350px] border-r flex flex-col">
+            <div className="p-4 border-b">
+              <h1 className="text-lg font-bold">デザイン依頼一覧</h1>
+            </div>
+            <ScrollArea className="flex-1">
+              <div className="p-3 space-y-4">
+                {/* Requested group */}
+                {requestedRequests.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 px-1">
+                      <Badge variant="destructive" className="text-xs">
+                        {DESIGN_REQUEST_STATUS_LABELS["requested"]}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        ({requestedRequests.length}件)
+                      </span>
+                    </div>
+                    {requestedRequests.map((req) => (
+                      <RequestCard
+                        key={req.id}
+                        request={req}
+                        isSelected={selectedRequestId === req.id}
+                        onSelect={onSelectRequest}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Uploaded group */}
+                {uploadedRequests.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 px-1">
+                      <Badge variant="default" className="text-xs">
+                        {DESIGN_REQUEST_STATUS_LABELS["uploaded"]}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        ({uploadedRequests.length}件)
+                      </span>
+                    </div>
+                    {uploadedRequests.map((req) => (
+                      <RequestCard
+                        key={req.id}
+                        request={req}
+                        isSelected={selectedRequestId === req.id}
+                        onSelect={onSelectRequest}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {requestedRequests.length === 0 && uploadedRequests.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    デザイン依頼はありません
+                  </p>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+
+          {/* Right Panel: Detail */}
+          <div className="flex-1 flex flex-col min-h-0">
+            {selectedRequest ? (
+              <RequestDetail
+                request={selectedRequest}
+                chatMessages={chatMessages}
+                onFileUpload={onFileUpload}
+                onChatSend={onChatSend}
+              />
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                <p className="text-sm">左のリストから依頼を選択してください</p>
+              </div>
+            )}
+          </div>
         </div>
-        <ScrollArea className="flex-1">
-          <div className="p-3 space-y-4">
-            {/* Requested group */}
-            {requestedRequests.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 px-1">
-                  <Badge variant="destructive" className="text-xs">
-                    {DESIGN_REQUEST_STATUS_LABELS["requested"]}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    ({requestedRequests.length}件)
-                  </span>
-                </div>
-                {requestedRequests.map((req) => (
-                  <RequestCard
-                    key={req.id}
-                    request={req}
-                    isSelected={selectedRequestId === req.id}
-                    onSelect={onSelectRequest}
-                  />
-                ))}
-              </div>
-            )}
+      </TabsContent>
 
-            {/* Uploaded group */}
-            {uploadedRequests.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 px-1">
-                  <Badge variant="default" className="text-xs">
-                    {DESIGN_REQUEST_STATUS_LABELS["uploaded"]}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    ({uploadedRequests.length}件)
-                  </span>
-                </div>
-                {uploadedRequests.map((req) => (
-                  <RequestCard
-                    key={req.id}
-                    request={req}
-                    isSelected={selectedRequestId === req.id}
-                    onSelect={onSelectRequest}
-                  />
-                ))}
-              </div>
-            )}
-
-            {requestedRequests.length === 0 && uploadedRequests.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                デザイン依頼はありません
-              </p>
-            )}
-          </div>
-        </ScrollArea>
-      </div>
-
-      {/* Right Panel: Detail */}
-      <div className="flex-1 flex flex-col min-h-0">
-        {selectedRequest ? (
-          <RequestDetail
-            request={selectedRequest}
-            commentText={commentText}
-            onCommentTextChange={onCommentTextChange}
-            onFileUpload={onFileUpload}
-            onCommentSubmit={onCommentSubmit}
-          />
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground">
-            <p className="text-sm">左のリストから依頼を選択してください</p>
-          </div>
-        )}
-      </div>
-    </div>
+      <TabsContent value="billing" className="flex-1 overflow-hidden">
+        {billingTab}
+      </TabsContent>
+    </Tabs>
   )
 }

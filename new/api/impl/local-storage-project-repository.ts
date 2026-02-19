@@ -1,10 +1,11 @@
 import type { ProjectRepository } from "../project-repository"
-import type { Project, Product, DesignRequest, Company, Hall, Employee, CastSchedule, MachineMaster } from "../types"
+import type { Project, Product, DesignRequest, MonthlyBilling, Company, Hall, Employee, CastSchedule, MachineMaster } from "../types"
 import {
   SEED_VERSION,
   SEED_PROJECTS,
   SEED_PRODUCTS,
   SEED_DESIGN_REQUESTS,
+  SEED_MONTHLY_BILLINGS,
   SEED_COMPANIES,
   SEED_HALLS,
   SEED_EMPLOYEES,
@@ -21,6 +22,7 @@ const STORAGE_KEYS = {
   halls: "new_halls",
   employees: "new_employees",
   machineMasters: "new_machine_masters",
+  monthlyBillings: "new_monthly_billings",
 } as const
 
 function getFromStorage<T>(key: string, fallback: T[]): T[] {
@@ -75,6 +77,9 @@ export class LocalStorageProjectRepository implements ProjectRepository {
     }
     if (!localStorage.getItem(STORAGE_KEYS.machineMasters)) {
       localStorage.setItem(STORAGE_KEYS.machineMasters, JSON.stringify(SEED_MACHINE_MASTERS))
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.monthlyBillings)) {
+      localStorage.setItem(STORAGE_KEYS.monthlyBillings, JSON.stringify(SEED_MONTHLY_BILLINGS))
     }
   }
 
@@ -214,5 +219,44 @@ export class LocalStorageProjectRepository implements ProjectRepository {
       return match ? Math.max(max, parseInt(match[1], 10)) : max
     }, 0)
     return `PJ-${String(maxNum + 1).padStart(3, "0")}`
+  }
+
+  // ─── 月次計上 ───
+
+  getMonthlyBillings(): MonthlyBilling[] {
+    return getFromStorage<MonthlyBilling>(STORAGE_KEYS.monthlyBillings, SEED_MONTHLY_BILLINGS)
+  }
+
+  getMonthlyBillingById(id: string): MonthlyBilling | undefined {
+    return this.getMonthlyBillings().find((b) => b.id === id)
+  }
+
+  getMonthlyBillingsByVendor(vendorId: string): MonthlyBilling[] {
+    return this.getMonthlyBillings().filter((b) => b.vendorId === vendorId)
+  }
+
+  getMonthlyBillingsByMonth(billingMonth: string): MonthlyBilling[] {
+    return this.getMonthlyBillings().filter((b) => b.billingMonth === billingMonth)
+  }
+
+  createMonthlyBilling(billing: Omit<MonthlyBilling, "id">): MonthlyBilling {
+    const all = this.getMonthlyBillings()
+    const maxNum = all.reduce((max, b) => {
+      const match = b.id.match(/^MB-(\d+)$/)
+      return match ? Math.max(max, parseInt(match[1], 10)) : max
+    }, 0)
+    const newBilling: MonthlyBilling = { ...billing, id: `MB-${String(maxNum + 1).padStart(3, "0")}` }
+    saveToStorage(STORAGE_KEYS.monthlyBillings, [...all, newBilling])
+    return newBilling
+  }
+
+  updateMonthlyBilling(id: string, updates: Partial<MonthlyBilling>): MonthlyBilling | undefined {
+    const all = this.getMonthlyBillings()
+    const index = all.findIndex((b) => b.id === id)
+    if (index === -1) return undefined
+    const updated = { ...all[index], ...updates }
+    all[index] = updated
+    saveToStorage(STORAGE_KEYS.monthlyBillings, all)
+    return updated
   }
 }

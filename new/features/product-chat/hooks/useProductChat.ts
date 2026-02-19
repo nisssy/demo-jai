@@ -8,6 +8,14 @@ import type { ChatChannel } from "@/new/features/product-chat/model/types"
 const CHAT_DEPARTMENTS: Record<string, string[]> = {
   "トリニティガール": ["BS・CS"],
   "スロセレ": ["BS・CS"],
+  "合同抽選会": ["poster", "dm"],
+}
+
+/** チャンネル内部名 → デフォルト表示名 */
+const DEFAULT_DISPLAY_NAMES: Record<string, string> = {
+  "BS・CS": "マネジメント部",
+  "poster": "ポスター",
+  "dm": "DM",
 }
 
 export type UseProductChatArgs = {
@@ -19,7 +27,7 @@ export type UseProductChatArgs = {
   channelDisplayNames?: Record<string, string>
 }
 
-export function useProductChat({ repository, productId, author = "営業", departments: departmentsOverride, channelDisplayNames = {} }: UseProductChatArgs) {
+export function useProductChat({ repository, productId, author = "営業", departments: departmentsOverride, channelDisplayNames: channelDisplayNamesOverride = {} }: UseProductChatArgs) {
   const [refreshKey, setRefreshKey] = useState(0)
 
   // 他コンポーネントからの chatMessages 更新を検知して再読み込み
@@ -46,6 +54,12 @@ export function useProductChat({ repository, productId, author = "営業", depar
   const departments = useMemo(
     () => departmentsOverride ?? CHAT_DEPARTMENTS[eventType] ?? [],
     [departmentsOverride, eventType],
+  )
+
+  // デフォルト表示名とオーバーライドをマージ
+  const channelDisplayNames = useMemo(
+    () => ({ ...DEFAULT_DISPLAY_NAMES, ...channelDisplayNamesOverride }),
+    [channelDisplayNamesOverride],
   )
 
   // 部門ごとのメッセージを分類

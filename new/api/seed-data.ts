@@ -4,10 +4,10 @@
  * ローカル開発・デモ用の初期データを一元管理する。
  * バージョンを変更するとクライアントの localStorage がリセットされる。
  */
-import type { Project, Product, DesignRequest, Company, Hall, Employee, CastSchedule, MachineMaster } from "./types"
+import type { Project, Product, DesignRequest, MonthlyBilling, Company, Hall, Employee, CastSchedule, MachineMaster } from "./types"
 
 /** シードデータのスキーマバージョン。型定義やシードデータを変更したらインクリメントする */
-export const SEED_VERSION = 24
+export const SEED_VERSION = 31
 
 // ─── Projects ───
 
@@ -76,6 +76,19 @@ export const SEED_PROJECTS: Project[] = [
     requestDate: "2026/02/10",
     createdAt: "2026-02-10T08:00:00Z",
     updatedAt: "2026-02-10T08:00:00Z",
+  },
+  {
+    id: 6,
+    projectNumber: "PJ-006",
+    projectName: "パチンコパーラー池袋 - 田中 三郎",
+    companyName: "ダイナム株式会社",
+    companyId: "CORP-004",
+    hallName: "パチンコパーラー池袋",
+    hallId: "HALL-020",
+    salesPersonName: "田中 三郎",
+    requestDate: "2026/02/15",
+    createdAt: "2026-02-15T09:00:00Z",
+    updatedAt: "2026-02-15T09:00:00Z",
   },
 ]
 
@@ -240,11 +253,11 @@ export const SEED_PRODUCTS: Product[] = [
     area: "東京都",
     budget: "1200000",
     prizeInfo: [
-      { rank: "特賞", name: "液晶テレビ 50インチ", quantity: "2", prizeId: "1", vendorId: "1", vendorName: "景品卸売センター" },
-      { rank: "1等", name: "ダイソン掃除機", quantity: "5", prizeId: "2", vendorId: "1", vendorName: "景品卸売センター" },
-      { rank: "2等", name: "任天堂Switch", quantity: "10", prizeId: "3", vendorId: "2", vendorName: "プレミアム景品" },
-      { rank: "3等", name: "商品券 5000円分", quantity: "50", prizeId: "4", vendorId: "3", vendorName: "ギフトプラザ" },
-      { rank: "参加賞", name: "ティッシュBOX", quantity: "500", prizeId: "5", vendorId: "1", vendorName: "景品卸売センター" },
+      { rank: "特賞", name: "液晶テレビ 50インチ", quantity: "1", unitPrice: 80000, prizeId: "1", vendorId: "1", vendorName: "景品卸売センター" },
+      { rank: "1等", name: "ダイソン掃除機", quantity: "2", unitPrice: 45000, prizeId: "2", vendorId: "1", vendorName: "景品卸売センター" },
+      { rank: "2等", name: "任天堂Switch", quantity: "3", unitPrice: 35000, prizeId: "3", vendorId: "2", vendorName: "プレミアム景品" },
+      { rank: "3等", name: "商品券 5000円分", quantity: "5", unitPrice: 5000, prizeId: "4", vendorId: "3", vendorName: "ギフトプラザ" },
+      { rank: "参加賞", name: "ティッシュBOX", quantity: "10", unitPrice: 100, prizeId: "5", vendorId: "1", vendorName: "景品卸売センター" },
     ],
     quoteConfig: {
       totalQuoteItems: { 1: "50000", 3: "80000", 4: "65000" },
@@ -280,11 +293,32 @@ export const SEED_PRODUCTS: Product[] = [
       },
     ],
     winnerList: [
-      { id: "W-001", name: "鈴木 太郎", address: "東京都渋谷区1-1-1", phone: "090-1111-1111", prize: "特賞" },
-      { id: "W-002", name: "田中 花子", address: "東京都新宿区2-2-2", phone: "090-2222-2222", prize: "1等" },
-      { id: "W-003", name: "佐藤 次郎", address: "東京都豊島区3-3-3", phone: "090-3333-3333", prize: "1等" },
-      { id: "W-004", name: "高橋 美咲", address: "東京都港区4-4-4", phone: "090-4444-4444", prize: "2等" },
-      { id: "W-005", name: "渡辺 健一", address: "東京都品川区5-5-5", phone: "090-5555-5555", prize: "2等" },
+      // 特賞: 液晶テレビ 50インチ × 1 (vendor 1)
+      { id: "1", name: "鈴木 太郎", address: "東京都渋谷区神南1-1-1", phone: "090-1111-1111", prize: "液晶テレビ 50インチ" },
+      // 1等: ダイソン掃除機 × 2 (vendor 1)
+      { id: "2", name: "田中 花子", address: "東京都新宿区西新宿2-2-2", phone: "090-2222-2222", prize: "ダイソン掃除機" },
+      { id: "3", name: "佐藤 次郎", address: "東京都豊島区東池袋3-3-3", phone: "090-3333-3333", prize: "ダイソン掃除機" },
+      // 2等: 任天堂Switch × 3 (vendor 2)
+      { id: "4", name: "高橋 美咲", address: "東京都港区六本木4-4-4", phone: "090-4444-4444", prize: "任天堂Switch" },
+      { id: "5", name: "渡辺 健一", address: "東京都品川区大崎5-5-5", phone: "090-5555-5555", prize: "任天堂Switch" },
+      { id: "6", name: "伊藤 さくら", address: "神奈川県横浜市中区本町6-6-6", phone: "090-6666-6666", prize: "任天堂Switch" },
+      // 3等: 商品券 5000円分 × 5 (vendor 3)
+      { id: "7", name: "山本 大輔", address: "千葉県千葉市中央区7-7-7", phone: "090-7777-7777", prize: "商品券 5000円分" },
+      { id: "8", name: "中村 優子", address: "埼玉県さいたま市浦和区8-8-8", phone: "090-8888-8888", prize: "商品券 5000円分" },
+      { id: "9", name: "小林 誠", address: "東京都中央区銀座9-9-9", phone: "090-9999-9999", prize: "商品券 5000円分" },
+      { id: "10", name: "加藤 麻衣", address: "東京都目黒区自由が丘10-10", phone: "090-1010-1010", prize: "商品券 5000円分" },
+      { id: "11", name: "吉田 翔太", address: "東京都世田谷区三軒茶屋11-11", phone: "090-1100-1100", prize: "商品券 5000円分" },
+      // 参加賞: ティッシュBOX × 10 (vendor 1)
+      { id: "12", name: "松本 由美", address: "東京都文京区本郷12-12", phone: "080-1212-1212", prize: "ティッシュBOX" },
+      { id: "13", name: "井上 拓也", address: "東京都台東区上野13-13", phone: "080-1313-1313", prize: "ティッシュBOX" },
+      { id: "14", name: "木村 恵子", address: "東京都北区赤羽14-14", phone: "080-1414-1414", prize: "ティッシュBOX" },
+      { id: "15", name: "林 浩二", address: "東京都板橋区板橋15-15", phone: "080-1515-1515", prize: "ティッシュBOX" },
+      { id: "16", name: "斎藤 美穂", address: "東京都練馬区練馬16-16", phone: "080-1616-1616", prize: "ティッシュBOX" },
+      { id: "17", name: "清水 圭介", address: "東京都江東区豊洲17-17", phone: "080-1717-1717", prize: "ティッシュBOX" },
+      { id: "18", name: "山田 香織", address: "東京都大田区蒲田18-18", phone: "080-1818-1818", prize: "ティッシュBOX" },
+      { id: "19", name: "阿部 雄大", address: "東京都杉並区高円寺19-19", phone: "080-1919-1919", prize: "ティッシュBOX" },
+      { id: "20", name: "森 真理子", address: "東京都墨田区錦糸町20-20", phone: "080-2020-2020", prize: "ティッシュBOX" },
+      { id: "21", name: "池田 修平", address: "東京都荒川区西日暮里21-21", phone: "080-2121-2121", prize: "ティッシュBOX" },
     ],
     winnerListUploadedAt: "2026-02-20T10:00:00Z",
     winnerListValidatedAt: "2026-02-20T10:05:00Z",
@@ -299,26 +333,29 @@ export const SEED_PRODUCTS: Product[] = [
         vendorId: "1",
         vendorName: "景品卸売センター",
         requestedAt: "2026-02-22T10:00:00Z",
+        desiredDeliveryDate: "2026-03-10",
         prizeItems: [
-          { rank: "特賞", name: "液晶テレビ 50インチ", quantity: "2", prizeId: "1", vendorId: "1", vendorName: "景品卸売センター" },
-          { rank: "1等", name: "ダイソン掃除機", quantity: "5", prizeId: "2", vendorId: "1", vendorName: "景品卸売センター" },
-          { rank: "参加賞", name: "ティッシュBOX", quantity: "500", prizeId: "5", vendorId: "1", vendorName: "景品卸売センター" },
+          { rank: "特賞", name: "液晶テレビ 50インチ", quantity: "1", unitPrice: 80000, prizeId: "1", vendorId: "1", vendorName: "景品卸売センター" },
+          { rank: "1等", name: "ダイソン掃除機", quantity: "2", unitPrice: 45000, prizeId: "2", vendorId: "1", vendorName: "景品卸売センター" },
+          { rank: "参加賞", name: "ティッシュBOX", quantity: "10", unitPrice: 100, prizeId: "5", vendorId: "1", vendorName: "景品卸売センター" },
         ],
       },
       {
         vendorId: "2",
         vendorName: "プレミアム景品",
         requestedAt: "2026-02-22T10:00:00Z",
+        desiredDeliveryDate: "2026-03-10",
         prizeItems: [
-          { rank: "2等", name: "任天堂Switch", quantity: "10", prizeId: "3", vendorId: "2", vendorName: "プレミアム景品" },
+          { rank: "2等", name: "任天堂Switch", quantity: "3", unitPrice: 35000, prizeId: "3", vendorId: "2", vendorName: "プレミアム景品" },
         ],
       },
       {
         vendorId: "3",
         vendorName: "ギフトプラザ",
         requestedAt: "2026-02-22T10:00:00Z",
+        desiredDeliveryDate: "2026-03-10",
         prizeItems: [
-          { rank: "3等", name: "商品券 5000円分", quantity: "50", prizeId: "4", vendorId: "3", vendorName: "ギフトプラザ" },
+          { rank: "3等", name: "商品券 5000円分", quantity: "5", unitPrice: 5000, prizeId: "4", vendorId: "3", vendorName: "ギフトプラザ" },
         ],
       },
     ],
@@ -327,15 +364,23 @@ export const SEED_PRODUCTS: Product[] = [
       {
         vendorId: "1",
         vendorName: "景品卸売センター",
-        deliveredAt: "2026-03-01T14:00:00Z",
-        carrierName: "ヤマト運輸",
-        trackingNumber: "1234-5678-9012",
-        shippedAt: "2026-02-28T10:00:00Z",
         deliveries: [
-          { winnerId: "W-001", winnerName: "鈴木 太郎", carrierName: "ヤマト運輸", trackingNumber: "T-001", shippedAt: "2026-02-28T10:00:00Z" },
-          { winnerId: "W-002", winnerName: "田中 花子", carrierName: "ヤマト運輸", trackingNumber: "T-002", shippedAt: "2026-02-28T10:00:00Z" },
+          // 特賞 × 1
+          { winnerId: "1", winnerName: "鈴木 太郎", carrierName: "ヤマト運輸", trackingNumber: "T-0001", shippedAt: "2026-02-28", deliveredAt: "2026-03-01" },
+          // 1等 × 2
+          { winnerId: "2", winnerName: "田中 花子", carrierName: "ヤマト運輸", trackingNumber: "T-0002", shippedAt: "2026-02-28", deliveredAt: "2026-03-01" },
+          { winnerId: "3", winnerName: "佐藤 次郎", carrierName: "ヤマト運輸", trackingNumber: "T-0003", shippedAt: "2026-02-28" },
+          // 参加賞 × 10（一部のみ入力済み）
+          { winnerId: "12", winnerName: "松本 由美", carrierName: "佐川急便", trackingNumber: "S-0001", shippedAt: "2026-03-02", deliveredAt: "2026-03-03" },
+          { winnerId: "13", winnerName: "井上 拓也", carrierName: "佐川急便", trackingNumber: "S-0002", shippedAt: "2026-03-02" },
         ],
       },
+    ],
+    chatMessages: [
+      { channel: "poster", author: "営業", content: "ポスターデザインをお願いします。赤を基調としたデザインでお願いします。", timestamp: "2026-02-10T10:05:00Z" },
+      { channel: "poster", author: "デザインスタジオA", content: "承知しました。2日以内に初稿をアップロードします。", timestamp: "2026-02-10T11:00:00Z" },
+      { channel: "poster", author: "デザインスタジオA", content: "初稿をアップロードしました。ご確認ください。", timestamp: "2026-02-12T15:00:00Z" },
+      { channel: "dm", author: "営業", content: "DM用デザインをお願いします。ポスターと統一感のあるデザインで。", timestamp: "2026-02-11T09:05:00Z" },
     ],
   },
   // Product 4: トリニティガール（イベント終了済み - マネジメント部用）
@@ -635,6 +680,69 @@ export const SEED_PRODUCTS: Product[] = [
       { channel: "商材管理課", author: "外注業者", content: "中間レポートを入力しました。ご確認ください。", timestamp: "2026-02-16T14:00:00Z" },
     ],
   },
+  // Product 12: 合同抽選会（受注済み - 事務管理課 未入力状態）
+  {
+    id: 12,
+    projectId: 6,
+    projectNumber: "PJ-006",
+    category: "ポイント",
+    eventType: "合同抽選会",
+    eventProductName: "GW大感謝抽選会2026",
+    eventDate: "2026/05/03",
+    estimatedBillingAmount: 900000,
+    proposalStatus: "order-received",
+    managementConfirmationStatus: "approved",
+    companionCount: "0",
+    directorCount: "0",
+    mcCount: "0",
+    selectedCompanions: [],
+    selectedDirectors: [],
+    selectedMcs: [],
+    companionBookingStatus: {},
+    directorBookingStatus: {},
+    mcBookingStatus: {},
+    executionStatus: "実施前",
+    dmMailing: "yes",
+    hallNames: ["パチンコパーラー池袋"],
+    eventStartDate: "2026/04/28",
+    eventEndDate: "2026/05/06",
+    salesPersonId: 3,
+    insightPersonId: 1,
+    readingCertainty: "B" as const,
+    area: "東京都",
+    budget: "900000",
+    prizeInfo: [
+      { rank: "特賞", name: "PlayStation 5", quantity: "1", unitPrice: 66980, prizeId: "6", vendorId: "2", vendorName: "プレミアム景品" },
+      { rank: "1等", name: "ルンバ i7+", quantity: "2", unitPrice: 55000, prizeId: "7", vendorId: "1", vendorName: "景品卸売センター" },
+      { rank: "2等", name: "JTB旅行券 3万円分", quantity: "3", unitPrice: 30000, prizeId: "8", vendorId: "3", vendorName: "ギフトプラザ" },
+      { rank: "3等", name: "QUOカード 3000円分", quantity: "5", unitPrice: 3000, prizeId: "9", vendorId: "3", vendorName: "ギフトプラザ" },
+      { rank: "参加賞", name: "ポケットティッシュ", quantity: "10", unitPrice: 50, prizeId: "10", vendorId: "1", vendorName: "景品卸売センター" },
+    ],
+    hallQuotes: [
+      {
+        hallName: "パチンコパーラー池袋",
+        quoteItems: [
+          { id: 1, name: "ポスターデザイン", quantity: 1, unitPrice: 25000, included: true },
+          { id: 2, name: "ポスター印刷", quantity: 20, unitPrice: 2000, included: true },
+          { id: 3, name: "DM発送代行", quantity: 1, unitPrice: 40000, included: true },
+          { id: 4, name: "抽選システム利用料", quantity: 1, unitPrice: 35000, included: true },
+        ],
+        percentage: 100,
+        calculatedAmount: 140000,
+      },
+    ],
+    // 事務管理課ワークフロー: 全て未入力
+    // winnerList: undefined
+    // winnerListUploadedAt: undefined
+    // winnerListValidatedAt: undefined
+    // notificationOrderGeneratedAt: undefined
+    // notificationOrderSentAt: undefined
+    // prizeOrderGeneratedAt: undefined
+    // prizeOrderRequestedAt: undefined
+    // prizeOrdersByVendor: undefined
+    // prizeDeliveryInfoByVendor: undefined
+    // quoCardLetterCheckedAt: undefined
+  },
 ]
 
 // ─── Design Requests ───
@@ -695,8 +803,8 @@ export const SEED_DESIGN_REQUESTS: DesignRequest[] = [
     eventStartDate: "2026/03/15",
     eventEndDate: "2026/03/25",
     status: "requested",
-    vendorId: "V-002",
-    vendorName: "デザインスタジオB",
+    vendorId: "V-001",
+    vendorName: "デザインスタジオA",
     requestedAt: "2026-02-21T10:00:00Z",
     requestedBy: "EMP-003",
     requestedByName: "田中 三郎",
@@ -814,6 +922,45 @@ export const SEED_PRIZE_VENDORS = [
   { id: "1", name: "景品卸売センター" },
   { id: "2", name: "プレミアム景品" },
   { id: "3", name: "ギフトプラザ" },
+]
+
+// ─── Monthly Billings（月次計上シードデータ） ───
+
+export const SEED_MONTHLY_BILLINGS: MonthlyBilling[] = [
+  {
+    id: "MB-001",
+    vendorType: "prize",
+    vendorId: "1",
+    vendorName: "景品卸売センター",
+    billingMonth: "2026-02",
+    status: "sent",
+    lineItems: [
+      { productId: 3, productName: "春の大抽選会2026", projectNumber: "PJ-002", itemName: "液晶テレビ 50インチ", quantity: 2, unitPrice: 80000, subtotal: 160000 },
+      { productId: 3, productName: "春の大抽選会2026", projectNumber: "PJ-002", itemName: "ダイソン掃除機", quantity: 5, unitPrice: 45000, subtotal: 225000 },
+      { productId: 3, productName: "春の大抽選会2026", projectNumber: "PJ-002", itemName: "ティッシュBOX", quantity: 500, unitPrice: 100, subtotal: 50000 },
+    ],
+    totalAmount: 435000,
+    createdAt: "2026-02-28T09:00:00Z",
+    updatedAt: "2026-02-28T10:00:00Z",
+    chatMessages: [
+      { author: "事務管理課", content: "2月分の計上データをお送りします。内容をご確認ください。", timestamp: "2026-02-28T10:00:00Z" },
+    ],
+  },
+  {
+    id: "MB-002",
+    vendorType: "design",
+    vendorId: "V-001",
+    vendorName: "デザインスタジオA",
+    billingMonth: "2026-02",
+    status: "draft",
+    lineItems: [
+      { productId: 3, productName: "春の大抽選会2026", projectNumber: "PJ-002", itemName: "当選通知書制作費", quantity: 1, unitPrice: 50000, subtotal: 50000 },
+    ],
+    totalAmount: 50000,
+    createdAt: "2026-02-28T09:00:00Z",
+    updatedAt: "2026-02-28T09:00:00Z",
+    chatMessages: [],
+  },
 ]
 
 // ─── Cast Schedules（キャスト予定データ） ───

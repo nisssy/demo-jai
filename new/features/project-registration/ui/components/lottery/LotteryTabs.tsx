@@ -111,9 +111,6 @@ export const LotteryTabs = ({ lotteryForm: f }: LotteryTabsProps) => {
           showDateError={f.showDateError}
           showFontError={f.showFontError}
           onAIProofing={f.handleAIProofing}
-          posterCommentText={f.posterCommentText}
-          onPosterCommentTextChange={f.setPosterCommentText}
-          onSendPosterComment={f.handlePosterComment}
           posterSentToCustomer={f.posterSentToCustomer}
           onSendPosterToCustomer={f.handleSendPosterToCustomer}
           showPosterOrderModal={f.showPosterOrderModal}

@@ -82,6 +82,7 @@ export const DeliveryInfoSectionView = ({
                         <TableHead>配送業者</TableHead>
                         <TableHead>追跡番号</TableHead>
                         <TableHead>発送日</TableHead>
+                        <TableHead>発送完了日</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -98,6 +99,11 @@ export const DeliveryInfoSectionView = ({
                           <TableCell>
                             {delivery.shippedAt
                               ? new Date(delivery.shippedAt).toLocaleDateString("ja-JP")
+                              : "-"}
+                          </TableCell>
+                          <TableCell>
+                            {delivery.deliveredAt
+                              ? new Date(delivery.deliveredAt).toLocaleDateString("ja-JP")
                               : "-"}
                           </TableCell>
                         </TableRow>

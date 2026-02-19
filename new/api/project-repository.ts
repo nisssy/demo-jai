@@ -1,4 +1,4 @@
-import type { Project, Product, DesignRequest, Company, Hall, Employee, CastSchedule, MachineMaster } from "./types"
+import type { Project, Product, DesignRequest, MonthlyBilling, Company, Hall, Employee, CastSchedule, MachineMaster } from "./types"
 
 /** 案件リポジトリのインターフェース */
 export interface ProjectRepository {
@@ -34,4 +34,12 @@ export interface ProjectRepository {
   // 機種マスタ
   getMachineMasters(): MachineMaster[]
   saveMachineMasters(masters: MachineMaster[]): void
+
+  // 月次計上
+  getMonthlyBillings(): MonthlyBilling[]
+  getMonthlyBillingById(id: string): MonthlyBilling | undefined
+  getMonthlyBillingsByVendor(vendorId: string): MonthlyBilling[]
+  getMonthlyBillingsByMonth(billingMonth: string): MonthlyBilling[]
+  createMonthlyBilling(billing: Omit<MonthlyBilling, "id">): MonthlyBilling
+  updateMonthlyBilling(id: string, updates: Partial<MonthlyBilling>): MonthlyBilling | undefined
 }

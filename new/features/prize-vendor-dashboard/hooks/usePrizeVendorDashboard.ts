@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import type { ProjectRepository } from "@/new/api/project-repository"
-import type { Product, PrizeOrderDocument, PrizeDeliveryInfoByVendor, DeliveryInfo } from "@/new/api/types"
+import type { Product, PrizeOrderDocument, PrizeDeliveryInfoByVendor } from "@/new/api/types"
 
 // ─── ViewModel types ───
 
@@ -13,10 +13,13 @@ export type OrderEntry = {
 export type DeliveryFormRow = {
   winnerId: string
   winnerName: string
+  winnerAddress: string
+  winnerPhone: string
   prize: string
   carrierName: string
   trackingNumber: string
   shippedAt: string
+  deliveredAt: string
 }
 
 export type SelectedKey = {
@@ -61,17 +64,6 @@ export function usePrizeVendorDashboard(repository: ProjectRepository) {
     ) ?? null
   }, [orderEntries, selectedKey])
 
-  // Existing delivery info for selected vendor
-  const existingDeliveries: DeliveryInfo[] = useMemo(() => {
-    if (!selectedEntry) return []
-    const product = selectedEntry.product
-    const vendorId = selectedEntry.order.vendorId
-    const vendorDelivery = product.prizeDeliveryInfoByVendor?.find(
-      (d) => d.vendorId === vendorId
-    )
-    return vendorDelivery?.deliveries ?? []
-  }, [selectedEntry])
-
   // Initialize delivery form when selection changes
   useEffect(() => {
     if (!selectedEntry) {
@@ -97,14 +89,20 @@ export function usePrizeVendorDashboard(repository: ProjectRepository) {
     if (vendorDelivery?.deliveries && vendorDelivery.deliveries.length > 0) {
       // Populate from existing delivery data
       setDeliveryForm(
-        vendorDelivery.deliveries.map((d) => ({
-          winnerId: d.winnerId,
-          winnerName: d.winnerName,
-          prize: relevantWinners.find((w) => w.id === d.winnerId)?.prize ?? "",
-          carrierName: d.carrierName ?? "",
-          trackingNumber: d.trackingNumber ?? "",
-          shippedAt: d.shippedAt ?? "",
-        }))
+        vendorDelivery.deliveries.map((d) => {
+          const winner = relevantWinners.find((w) => w.id === d.winnerId)
+          return {
+            winnerId: d.winnerId,
+            winnerName: d.winnerName,
+            winnerAddress: winner?.address ?? "",
+            winnerPhone: winner?.phone ?? "",
+            prize: winner?.prize ?? "",
+            carrierName: d.carrierName ?? "",
+            trackingNumber: d.trackingNumber ?? "",
+            shippedAt: d.shippedAt ?? "",
+            deliveredAt: d.deliveredAt ?? "",
+          }
+        })
       )
     } else {
       // Initialize empty form from relevant winners
@@ -112,10 +110,13 @@ export function usePrizeVendorDashboard(repository: ProjectRepository) {
         relevantWinners.map((w) => ({
           winnerId: w.id,
           winnerName: w.name,
+          winnerAddress: w.address ?? "",
+          winnerPhone: w.phone ?? "",
           prize: w.prize ?? "",
           carrierName: "",
           trackingNumber: "",
           shippedAt: "",
+          deliveredAt: "",
         }))
       )
     }
@@ -152,6 +153,7 @@ export function usePrizeVendorDashboard(repository: ProjectRepository) {
       carrierName: row.carrierName || undefined,
       trackingNumber: row.trackingNumber || undefined,
       shippedAt: row.shippedAt || undefined,
+      deliveredAt: row.deliveredAt || undefined,
     }))
 
     const existingVendorDeliveries = product.prizeDeliveryInfoByVendor ?? []
@@ -176,7 +178,6 @@ export function usePrizeVendorDashboard(repository: ProjectRepository) {
     orderEntries,
     selectedKey,
     selectedEntry,
-    existingDeliveries,
     deliveryForm,
     handleSelect,
     updateDeliveryFormRow,

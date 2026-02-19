@@ -326,7 +326,6 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
   const [proofingComplete, setProofingComplete] = useState(false)
   const [showDateError, setShowDateError] = useState(false)
   const [showFontError, setShowFontError] = useState(false)
-  const [posterCommentText, setPosterCommentText] = useState("")
   const [posterSentToCustomer, setPosterSentToCustomer] = useState(false)
   const [showPosterOrderModal, setShowPosterOrderModal] = useState(false)
   const [showDmCreateModal, setShowDmCreateModal] = useState(false)
@@ -335,6 +334,19 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
 
   // デザイン依頼データ
   const [designRequestsVersion, setDesignRequestsVersion] = useState(0)
+
+  // 他タブ・他画面でのデザインリクエスト更新を検知して再読み込み
+  useEffect(() => {
+    const refresh = () => setDesignRequestsVersion((v) => v + 1)
+    // 別タブでlocalStorageが更新された場合
+    window.addEventListener("storage", refresh)
+    // タブにフォーカスが戻った場合（同タブでのページ遷移後も対応）
+    window.addEventListener("focus", refresh)
+    return () => {
+      window.removeEventListener("storage", refresh)
+      window.removeEventListener("focus", refresh)
+    }
+  }, [])
 
   const allDesignRequests = useMemo(() => {
     if (!productId) return []
@@ -436,6 +448,17 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
       vendorName: vendor.name,
       requestedAt: new Date().toISOString(),
     })
+    // 発注後にチャットへ自動メッセージ送信
+    const chatMessage = {
+      channel: "poster",
+      author: "営業",
+      content: `ポスター作成を発注しました。\n発注先: ${vendor.name}`,
+      timestamp: new Date().toISOString(),
+    }
+    repository.updateProduct(productId, {
+      chatMessages: [...(product.chatMessages ?? []), chatMessage],
+    })
+    window.dispatchEvent(new CustomEvent("chat-updated", { detail: { productId } }))
     setDesignRequestsVersion((v) => v + 1)
     setShowPosterOrderModal(false)
   }, [productId, posterOrderVendorId, repository])
@@ -457,21 +480,20 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
       vendorName: vendor.name,
       requestedAt: new Date().toISOString(),
     })
+    // 発注後にチャットへ自動メッセージ送信
+    const chatMessage = {
+      channel: "dm",
+      author: "営業",
+      content: `DM作成を依頼しました。\n依頼先: ${vendor.name}`,
+      timestamp: new Date().toISOString(),
+    }
+    repository.updateProduct(productId, {
+      chatMessages: [...(product.chatMessages ?? []), chatMessage],
+    })
+    window.dispatchEvent(new CustomEvent("chat-updated", { detail: { productId } }))
     setDesignRequestsVersion((v) => v + 1)
     setShowDmCreateModal(false)
   }, [productId, dmCreateVendorId, repository])
-
-  const handlePosterComment = useCallback(() => {
-    if (!posterCommentText.trim() || !latestPosterRequest) return
-    repository.addDesignRequestComment(
-      latestPosterRequest.id,
-      posterCommentText.trim(),
-      "Sales",
-      salesPersonName || "営業"
-    )
-    setPosterCommentText("")
-    setDesignRequestsVersion((v) => v + 1)
-  }, [posterCommentText, latestPosterRequest, salesPersonName, repository])
 
   const handleSendPosterToCustomer = useCallback(() => {
     setPosterSentToCustomer(true)
@@ -644,9 +666,6 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
     showDateError,
     showFontError,
     handleAIProofing,
-    posterCommentText,
-    setPosterCommentText,
-    handlePosterComment,
     posterSentToCustomer,
     handleSendPosterToCustomer,
     handlePosterOrder,

@@ -218,10 +218,12 @@ export const ProjectRegistrationView = ({
         elements.push(
           <Card key={idx}>
             <CardContent className="pt-6">
-              <ConfirmationStatusBar
-                status={managementConfirmationStatus}
-                onRequestConfirmation={handleRequestConfirmation}
-              />
+              {product.category !== "ポイント" && (
+                <ConfirmationStatusBar
+                  status={managementConfirmationStatus}
+                  onRequestConfirmation={handleRequestConfirmation}
+                />
+              )}
               <ProductContent {...contentProps} />
             </CardContent>
           </Card>

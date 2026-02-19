@@ -37,6 +37,16 @@ export type SlotReport = {
 /** マネジメント部確認ステータス */
 export type ManagementConfirmationStatus = "unconfirmed" | "under-review" | "revision-requested" | "approved"
 
+/** 月次計上ステータス */
+export type BillingStatus =
+  | "draft"                // 抽出済み（未送信）
+  | "sent"                 // 業者に送信済み
+  | "correction-requested" // 修正依頼あり
+  | "confirmed"            // 業者確認済み
+  | "invoice-received"     // 請求書受領
+  | "agreed"               // 合意メール送信済み
+  | "acknowledged"         // 了承メール受信済み
+
 // ─── 案件エンティティ ───
 
 export type Project = {
@@ -171,6 +181,7 @@ export type PrizeInfo = {
   rank: string
   name: string
   quantity: string
+  unitPrice?: number
   prizeId?: string
   vendorId?: string
   vendorName?: string
@@ -218,6 +229,7 @@ export type DeliveryInfo = {
   carrierName?: string
   trackingNumber?: string
   shippedAt?: string
+  deliveredAt?: string
 }
 
 /** 景品発注書（1業者分） */
@@ -225,6 +237,7 @@ export type PrizeOrderDocument = {
   vendorId: string
   vendorName: string
   requestedAt: string
+  desiredDeliveryDate?: string
   prizeItems: PrizeInfo[]
 }
 
@@ -365,4 +378,44 @@ export type CastSchedule = {
   castName: string
   role: CastRole
   items: CastScheduleItem[]
+}
+
+// ─── 月次計上 ───
+
+/** 計上明細行 */
+export type BillingLineItem = {
+  productId: number
+  productName: string
+  projectNumber: string
+  itemName: string
+  quantity: number
+  unitPrice: number
+  subtotal: number
+}
+
+/** 計上チャットメッセージ */
+export type BillingChatMessage = {
+  author: string
+  content: string
+  timestamp: string
+}
+
+/** 月次計上レコード（業者×月） */
+export type MonthlyBilling = {
+  id: string
+  vendorType: "prize" | "design"
+  vendorId: string
+  vendorName: string
+  billingMonth: string
+  status: BillingStatus
+  lineItems: BillingLineItem[]
+  totalAmount: number
+  createdAt: string
+  updatedAt: string
+  chatMessages?: BillingChatMessage[]
+  correctionRequestedAt?: string
+  confirmedAt?: string
+  invoiceReceivedAt?: string
+  agreedAt?: string
+  acknowledgedAt?: string
 }

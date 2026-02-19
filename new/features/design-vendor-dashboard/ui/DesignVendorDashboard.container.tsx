@@ -3,6 +3,7 @@
 import type { ProjectRepository } from "@/new/api/project-repository"
 import { useDesignVendorDashboard } from "@/new/features/design-vendor-dashboard/hooks/useDesignVendorDashboard"
 import { DesignVendorDashboardView } from "@/new/features/design-vendor-dashboard/ui/DesignVendorDashboard.view"
+import { DesignVendorBillingContainer } from "@/new/features/design-vendor-billing/ui/DesignVendorBilling.container"
 
 export interface DesignVendorDashboardContainerProps {
   repository: ProjectRepository
@@ -16,11 +17,10 @@ export const DesignVendorDashboardContainer = ({
     uploadedRequests,
     selectedRequest,
     selectedRequestId,
-    commentText,
-    setCommentText,
+    chatMessages,
     handleSelectRequest,
     handleFileUpload,
-    handleCommentSubmit,
+    handleChatSend,
   } = useDesignVendorDashboard(repository)
 
   return (
@@ -29,11 +29,11 @@ export const DesignVendorDashboardContainer = ({
       uploadedRequests={uploadedRequests}
       selectedRequest={selectedRequest}
       selectedRequestId={selectedRequestId}
-      commentText={commentText}
-      onCommentTextChange={setCommentText}
+      chatMessages={chatMessages}
       onSelectRequest={handleSelectRequest}
       onFileUpload={handleFileUpload}
-      onCommentSubmit={handleCommentSubmit}
+      onChatSend={handleChatSend}
+      billingTab={<DesignVendorBillingContainer repository={repository} />}
     />
   )
 }
