@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import type { ProjectRepository } from "@/new/api/project-repository"
-import type { Product, PrizeOrderDocument, PrizeDeliveryInfoByVendor } from "@/new/api/types"
+import type { Product, PrizeOrderDocument, PrizeDeliveryInfoByVendor, DeliveryInfo } from "@/new/api/types"
 
 // ─── ViewModel types ───
 
