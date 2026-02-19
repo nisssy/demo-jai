@@ -6,9 +6,9 @@
     "build": "bun run next build",
     "dev": "bun run next dev --port ${PORT:-3000}",
     "lint": "eslint .",
-    "start": "PORT=${PORT:-3000} node .next/standalone/server.js",
+    "start": "bun run next start",
     "test": "bun test",
-    "zip": "zip -r ../demo-jai.zip . -x \"node_modules/*\" \".next/*\" \".git/*\" \".claude/*\" \".cursor/*\""
+    "zip": "zip -r ../demo-jai-re.zip . -x \"node_modules/*\" \".next/*\" \".git/*\" \".claude/*\" \".cursor/*\" \".env*\""
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
