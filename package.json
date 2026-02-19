@@ -6,7 +6,7 @@
     "build": "bun run next build",
     "dev": "bun run next dev --port ${PORT:-3000}",
     "lint": "eslint .",
-    "start": "bun run next start --port ${PORT:-3000}",
+    "start": "PORT=${PORT:-3000} node .next/standalone/server.js",
     "test": "bun test",
     "zip": "zip -r ../demo-jai.zip . -x \"node_modules/*\" \".next/*\" \".git/*\" \".claude/*\" \".cursor/*\""
   },
