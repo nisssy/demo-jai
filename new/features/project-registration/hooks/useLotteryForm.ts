@@ -438,12 +438,14 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
     const partners = TRADING_PARTNERS.filter((t) => t.type === "printing")
     const vendor = partners.find((t) => t.id === posterOrderVendorId) ?? partners[0]
     if (!vendor) return
+    const project = repository.getProjects().find((pj) => pj.projectNumber === product.projectNumber)
 
     repository.createDesignRequest({
       requestType: "poster",
       projectId: product.projectId,
       projectNumber: product.projectNumber,
       projectName: product.eventProductName,
+      companyName: project?.companyName ?? "",
       hallNames: product.hallNames ?? [],
       eventStartDate: product.eventStartDate,
       eventEndDate: product.eventEndDate,
@@ -474,12 +476,14 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
     const partners = TRADING_PARTNERS.filter((t) => t.type === "design")
     const vendor = partners.find((t) => t.id === dmCreateVendorId) ?? partners[0]
     if (!vendor) return
+    const project = repository.getProjects().find((pj) => pj.projectNumber === product.projectNumber)
 
     repository.createDesignRequest({
       requestType: "dm",
       projectId: product.projectId,
       projectNumber: product.projectNumber,
       projectName: product.eventProductName,
+      companyName: project?.companyName ?? "",
       hallNames: product.hallNames ?? [],
       eventStartDate: product.eventStartDate,
       eventEndDate: product.eventEndDate,

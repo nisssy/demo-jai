@@ -63,7 +63,7 @@ export function useDesignVendorDashboard(repository: ProjectRepository) {
 
     // ポスター・DM: Product.chatMessages からフィルタ
     const product = repository.getProducts().find(
-      (p) => p.id === selectedRequest.projectId && p.category === "ポイント"
+      (p) => p.projectId === selectedRequest.projectId && p.category === "ポイント"
     )
     if (!product?.chatMessages) return []
     return product.chatMessages.filter((m) => m.channel === channel)
@@ -93,7 +93,7 @@ export function useDesignVendorDashboard(repository: ProjectRepository) {
         } else if (request.requestType === "poster" || request.requestType === "dm") {
           // ポスター・DM: Product chatMessages に自動メッセージ
           const product = repository.getProducts().find(
-            (p) => p.id === request.projectId && p.category === "ポイント"
+            (p) => p.projectId === request.projectId && p.category === "ポイント"
           )
           if (product) {
             const channel = request.requestType === "poster" ? "poster" : "dm"
@@ -135,7 +135,7 @@ export function useDesignVendorDashboard(repository: ProjectRepository) {
       // ポスター・DM: Product chatMessages に保存
       if (channel !== "poster" && channel !== "dm") return
       const product = repository.getProducts().find(
-        (p) => p.id === selectedRequest.projectId && p.category === "ポイント"
+        (p) => p.projectId === selectedRequest.projectId && p.category === "ポイント"
       )
       if (!product) return
       const vendorName = selectedRequest.vendorName ?? "デザイン業者"
