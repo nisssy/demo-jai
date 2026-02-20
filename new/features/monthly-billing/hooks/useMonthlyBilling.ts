@@ -422,7 +422,7 @@ export function useMonthlyBilling(repository: ProjectRepository) {
   const downloadCsv = useCallback(() => {
     if (billings.length === 0) return
     const csv = buildVendorCsvContent(billings, selectedMonth)
-    const filename = `売上計上データ_${selectedMonth}.csv`
+    const filename = `支払データ_${selectedMonth}.csv`
     triggerDownload(csv, filename)
   }, [billings, selectedMonth])
 
