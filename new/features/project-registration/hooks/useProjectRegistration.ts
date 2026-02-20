@@ -743,9 +743,15 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
 
     const hallAddress = allHalls.find((h) => h.hallId === form.hallId)?.address ?? ""
 
-    /** イベント系商材の請求予定金額を計算（合同抽選会は対象外） */
+    /** 商材の請求予定金額を計算 */
     const calcBilling = (p: ProductFormState): number => {
-      if (p.category === "ポイント") return 0
+      if (p.category === "ポイント") {
+        // 合同抽選会: hallQuotesのcalculatedAmountの合計を使う
+        if (lotteryData?.hallQuotes && lotteryData.hallQuotes.length > 0) {
+          return lotteryData.hallQuotes.reduce((sum, hq) => sum + (hq.calculatedAmount ?? 0), 0)
+        }
+        return 0
+      }
       return computeEstimatedBilling({
         startTime: p.startTime,
         endTime: p.endTime,
