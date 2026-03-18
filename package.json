@@ -8,7 +8,7 @@
     "lint": "eslint .",
     "start": "bun run next start",
     "test": "bun test",
-    "zip": "zip -r ../demo-jai-re.zip . -x \"node_modules/*\" \".next/*\" \".git/*\" \".claude/*\" \".cursor/*\" \".env*\""
+    "zip": "zip -r ../demo-jai.zip . -x \"node_modules/*\" \".next/*\" \".git/*\" \".claude/*\" \".cursor/*\" \".env*\""
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
