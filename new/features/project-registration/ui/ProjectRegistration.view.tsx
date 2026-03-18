@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChevronLeft } from "lucide-react"
@@ -12,6 +13,7 @@ import { ProductContent } from "./components/ProductContent"
 import { ThreeSetSection } from "./components/ThreeSetSection"
 import { ActionButtons } from "./components/ActionButtons"
 import { ConfirmationStatusBar } from "./components/ConfirmationStatusBar"
+import { ProductDetailStepper } from "./components/ProductDetailStepper"
 import { CastCalendarModal } from "./components/CastCalendarModal"
 
 const MODE_TITLES: Record<RegistrationMode, string> = {
@@ -64,7 +66,7 @@ export type ProjectRegistrationViewProps = {
   handleCastCountChange: (index: number, role: "companion" | "director", count: string) => void
   handleToggleCast: (index: number, role: "companion" | "director", name: string) => void
   handleToggleNomination: (index: number, role: "companion" | "director", name: string) => void
-  handleCastHoldTypeChange: (index: number, role: "companion" | "director", name: string, holdType: "tentative" | "confirmed") => void
+  handleCastHoldTypeChange: (index: number, role: "companion" | "director", name: string, holdType: "tentative" | "confirmed" | "availability-check") => void
   // マネジメント部確認
   managementConfirmationStatus: ManagementConfirmationStatus
   handleRequestConfirmation: () => void
@@ -123,6 +125,7 @@ export const ProjectRegistrationView = ({
 }: ProjectRegistrationViewProps) => {
   const isProductMode = mode === "product-add" || mode === "product-edit"
   const isProjectEditMode = mode === "project-edit"
+  const [currentStep, setCurrentStep] = useState(1)
 
   const buildContentProps = (index: number, product: ProductFormState): ProductContentProps => ({
     index,
@@ -139,7 +142,7 @@ export const ProjectRegistrationView = ({
     onCastCountChange: (role: "companion" | "director", count: string) => handleCastCountChange(index, role, count),
     onToggleCast: (role: "companion" | "director", name: string) => handleToggleCast(index, role, name),
     onToggleNomination: (role: "companion" | "director", name: string) => handleToggleNomination(index, role, name),
-    onCastHoldTypeChange: (role: "companion" | "director", name: string, ht: "tentative" | "confirmed") => handleCastHoldTypeChange(index, role, name, ht),
+    onCastHoldTypeChange: (role: "companion" | "director", name: string, ht: "tentative" | "confirmed" | "availability-check") => handleCastHoldTypeChange(index, role, name, ht),
     checkAvailability: castCalendar.checkAvailability,
     onOpenCalendar: (name: string, status: Parameters<typeof castCalendar.openModal>[1], type: "companion" | "director") => castCalendar.openModal(name, status, type),
     onStatusChange: (status: Parameters<typeof updateProduct>[2] & string) => updateProduct(index, "proposalStatus", status),
@@ -153,6 +156,8 @@ export const ProjectRegistrationView = ({
     onThreeSetModeChange: (isThreeSet: boolean) => handleThreeSetModeChange(index, isThreeSet),
     canSwitchToThreeSet: (5 - form.products.length) >= 2,
     lotteryForm: product.category === "ポイント" ? lotteryForm : undefined,
+    stepperMode: mode === "product-edit",
+    currentStep: mode === "product-edit" ? currentStep : undefined,
   })
 
   const renderProducts = () => {
@@ -245,8 +250,30 @@ export const ProjectRegistrationView = ({
     return elements
   }
 
+  // 商材編集モード用: 最初の商材情報を取得（ステッパー表示用）
+  const firstProduct = form.products[0]
+
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="space-y-0">
+      {/* 商材詳細ステッパー（product-edit モードのみ） */}
+      {mode === "product-edit" && firstProduct && (
+        <ProductDetailStepper
+          proposalStatus={firstProduct.proposalStatus}
+          executionStatus={firstProduct.executionStatus}
+          eventProductName={firstProduct.eventProductName}
+          eventDate={firstProduct.eventDate}
+          category={firstProduct.category}
+          eventType={firstProduct.eventType}
+          estimatedBillingAmount={Number((firstProduct as any).estimatedBillingAmount) || 0}
+          hallName={form.hallName}
+          companyName={form.companyName}
+          salesPersonName={form.salesPersonName}
+          currentStep={currentStep}
+          onStepChange={setCurrentStep}
+        />
+      )}
+
+    <div className="max-w-5xl mx-auto space-y-6 pt-6">
       {/* ヘッダー */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" onClick={handleBack}>
@@ -327,6 +354,7 @@ export const ProjectRegistrationView = ({
         onPreviousWeek={castCalendar.goToPreviousWeek}
         onNextWeek={castCalendar.goToNextWeek}
       />
+    </div>
     </div>
   )
 }

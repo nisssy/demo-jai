@@ -14,11 +14,11 @@ type CastMemberCardProps = {
   hourlyRate: number
   durationHours: number
   availability?: AvailabilityStatus
-  holdType?: "tentative" | "confirmed"
+  holdType?: "tentative" | "confirmed" | "availability-check"
   onToggle: () => void
   onToggleNomination: () => void
   onOpenCalendar?: () => void
-  onHoldTypeChange?: (holdType: "tentative" | "confirmed") => void
+  onHoldTypeChange?: (holdType: "tentative" | "confirmed" | "availability-check") => void
 }
 
 function AvailabilityBadge({ availability, isExclusive }: { availability: AvailabilityStatus; isExclusive: boolean }) {
@@ -120,16 +120,20 @@ export const CastMemberCard = ({
               >
                 <RadioGroup
                   value={holdType ?? "tentative"}
-                  onValueChange={(v) => onHoldTypeChange(v as "tentative" | "confirmed")}
+                  onValueChange={(v) => onHoldTypeChange(v as "tentative" | "confirmed" | "availability-check")}
                   className="flex gap-3"
                 >
+                  <div className="flex items-center gap-1">
+                    <RadioGroupItem value="confirmed" id={`hold-c-${name}`} className="h-3.5 w-3.5" />
+                    <Label htmlFor={`hold-c-${name}`} className="text-xs cursor-pointer text-slate-600">本押さえ</Label>
+                  </div>
                   <div className="flex items-center gap-1">
                     <RadioGroupItem value="tentative" id={`hold-t-${name}`} className="h-3.5 w-3.5" />
                     <Label htmlFor={`hold-t-${name}`} className="text-xs cursor-pointer text-slate-600">仮押さえ</Label>
                   </div>
                   <div className="flex items-center gap-1">
-                    <RadioGroupItem value="confirmed" id={`hold-c-${name}`} className="h-3.5 w-3.5" />
-                    <Label htmlFor={`hold-c-${name}`} className="text-xs cursor-pointer text-slate-600">本押さえ</Label>
+                    <RadioGroupItem value="availability-check" id={`hold-a-${name}`} className="h-3.5 w-3.5" />
+                    <Label htmlFor={`hold-a-${name}`} className="text-xs cursor-pointer text-slate-600">空き状況確認のみ</Label>
                   </div>
                 </RadioGroup>
               </div>

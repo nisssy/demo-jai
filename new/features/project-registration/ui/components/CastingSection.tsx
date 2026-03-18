@@ -10,7 +10,7 @@ type CastingSectionProps = {
   onToggleCast: (role: "companion" | "director", name: string) => void
   onToggleNomination: (role: "companion" | "director", name: string) => void
   onOpenCalendar?: (name: string, status: AvailabilityStatus, type: "companion" | "director") => void
-  onCastHoldTypeChange: (role: "companion" | "director", name: string, holdType: "tentative" | "confirmed") => void
+  onCastHoldTypeChange: (role: "companion" | "director", name: string, holdType: "tentative" | "confirmed" | "availability-check") => void
 }
 
 export const CastingSection = ({

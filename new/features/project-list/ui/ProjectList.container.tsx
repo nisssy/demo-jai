@@ -27,9 +27,17 @@ export const ProjectListContainer = () => {
     handleSelectHall,
     handleSelectCompany,
     handleCompanyHallSearchTypeChange,
+    savedConditions,
+    handleSaveCondition,
+    handleDeleteCondition,
+    handleApplyCondition,
+    handleExportConditions,
     handleCreateNewProject,
     handleClickDetail,
+    handleClickRecord,
     handleClickMessageProduct,
+    handleProductCreated,
+    repository: hookRepository,
   } = useProjectList({ repository })
 
   return (
@@ -52,9 +60,17 @@ export const ProjectListContainer = () => {
       getCompanyByCompanyId={getCompanyByCompanyId}
       onSelectHall={handleSelectHall}
       onSelectCompany={handleSelectCompany}
+      savedConditions={savedConditions}
+      onSaveCondition={handleSaveCondition}
+      onDeleteCondition={handleDeleteCondition}
+      onApplyCondition={handleApplyCondition}
+      onExportConditions={handleExportConditions}
       onCreateNewProject={handleCreateNewProject}
       onClickDetail={handleClickDetail}
+      onClickRecord={handleClickRecord}
       onClickMessageProduct={handleClickMessageProduct}
+      repository={hookRepository}
+      onProductCreated={handleProductCreated}
     />
   )
 }

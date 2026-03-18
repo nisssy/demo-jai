@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from "react"
 import { useAppRouter } from "@/hooks/use-app-router"
 import type { ProjectRepository } from "@/new/api/project-repository"
 import type { Project, Product, ProductComment, ChatMessage, Company, Hall, BookingStatus, ProposalStatus, ExecutionStatus, DesignRequest } from "@/new/api/types"
-import type { ProjectListTab, FilterState } from "@/new/features/project-list/model/types"
+import type { ProjectListTab, FilterState, SavedSearchCondition } from "@/new/features/project-list/model/types"
 
 /** Viewに渡す案件グループ表示用の型 */
 export type ProductViewModel = {
@@ -55,6 +55,7 @@ export type UseProjectListArgs = {
 
 const INITIAL_FILTERS: FilterState = {
   projectNumber: "",
+  recordNumber: "",
   projectName: "",
   salesPersonId: "",
   dateMode: "execution",
@@ -64,6 +65,35 @@ const INITIAL_FILTERS: FilterState = {
   eventType: "",
   hallName: "",
   companyId: "",
+  statuses: [],
+}
+
+const SAVED_CONDITIONS_KEY = "saved_search_conditions"
+
+function loadSavedConditions(): SavedSearchCondition[] {
+  if (typeof window === "undefined") return []
+  try {
+    const data = localStorage.getItem(SAVED_CONDITIONS_KEY)
+    return data ? JSON.parse(data) : []
+  } catch {
+    return []
+  }
+}
+
+function saveSavedConditions(conditions: SavedSearchCondition[]) {
+  localStorage.setItem(SAVED_CONDITIONS_KEY, JSON.stringify(conditions))
+}
+
+const FILTER_PERSISTENCE_KEY = "project_list_filters"
+
+function loadPersistedFilters(): FilterState | null {
+  if (typeof window === "undefined") return null
+  try {
+    const data = localStorage.getItem(FILTER_PERSISTENCE_KEY)
+    return data ? JSON.parse(data) : null
+  } catch {
+    return null
+  }
 }
 
 /** Product → ProductViewModel にマッピング */
@@ -142,7 +172,68 @@ function resolveDesignStatus(requests: { status: DesignRequest["status"] }[]): D
 export function useProjectList({ repository }: UseProjectListArgs) {
   const router = useAppRouter()
   const [activeTab, setActiveTab] = useState<ProjectListTab>("projects")
-  const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS)
+  const [filters, setFiltersRaw] = useState<FilterState>(() => loadPersistedFilters() ?? INITIAL_FILTERS)
+  const [savedConditions, setSavedConditionsState] = useState<SavedSearchCondition[]>(() => loadSavedConditions())
+
+  // フィルタ変更時にlocalStorageに保持
+  const setFilters = useCallback((f: FilterState | ((prev: FilterState) => FilterState)) => {
+    setFiltersRaw((prev) => {
+      const next = typeof f === "function" ? f(prev) : f
+      localStorage.setItem(FILTER_PERSISTENCE_KEY, JSON.stringify(next))
+      return next
+    })
+  }, [])
+
+  // 検索条件の保存
+  const handleSaveCondition = useCallback((name: string) => {
+    const newCondition: SavedSearchCondition = {
+      id: crypto.randomUUID(),
+      name,
+      filters: { ...filters },
+      createdAt: new Date().toISOString(),
+    }
+    const updated = [...savedConditions, newCondition]
+    setSavedConditionsState(updated)
+    saveSavedConditions(updated)
+  }, [filters, savedConditions])
+
+  // 検索条件の削除
+  const handleDeleteCondition = useCallback((id: string) => {
+    const updated = savedConditions.filter((c) => c.id !== id)
+    setSavedConditionsState(updated)
+    saveSavedConditions(updated)
+  }, [savedConditions])
+
+  // 検索条件の適用
+  const handleApplyCondition = useCallback((id: string) => {
+    const condition = savedConditions.find((c) => c.id === id)
+    if (condition) {
+      setFilters(condition.filters)
+    }
+  }, [savedConditions, setFilters])
+
+  // 検索条件のエクスポート（CSV）
+  const handleExportConditions = useCallback(() => {
+    const headers = ["名前", "案件番号", "レコード番号", "案件名", "商材区分", "商材名", "ステータス", "保存日時"]
+    const rows = savedConditions.map((c) => [
+      c.name,
+      c.filters.projectNumber,
+      c.filters.recordNumber,
+      c.filters.projectName,
+      c.filters.category,
+      c.filters.eventType,
+      c.filters.statuses.join("/"),
+      c.createdAt,
+    ])
+    const csv = [headers, ...rows].map((r) => r.map((v) => `"${v}"`).join(",")).join("\n")
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `検索条件_${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [savedConditions])
 
   // 法人/ホール検索のUI状態
   const [companyHallSearchOpen, setCompanyHallSearchOpen] = useState(false)
@@ -224,6 +315,12 @@ export function useProjectList({ repository }: UseProjectListArgs) {
       if (filters.companyId && project.companyId !== filters.companyId) continue
       if (filters.salesPersonId && !project.salesPersonName.includes(filters.salesPersonId)) continue
 
+      // レコード番号フィルタ（商材IDで検索）
+      if (filters.recordNumber) {
+        const hasMatchingRecord = prods.some((p) => String(p.id).includes(filters.recordNumber))
+        if (!hasMatchingRecord) continue
+      }
+
       const productVMs = prods.map((prod) => {
         const designRequests = repository.getDesignRequestsByProjectId(prod.id)
         const posterReqs = designRequests.filter((dr) => dr.requestType === "poster")
@@ -237,10 +334,22 @@ export function useProjectList({ repository }: UseProjectListArgs) {
         })
       })
 
-      // 商材レベルのフィルタ（カテゴリ・イベント区分・日付）
+      // 商材レベルのフィルタ（カテゴリ・商材名・日付・ステータス）
       const filteredProducts = productVMs.filter((p) => {
         if (filters.category && p.category !== filters.category) return false
-        if (filters.eventType && p.eventType !== filters.eventType) return false
+        if (filters.eventType && !p.eventType.includes(filters.eventType) && !p.eventProductName.includes(filters.eventType)) return false
+        // ステータス複数選択フィルタ
+        if (filters.statuses.length > 0) {
+          const productStatuses: string[] = []
+          if (p.proposalStatus === "order-received") productStatuses.push("受注済み")
+          else if (p.proposalStatus === "proposing") productStatuses.push("提案中")
+          else if (p.proposalStatus === "before-proposal") productStatuses.push("提案前")
+          if (p.executionStatus === "実施前") productStatuses.push("実施前")
+          if (p.executionStatus === "実施中") productStatuses.push("実施中")
+          if (p.executionStatus === "終了") productStatuses.push("終了")
+          const match = filters.statuses.some((s) => productStatuses.includes(s))
+          if (!match) return false
+        }
         if (filters.dateFrom || filters.dateTo) {
           const dateValue = filters.dateMode === "execution" ? p.eventDate : project.createdAt
           if (dateValue) {
@@ -320,6 +429,16 @@ export function useProjectList({ repository }: UseProjectListArgs) {
     router.push(`/new/project-registration?mode=product-edit&productId=${productId}`)
   }, [router])
 
+  // レコード詳細（商材詳細）への遷移
+  const handleClickRecord = useCallback((productId: number) => {
+    router.push(`/new/project/${productId}?role=Sales`)
+  }, [router])
+
+  // 新規商材追加後の遷移
+  const handleProductCreated = useCallback((productId: number) => {
+    router.push(`/new/project-registration?mode=product-edit&productId=${productId}`)
+  }, [router])
+
   return {
     activeTab,
     setActiveTab,
@@ -340,10 +459,19 @@ export function useProjectList({ repository }: UseProjectListArgs) {
     handleSelectHall,
     handleSelectCompany,
     handleCompanyHallSearchTypeChange,
+    // 検索条件管理
+    savedConditions,
+    handleSaveCondition,
+    handleDeleteCondition,
+    handleApplyCondition,
+    handleExportConditions,
     // ナビゲーション
     handleCreateNewProject,
     handleClickDetail,
     handleClickProduct,
+    handleClickRecord,
     handleClickMessageProduct,
+    handleProductCreated,
+    repository,
   }
 }

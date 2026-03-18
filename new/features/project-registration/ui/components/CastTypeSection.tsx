@@ -11,13 +11,13 @@ type CastTypeSectionProps = {
   castMembers: CastMember[]
   selectedNames: string[]
   nominations: Record<string, boolean>
-  holdTypes: Record<string, "tentative" | "confirmed">
+  holdTypes: Record<string, "tentative" | "confirmed" | "availability-check">
   durationHours: number
   checkAvailability?: (name: string) => AvailabilityStatus
   onCountChange: (count: string) => void
   onToggle: (name: string) => void
   onToggleNomination: (name: string) => void
-  onHoldTypeChange: (name: string, holdType: "tentative" | "confirmed") => void
+  onHoldTypeChange: (name: string, holdType: "tentative" | "confirmed" | "availability-check") => void
   onOpenCalendar?: (name: string, status: AvailabilityStatus) => void
 }
 

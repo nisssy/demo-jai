@@ -25,8 +25,8 @@ export type ProductFormState = {
   selectedDirectors: string[]
   nominatedCompanions: Record<string, boolean>
   nominatedDirectors: Record<string, boolean>
-  companionHoldTypes: Record<string, "tentative" | "confirmed">
-  directorHoldTypes: Record<string, "tentative" | "confirmed">
+  companionHoldTypes: Record<string, "tentative" | "confirmed" | "availability-check">
+  directorHoldTypes: Record<string, "tentative" | "confirmed" | "availability-check">
   // 請求予定金額
   performanceFeeDiscount: string
   accommodationFeePerPerson: string

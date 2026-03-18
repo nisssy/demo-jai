@@ -462,7 +462,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
   }, [])
 
   // ─── キャスティング: 押さえ種別変更 ───
-  const handleCastHoldTypeChange = useCallback((index: number, role: "companion" | "director", name: string, holdType: "tentative" | "confirmed") => {
+  const handleCastHoldTypeChange = useCallback((index: number, role: "companion" | "director", name: string, holdType: "tentative" | "confirmed" | "availability-check") => {
     setForm((prev) => {
       const products = [...prev.products]
       const p = { ...products[index] }
