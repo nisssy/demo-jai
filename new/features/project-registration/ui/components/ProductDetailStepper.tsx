@@ -22,9 +22,9 @@ type ProductDetailStepperProps = {
 }
 
 const CONTENT_STEPS = [
-  { id: 1, label: "基本情報登録" },
-  { id: 2, label: "LINE広告アカウント登録" },
-  { id: 3, label: "配信レポート作成" },
+  { id: 1, label: "基本情報" },
+  { id: 2, label: "キャスティング" },
+  { id: 3, label: "請求予定金額" },
 ]
 
 function getStatusColor(proposalStatus: string, executionStatus: string): string {

@@ -10,6 +10,7 @@ import type { ProductContentProps } from "./components/ProductContent"
 import { BasicInfoSection } from "./components/BasicInfoSection"
 import { ProductSection } from "./components/ProductSection"
 import { ProductContent } from "./components/ProductContent"
+import { ProductBasicFields } from "./components/ProductBasicFields"
 import { ThreeSetSection } from "./components/ThreeSetSection"
 import { ActionButtons } from "./components/ActionButtons"
 import { ConfirmationStatusBar } from "./components/ConfirmationStatusBar"
@@ -162,6 +163,43 @@ export const ProjectRegistrationView = ({
 
   const renderProducts = () => {
     if (isProjectEditMode) return null
+
+    // 新規作成モード: 商材区分＋商材名のみ
+    if (mode === "new") {
+      return form.products.map((product, idx) => (
+        <Card key={idx}>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">商材情報{idx + 1}</CardTitle>
+              {form.products.length > 1 && (
+                <Button variant="ghost" size="sm" onClick={() => handleRemoveProduct(idx)} className="text-red-500 hover:text-red-700">
+                  <span className="text-xs">削除</span>
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ProductBasicFields
+              index={idx}
+              product={product}
+              errors={errors}
+              eventTypeSearchOpen={eventTypeSearchOpen[idx] ?? false}
+              onEventTypeSearchOpenChange={(open: boolean) => handleEventTypeSearchOpenChange(idx, open)}
+              eventTypes={getEventTypesForProduct(product.category)}
+              onSelectEventType={(eventType: string) => handleSelectEventType(idx, eventType)}
+              onCategoryChange={(category: string) => handleCategoryChange(idx, category)}
+              onFieldChange={(field: keyof ProductFormState, value: string) => updateProduct(idx, field, value)}
+              calculateDuration={calculateDuration}
+              hideHeader={false}
+              isThreeSetMode={false}
+              onThreeSetModeChange={() => {}}
+              canSwitchToThreeSet={false}
+              newModeMinimal
+            />
+          </CardContent>
+        </Card>
+      ))
+    }
 
     const elements: React.ReactElement[] = []
     let i = 0

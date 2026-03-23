@@ -561,9 +561,10 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
     for (let i = 0; i < form.products.length; i++) {
       const p = form.products[i]
       if (!p.eventType.trim()) {
-        newErrors[`product_${i}_eventType`] = "イベント区分を選択してください"
+        newErrors[`product_${i}_eventType`] = "商材名を選択してください"
       }
-      if (p.eventType && p.category !== "ポイント") {
+      // 新規作成モードでは商材区分+商材名のみ必須（詳細はレコード詳細で入力）
+      if (mode !== "new" && p.eventType && p.category !== "ポイント") {
         if (!p.eventProductName.trim()) {
           newErrors[`product_${i}_eventProductName`] = "イベント商材名を入力してください"
         }
@@ -805,6 +806,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
     }
 
     let savedProjectNumber = form.projectNumber
+    let firstCreatedProductId: number | undefined
 
     if (mode === "new") {
       const projectNumber = repository.generateProjectNumber()
@@ -828,7 +830,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
         const undecidedCompanions = Math.max(0, parseInt(p.companionCount || "0") - castingSelected.length)
         const undecidedDirectors = Math.max(0, parseInt(p.directorCount || "0") - directorSelected.length)
         const castMessages = buildCastRequestMessages(p.eventType, castingSelected, directorSelected, p.companionHoldTypes, p.directorHoldTypes, undecidedCompanions, undecidedDirectors)
-        repository.createProduct({
+        const createdProduct = repository.createProduct({
           projectId: project.id,
           projectNumber,
           category: p.category,
@@ -863,6 +865,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
           chatMessages: castMessages.length > 0 ? castMessages : undefined,
           ...buildLotteryFields(p),
         })
+        if (!firstCreatedProductId) firstCreatedProductId = createdProduct.id
       }
     }
 
@@ -1035,8 +1038,9 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
       }
     }
 
-    if (mode === "new") {
-      router.push(`/new/project-number/${savedProjectNumber}?role=Sales`)
+    if (mode === "new" && firstCreatedProductId) {
+      // 新規作成後は最初の商材のレコード詳細（編集モード）に遷移
+      router.push(`/new/project-registration?mode=product-edit&productId=${firstCreatedProductId}`)
     } else {
       router.push(`/new/project-number/${savedProjectNumber}?role=Sales`)
     }

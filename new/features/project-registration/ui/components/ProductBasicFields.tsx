@@ -27,6 +27,8 @@ type ProductBasicFieldsProps = {
   isThreeSetMode?: boolean
   onThreeSetModeChange?: (isThreeSet: boolean) => void
   canSwitchToThreeSet?: boolean
+  // 新規作成モード: 商材区分+商材名のみ表示
+  newModeMinimal?: boolean
 }
 
 export const ProductBasicFields = ({
@@ -44,6 +46,7 @@ export const ProductBasicFields = ({
   isThreeSetMode,
   onThreeSetModeChange,
   canSwitchToThreeSet,
+  newModeMinimal,
 }: ProductBasicFieldsProps) => {
   const isLottery = product.category === "ポイント"
   const isSloCele = product.eventType === "スロセレ"
@@ -117,8 +120,8 @@ export const ProductBasicFields = ({
                 )}
               </div>
 
-              {/* 3点セット登録タイプ（スロセレのみ） */}
-              {isSloCele && onThreeSetModeChange && (
+              {/* 3点セット登録タイプ（スロセレのみ、新規作成モードでは非表示） */}
+              {!newModeMinimal && isSloCele && onThreeSetModeChange && (
                 <div className="col-span-2 space-y-2">
                   <Label className="text-sm font-semibold">登録タイプ</Label>
                   <RadioGroup
@@ -150,8 +153,8 @@ export const ProductBasicFields = ({
             </div>
           </div>
 
-          {/* イベント区分未選択時のメッセージ */}
-          {!hasEventType && (
+          {/* 商材名未選択時のメッセージ（新規作成モードでは非表示） */}
+          {!newModeMinimal && !hasEventType && (
             <div className="flex items-center gap-2 text-sm text-slate-500 py-4">
               <AlertTriangle className="h-4 w-4" />
               まず「商材名」を選択してください...
@@ -160,8 +163,8 @@ export const ProductBasicFields = ({
         </>
       )}
 
-      {/* イベント系の詳細フィールド */}
-      {hasEventType && !isLottery && (
+      {/* イベント系の詳細フィールド（新規作成モードでは非表示） */}
+      {!newModeMinimal && hasEventType && !isLottery && (
         <div className="grid grid-cols-2 gap-4">
           {/* イベント商材名 */}
           <div className="space-y-2">
