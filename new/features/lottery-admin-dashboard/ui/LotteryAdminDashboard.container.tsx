@@ -3,6 +3,7 @@
 import { useMemo } from "react"
 import { LocalStorageProjectRepository } from "@/new/api/impl/local-storage-project-repository"
 import { useLotteryAdminDashboard } from "@/new/features/lottery-admin-dashboard/hooks/useLotteryAdminDashboard"
+import { useProjectList } from "@/new/features/project-list/hooks/useProjectList"
 import { LotteryAdminDashboardView } from "@/new/features/lottery-admin-dashboard/ui/LotteryAdminDashboard.view"
 import { MonthlyBillingContainer } from "@/new/features/monthly-billing/ui/MonthlyBilling.container"
 
@@ -42,6 +43,8 @@ export const LotteryAdminDashboardContainer = () => {
     pendingPrizeVendorId,
   } = useLotteryAdminDashboard(repository)
 
+  const projectList = useProjectList({ repository })
+
   return (
     <LotteryAdminDashboardView
       productList={productList}
@@ -75,6 +78,7 @@ export const LotteryAdminDashboardContainer = () => {
       onCancelSendPrizeOrder={cancelSendPrizeOrder}
       pendingPrizeVendorId={pendingPrizeVendorId}
       billingTab={<MonthlyBillingContainer repository={repository} />}
+      projectList={projectList}
     />
   )
 }

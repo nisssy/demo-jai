@@ -6,6 +6,8 @@ import { ProductListPanelView } from "./ProductListPanel.view"
 import { WinnerListSectionView } from "./WinnerListSection.view"
 import { NotificationOrderSectionView } from "./NotificationOrderSection.view"
 import { PrizeOrderSectionView } from "./PrizeOrderSection.view"
+import { RecordListPanel } from "@/new/features/project-list/ui/components/RecordListPanel"
+import type { useProjectList } from "@/new/features/project-list/hooks/useProjectList"
 
 export interface LotteryAdminDashboardViewProps {
   // Product list
@@ -45,6 +47,8 @@ export interface LotteryAdminDashboardViewProps {
   pendingPrizeVendorId: string | null
   // Billing tab
   billingTab: ReactNode
+  // 案件一覧
+  projectList: ReturnType<typeof useProjectList>
 }
 
 export const LotteryAdminDashboardView = ({
@@ -79,15 +83,47 @@ export const LotteryAdminDashboardView = ({
   onCancelSendPrizeOrder,
   pendingPrizeVendorId,
   billingTab,
+  projectList,
 }: LotteryAdminDashboardViewProps) => {
   return (
-    <Tabs defaultValue="products" className="h-[calc(100vh-64px)] flex flex-col">
+    <Tabs defaultValue="project-list" className="h-[calc(100vh-64px)] flex flex-col">
       <div className="border-b px-4 pt-2">
         <TabsList>
+          <TabsTrigger value="project-list">案件一覧</TabsTrigger>
           <TabsTrigger value="products">商材管理</TabsTrigger>
           <TabsTrigger value="billing">月次計上</TabsTrigger>
         </TabsList>
       </div>
+
+      <TabsContent value="project-list" className="flex-1 overflow-auto mt-0 p-4">
+        <RecordListPanel
+          projectGroups={projectList.projectsTabGroups}
+          filters={projectList.filters}
+          onFiltersChange={projectList.setFilters}
+          companyHallSearchOpen={projectList.companyHallSearchOpen}
+          onCompanyHallSearchOpenChange={projectList.setCompanyHallSearchOpen}
+          companyHallSearchType={projectList.companyHallSearchType}
+          onCompanyHallSearchTypeChange={projectList.handleCompanyHallSearchTypeChange}
+          companyHallSearchQuery={projectList.companyHallSearchQuery}
+          onCompanyHallSearchQueryChange={projectList.setCompanyHallSearchQuery}
+          filteredCompanies={projectList.filteredCompanies}
+          filteredHalls={projectList.filteredHalls}
+          getCompanyByCompanyId={projectList.getCompanyByCompanyId}
+          onSelectHall={projectList.handleSelectHall}
+          onSelectCompany={projectList.handleSelectCompany}
+          savedConditions={projectList.savedConditions}
+          onSaveCondition={projectList.handleSaveCondition}
+          onDeleteCondition={projectList.handleDeleteCondition}
+          onApplyCondition={projectList.handleApplyCondition}
+          onExportConditions={projectList.handleExportConditions}
+          onCreateNewProject={projectList.handleCreateNewProject}
+          onClickDetail={projectList.handleClickDetail}
+          onClickRecord={projectList.handleClickRecord}
+          repository={projectList.repository}
+          onProductCreated={projectList.handleProductCreated}
+          onDuplicated={projectList.handleDuplicated}
+        />
+      </TabsContent>
 
       <TabsContent value="products" className="flex-1 overflow-hidden mt-0">
         <div className="flex h-full">

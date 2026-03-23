@@ -6,7 +6,7 @@ import { SEED_MACHINE_MASTERS } from "@/new/api/seed-data";
 
 export type ProjectMachinesSubTab = "pre-event" | "during-event" | "post-event";
 
-export type TabValue = "machineMaster" | "projectMachines";
+export type TabValue = "project-list" | "machineMaster" | "projectMachines";
 
 const DEFAULT_BANNER_EDIT: BannerEditState = {
   productId: null,
@@ -72,7 +72,7 @@ function getDateAndDayOfWeek(eventDate: string): {
 }
 
 export function useProductManagementDashboard(repository: ProjectRepository) {
-  const [activeTab, setActiveTab] = useState<TabValue>("projectMachines");
+  const [activeTab, setActiveTab] = useState<TabValue>("project-list");
   const [newMasterName, setNewMasterName] = useState("");
   const [newMasterPachitownName, setNewMasterPachitownName] = useState("");
   const [bannerModalOpen, setBannerModalOpen] = useState(false);

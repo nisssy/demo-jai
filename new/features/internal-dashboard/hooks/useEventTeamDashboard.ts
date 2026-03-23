@@ -43,7 +43,7 @@ function productToFormState(product: Product): ProductFormState {
   }
 }
 
-export type EventTeamTab = "cast-arrangement" | "arrangement" | "post-event" | "product-confirmation"
+export type EventTeamTab = "project-list" | "cast-arrangement" | "arrangement" | "post-event" | "product-confirmation"
 export type CastSubTab = "tentative" | "confirmed"
 export type ArrangementSubTab = "trinity-girl"
 
@@ -155,7 +155,7 @@ export type CostExportStatuses = {
 }
 
 export function useEventTeamDashboard({ repository }: { repository: ProjectRepository }) {
-  const [activeTab, setActiveTab] = useState<EventTeamTab>("cast-arrangement")
+  const [activeTab, setActiveTab] = useState<EventTeamTab>("project-list")
   const [castSubTab, setCastSubTab] = useState<CastSubTab>("tentative")
   // ArrangementSubTab removed — only trinity-girl remains
 

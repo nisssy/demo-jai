@@ -16,12 +16,15 @@ import { ProductConfirmationDetailModalView } from "./modals/ProductConfirmation
 import { CostInputModalView } from "./modals/CostInputModal.view"
 import { CastAssignmentModalView } from "./modals/CastAssignmentModal.view"
 import { ChatDrawerView } from "./modals/ChatDrawer.view"
+import { RecordListPanel } from "@/new/features/project-list/ui/components/RecordListPanel"
 import type { UseEventTeamDashboardReturn } from "../hooks/useEventTeamDashboard"
 import type { ArrangementChecks, CostExportStatuses } from "../hooks/useEventTeamDashboard"
 import type { UseLotteryFormReturn } from "@/new/features/project-registration/hooks/useLotteryForm"
+import type { useProjectList } from "@/new/features/project-list/hooks/useProjectList"
 
 export type EventTeamDashboardViewProps = UseEventTeamDashboardReturn & {
   confirmationLotteryForm: UseLotteryFormReturn
+  projectList: ReturnType<typeof useProjectList>
 }
 
 const tabTriggerClass = "relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
@@ -51,6 +54,9 @@ export function EventTeamDashboardView(props: EventTeamDashboardViewProps) {
       >
         <div className="border-b border-slate-100 mb-8">
           <TabsList className="bg-transparent h-auto p-0 gap-0">
+            <TabsTrigger value="project-list" className={tabTriggerClass}>
+              案件一覧
+            </TabsTrigger>
             <TabsTrigger value="cast-arrangement" className={tabTriggerClass}>
               キャスト手配
               {props.summaryCounts.castArrangement > 0 && (
@@ -85,6 +91,36 @@ export function EventTeamDashboardView(props: EventTeamDashboardViewProps) {
             </TabsTrigger>
           </TabsList>
         </div>
+
+        <TabsContent value="project-list" className="mt-0">
+          <RecordListPanel
+            projectGroups={props.projectList.projectsTabGroups}
+            filters={props.projectList.filters}
+            onFiltersChange={props.projectList.setFilters}
+            companyHallSearchOpen={props.projectList.companyHallSearchOpen}
+            onCompanyHallSearchOpenChange={props.projectList.setCompanyHallSearchOpen}
+            companyHallSearchType={props.projectList.companyHallSearchType}
+            onCompanyHallSearchTypeChange={props.projectList.handleCompanyHallSearchTypeChange}
+            companyHallSearchQuery={props.projectList.companyHallSearchQuery}
+            onCompanyHallSearchQueryChange={props.projectList.setCompanyHallSearchQuery}
+            filteredCompanies={props.projectList.filteredCompanies}
+            filteredHalls={props.projectList.filteredHalls}
+            getCompanyByCompanyId={props.projectList.getCompanyByCompanyId}
+            onSelectHall={props.projectList.handleSelectHall}
+            onSelectCompany={props.projectList.handleSelectCompany}
+            savedConditions={props.projectList.savedConditions}
+            onSaveCondition={props.projectList.handleSaveCondition}
+            onDeleteCondition={props.projectList.handleDeleteCondition}
+            onApplyCondition={props.projectList.handleApplyCondition}
+            onExportConditions={props.projectList.handleExportConditions}
+            onCreateNewProject={props.projectList.handleCreateNewProject}
+            onClickDetail={props.projectList.handleClickDetail}
+            onClickRecord={props.projectList.handleClickRecord}
+            repository={props.projectList.repository}
+            onProductCreated={props.projectList.handleProductCreated}
+            onDuplicated={props.projectList.handleDuplicated}
+          />
+        </TabsContent>
 
         <TabsContent value="cast-arrangement" className="mt-0">
           <CastArrangementTabView

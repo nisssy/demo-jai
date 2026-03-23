@@ -3,6 +3,7 @@
 import { useMemo } from "react"
 import type { ProjectRepository } from "@/new/api/project-repository"
 import { useProductManagementDashboard } from "../hooks/useProductManagementDashboard"
+import { useProjectList } from "@/new/features/project-list/hooks/useProjectList"
 import { ProductManagementDashboardView } from "@/features/product-management-dashboard/ui/ProductManagementDashboard.view"
 import type { ProductManagementDashboardTab } from "@/features/product-management-dashboard/hooks/useProductManagementDashboard"
 import type { ProjectWithMachines } from "@/features/product-management-dashboard/ui/sections/ProjectMachinesSection.view"
@@ -18,6 +19,7 @@ export const ProductManagementDashboardContainer = ({
   repository,
 }: ProductManagementDashboardContainerProps) => {
   const state = useProductManagementDashboard(repository)
+  const projectList = useProjectList({ repository })
 
   // 実施前: ProjectWithMachines に変換
   const preEventProjects: ProjectWithMachines[] = useMemo(() => {
@@ -108,6 +110,7 @@ export const ProductManagementDashboardContainer = ({
       chatProductId={state.chatProductId}
       chatProductName={state.chatProductName}
       toastMessage={state.toastMessage}
+      projectList={projectList}
     />
   )
 }

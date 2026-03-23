@@ -18,7 +18,7 @@ export type UseProductManagementDashboardArgs = {
   addNotification: (message: string) => void
 }
 
-export type ProductManagementDashboardTab = "machineMaster" | "projectMachines"
+export type ProductManagementDashboardTab = "project-list" | "machineMaster" | "projectMachines"
 
 function loadMachineMasters(): MachineMaster[] {
   if (typeof window === "undefined") return INITIAL_MACHINE_MASTERS

@@ -1,6 +1,7 @@
 "use client"
 import { useEventTeamDashboard } from "../hooks/useEventTeamDashboard"
 import { useLotteryForm } from "@/new/features/project-registration/hooks/useLotteryForm"
+import { useProjectList } from "@/new/features/project-list/hooks/useProjectList"
 import { EventTeamDashboardView } from "./EventTeamDashboard.view"
 import type { ProjectRepository } from "@/new/api/project-repository"
 
@@ -12,5 +13,6 @@ export const EventTeamDashboardContainer = ({ repository }: Props) => {
     repository,
     productId: dashboard.selectedConfirmationProduct?.id,
   })
-  return <EventTeamDashboardView {...dashboard} confirmationLotteryForm={confirmationLotteryForm} />
+  const projectList = useProjectList({ repository })
+  return <EventTeamDashboardView {...dashboard} confirmationLotteryForm={confirmationLotteryForm} projectList={projectList} />
 }

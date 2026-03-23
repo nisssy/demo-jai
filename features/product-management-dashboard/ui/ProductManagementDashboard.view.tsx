@@ -11,8 +11,10 @@ import { PostEventSectionView } from "@/features/product-management-dashboard/ui
 import type { PostEventProduct } from "@/features/product-management-dashboard/ui/sections/PostEventSection.view"
 import { BannerCreateModalView } from "@/features/product-management-dashboard/ui/sections/BannerCreateModal.view"
 import { ChatDrawerView } from "@/new/features/product-management-dashboard/ui/modals/ChatDrawer.view"
+import { RecordListPanel } from "@/new/features/project-list/ui/components/RecordListPanel"
 import type { BannerEditState, MachineMaster } from "@/features/product-management-dashboard/model/types"
 import type { ProjectMachinesSubTab } from "@/new/features/product-management-dashboard/hooks/useProductManagementDashboard"
+import type { useProjectList } from "@/new/features/project-list/hooks/useProjectList"
 
 const subTabTriggerClass = "relative px-3 py-2 text-sm font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-amber-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
 
@@ -64,6 +66,8 @@ export type ProductManagementDashboardViewProps = {
   chatProductName: string
   // トースト
   toastMessage: string | null
+  // 案件一覧
+  projectList: ReturnType<typeof useProjectList>
 }
 
 
@@ -106,6 +110,7 @@ export const ProductManagementDashboardView = ({
   chatProductId,
   chatProductName,
   toastMessage,
+  projectList,
 }: ProductManagementDashboardViewProps) => {
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -126,6 +131,12 @@ export const ProductManagementDashboardView = ({
         <div className="border-b border-slate-100 mb-6">
           <TabsList className="bg-transparent h-auto p-0 gap-0">
             <TabsTrigger
+              value="project-list"
+              className="relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-amber-600 after:scale-x-0 data-[state=active]:after:scale-x-100"
+            >
+              案件一覧
+            </TabsTrigger>
+            <TabsTrigger
               value="projectMachines"
               className="relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-amber-600 after:scale-x-0 data-[state=active]:after:scale-x-100"
             >
@@ -141,6 +152,36 @@ export const ProductManagementDashboardView = ({
             </TabsTrigger>
           </TabsList>
         </div>
+
+        <TabsContent value="project-list" className="mt-0">
+          <RecordListPanel
+            projectGroups={projectList.projectsTabGroups}
+            filters={projectList.filters}
+            onFiltersChange={projectList.setFilters}
+            companyHallSearchOpen={projectList.companyHallSearchOpen}
+            onCompanyHallSearchOpenChange={projectList.setCompanyHallSearchOpen}
+            companyHallSearchType={projectList.companyHallSearchType}
+            onCompanyHallSearchTypeChange={projectList.handleCompanyHallSearchTypeChange}
+            companyHallSearchQuery={projectList.companyHallSearchQuery}
+            onCompanyHallSearchQueryChange={projectList.setCompanyHallSearchQuery}
+            filteredCompanies={projectList.filteredCompanies}
+            filteredHalls={projectList.filteredHalls}
+            getCompanyByCompanyId={projectList.getCompanyByCompanyId}
+            onSelectHall={projectList.handleSelectHall}
+            onSelectCompany={projectList.handleSelectCompany}
+            savedConditions={projectList.savedConditions}
+            onSaveCondition={projectList.handleSaveCondition}
+            onDeleteCondition={projectList.handleDeleteCondition}
+            onApplyCondition={projectList.handleApplyCondition}
+            onExportConditions={projectList.handleExportConditions}
+            onCreateNewProject={projectList.handleCreateNewProject}
+            onClickDetail={projectList.handleClickDetail}
+            onClickRecord={projectList.handleClickRecord}
+            repository={projectList.repository}
+            onProductCreated={projectList.handleProductCreated}
+            onDuplicated={projectList.handleDuplicated}
+          />
+        </TabsContent>
 
         <TabsContent value="machineMaster" className="mt-0 space-y-6">
           <MachineMasterSectionView
