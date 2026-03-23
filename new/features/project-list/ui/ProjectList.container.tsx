@@ -37,6 +37,7 @@ export const ProjectListContainer = () => {
     handleClickRecord,
     handleClickMessageProduct,
     handleProductCreated,
+    handleDuplicated,
     repository: hookRepository,
   } = useProjectList({ repository })
 
@@ -71,6 +72,7 @@ export const ProjectListContainer = () => {
       onClickMessageProduct={handleClickMessageProduct}
       repository={hookRepository}
       onProductCreated={handleProductCreated}
+      onDuplicated={handleDuplicated}
     />
   )
 }

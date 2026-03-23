@@ -221,6 +221,52 @@ export class LocalStorageProjectRepository implements ProjectRepository {
     return `PJ-${String(maxNum + 1).padStart(3, "0")}`
   }
 
+  // ─── 複製 ───
+
+  duplicateProject(projectNumber: string, productIds: number[]): { project: Project; products: Product[] } {
+    const sourceProject = this.getProjectByProjectNumber(projectNumber)
+    if (!sourceProject) throw new Error(`Project ${projectNumber} not found`)
+
+    const now = new Date().toISOString()
+    const newProjectNumber = this.generateProjectNumber()
+
+    // 案件を複製
+    const newProject = this.createProject({
+      projectNumber: newProjectNumber,
+      projectName: sourceProject.projectName,
+      companyName: sourceProject.companyName,
+      companyId: sourceProject.companyId,
+      hallName: sourceProject.hallName,
+      hallId: sourceProject.hallId,
+      salesPersonName: sourceProject.salesPersonName,
+      requestDate: sourceProject.requestDate,
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    // 選択された商材を複製
+    const newProducts: Product[] = []
+    for (const productId of productIds) {
+      const sourceProduct = this.getProductById(productId)
+      if (!sourceProduct) continue
+
+      const { id: _id, projectId: _projectId, ...rest } = sourceProduct
+      const newProduct = this.createProduct({
+        ...rest,
+        projectId: newProject.id,
+        projectNumber: newProjectNumber,
+        // ステータス系はリセット
+        chatMessages: [],
+        comments: [],
+        statusHistory: [],
+        correctionRequest: undefined,
+      })
+      newProducts.push(newProduct)
+    }
+
+    return { project: newProject, products: newProducts }
+  }
+
   // ─── 月次計上 ───
 
   getMonthlyBillings(): MonthlyBilling[] {

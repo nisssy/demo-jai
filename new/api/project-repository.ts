@@ -25,6 +25,9 @@ export interface ProjectRepository {
   updateProduct(id: number, updates: Partial<Product>): Product | undefined
   generateProjectNumber(): string
 
+  // 複製
+  duplicateProject(projectNumber: string, productIds: number[]): { project: Project; products: Product[] }
+
   // マスタ
   getCompanies(): Company[]
   getHalls(): Hall[]

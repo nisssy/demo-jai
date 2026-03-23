@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Download, PackagePlus } from "lucide-react"
+import { Plus, Download, PackagePlus, Copy } from "lucide-react"
 import type { ProjectListTab, FilterState, SavedSearchCondition } from "@/new/features/project-list/model/types"
 import type { ProjectGroupViewModel } from "@/new/features/project-list/hooks/useProjectList"
 import type { Company, Hall } from "@/new/api/types"
@@ -12,6 +12,7 @@ import { ProjectCard } from "./components/ProjectCard"
 import { MessageCard } from "./components/MessageCard"
 import { ProjectListFilters } from "./components/ProjectListFilters"
 import { AddProductModal } from "./components/AddProductModal"
+import { DuplicateProductModal } from "./components/DuplicateProductModal"
 import { PROPOSAL_STATUS_LABELS, EXECUTION_STATUS_LABELS } from "@/new/api/display"
 import type { ProposalStatus } from "@/new/api/types"
 
@@ -52,6 +53,8 @@ export type ProjectListViewProps = {
   // 商材追加
   repository: ProjectRepository
   onProductCreated: (productId: number) => void
+  // 複製
+  onDuplicated: (newProjectNumber: string) => void
 }
 
 const tabTriggerClass = "relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
@@ -130,8 +133,11 @@ export const ProjectListView = ({
   onClickMessageProduct,
   repository,
   onProductCreated,
+  onDuplicated,
 }: ProjectListViewProps) => {
   const [addProductModalOpen, setAddProductModalOpen] = useState(false)
+  const [duplicateModalOpen, setDuplicateModalOpen] = useState(false)
+  const [duplicateTargetProjectNumber, setDuplicateTargetProjectNumber] = useState<string | null>(null)
   // フラットなレコード行に変換
   const recordRows: RecordRow[] = projectsTabGroups.flatMap((group) =>
     group.products.map((product) => ({
@@ -176,6 +182,15 @@ export const ProjectListView = ({
         onOpenChange={setAddProductModalOpen}
         repository={repository}
         onProductCreated={onProductCreated}
+      />
+
+      {/* 複製モーダル */}
+      <DuplicateProductModal
+        open={duplicateModalOpen}
+        onOpenChange={setDuplicateModalOpen}
+        projectNumber={duplicateTargetProjectNumber}
+        repository={repository}
+        onDuplicated={onDuplicated}
       />
 
       {/* タブ */}
@@ -255,6 +270,7 @@ export const ProjectListView = ({
                       <TableHead className="font-semibold text-slate-700">実施ステータス</TableHead>
                       <TableHead className="font-semibold text-slate-700 text-right">見積金額</TableHead>
                       <TableHead className="font-semibold text-slate-700">担当営業</TableHead>
+                      <TableHead className="font-semibold text-slate-700 w-[60px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -315,6 +331,21 @@ export const ProjectListView = ({
                         </TableCell>
                         {/* 担当営業 */}
                         <TableCell className="text-sm text-slate-600">{row.salesPersonName}</TableCell>
+                        {/* 複製 */}
+                        <TableCell>
+                          <button
+                            type="button"
+                            className="p-1.5 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                            title="レコード複製"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setDuplicateTargetProjectNumber(row.projectNumber)
+                              setDuplicateModalOpen(true)
+                            }}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

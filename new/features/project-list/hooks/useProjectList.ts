@@ -472,6 +472,11 @@ export function useProjectList({ repository }: UseProjectListArgs) {
     router.push(`/new/project-registration?mode=product-edit&productId=${productId}`)
   }, [router])
 
+  // 複製後の遷移
+  const handleDuplicated = useCallback((newProjectNumber: string) => {
+    router.push(`/new/project-number/${newProjectNumber}?role=Sales`)
+  }, [router])
+
   return {
     activeTab,
     setActiveTab,
@@ -505,6 +510,7 @@ export function useProjectList({ repository }: UseProjectListArgs) {
     handleClickRecord,
     handleClickMessageProduct,
     handleProductCreated,
+    handleDuplicated,
     repository,
   }
 }

@@ -2,9 +2,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ChevronLeft, Plus } from "lucide-react"
+import { useState } from "react"
+import { ChevronLeft, Plus, Copy } from "lucide-react"
 import { useAppRouter } from "@/hooks/use-app-router"
 import type { BookingStatus } from "@/new/api/types"
+import type { ProjectRepository } from "@/new/api/project-repository"
+import { DuplicateProductModal } from "@/new/features/project-list/ui/components/DuplicateProductModal"
 import type { ProjectInfo, ProductSummary, DepartmentActivitySummary } from "@/new/features/project-detail/model/types"
 import { EXECUTION_STATUS_LABELS } from "@/new/api/display"
 import { ProjectInfoCard } from "./components/ProjectInfoCard"
@@ -22,6 +25,9 @@ export type ProjectDetailViewProps = {
   onCreateQuote: () => void
   onBack: () => void
   onUpdateCastBookingStatus: (productId: number, castName: string, castType: string, targetStatus: BookingStatus) => void
+  // 複製
+  repository: ProjectRepository
+  onDuplicated: (newProjectNumber: string) => void
 }
 
 /** 案件全体のステータスを算出 */
@@ -47,8 +53,11 @@ export const ProjectDetailView = ({
   onCreateQuote,
   onBack,
   onUpdateCastBookingStatus,
+  repository,
+  onDuplicated,
 }: ProjectDetailViewProps) => {
   const router = useAppRouter()
+  const [duplicateModalOpen, setDuplicateModalOpen] = useState(false)
 
   if (!projectInfo) {
     return (
@@ -131,6 +140,7 @@ export const ProjectDetailView = ({
                         <TableHead className="font-semibold text-slate-700">実施</TableHead>
                         <TableHead className="font-semibold text-slate-700">キャスト</TableHead>
                         <TableHead className="font-semibold text-slate-700 text-right">見積金額</TableHead>
+                        <TableHead className="font-semibold text-slate-700 w-[60px]"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -188,6 +198,19 @@ export const ProjectDetailView = ({
                             <TableCell className="text-right text-sm font-medium text-slate-900">
                               ¥{(product.estimatedBillingAmount ?? 0).toLocaleString()}
                             </TableCell>
+                            <TableCell>
+                              <button
+                                type="button"
+                                className="p-1.5 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                title="レコード複製"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setDuplicateModalOpen(true)
+                                }}
+                              >
+                                <Copy className="h-4 w-4" />
+                              </button>
+                            </TableCell>
                           </TableRow>
                         )
                       })}
@@ -199,6 +222,15 @@ export const ProjectDetailView = ({
           </Card>
         </div>
       </div>
+
+      {/* 複製モーダル */}
+      <DuplicateProductModal
+        open={duplicateModalOpen}
+        onOpenChange={setDuplicateModalOpen}
+        projectNumber={projectInfo.projectNumber}
+        repository={repository}
+        onDuplicated={onDuplicated}
+      />
     </div>
   )
 }
