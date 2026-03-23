@@ -76,6 +76,8 @@ export const ProductContent = ({
   onThreeSetModeChange,
   canSwitchToThreeSet,
   lotteryForm,
+  stepperMode,
+  currentStep,
 }: ProductContentProps) => {
   const isLottery = product.category === "ポイント" && !!product.eventType.trim()
   const showCastingAndBilling = !!product.eventType && product.category !== "ポイント"
