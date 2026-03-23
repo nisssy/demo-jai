@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useMemo, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { useAppRouter } from "@/hooks/use-app-router"
 import type { ProjectRepository } from "@/new/api/project-repository"
 import type { Company, Hall, Product, ProductComment, ChatMessage, ManagementConfirmationStatus } from "@/new/api/types"
@@ -56,6 +57,7 @@ function createInitialForm(): ProjectFormState {
 
 export function useProjectRegistration({ repository, mode, productId, comments, getLotteryData }: UseProjectRegistrationArgs) {
   const router = useAppRouter()
+  const searchParams = useSearchParams()
 
   // ─── フォーム状態 ───
   const [form, setForm] = useState<ProjectFormState>(createInitialForm)
@@ -213,6 +215,40 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
       setProjectNameTouched(true)
     }
   }, [mode, productId, repository])
+
+  // ─── 新規作成モード: 検索条件から初期値を設定 ───
+  useEffect(() => {
+    if (mode !== "new") return
+    if (!searchParams) return
+
+    const companyId = searchParams.get("companyId")
+    const companyName = searchParams.get("companyName")
+    const hallName = searchParams.get("hallName")
+    const hallId = searchParams.get("hallId")
+    const salesPersonName = searchParams.get("salesPersonName")
+    const category = searchParams.get("category")
+    const eventType = searchParams.get("eventType")
+
+    if (!companyId && !hallName && !salesPersonName && !category && !eventType) return
+
+    setForm((prev) => ({
+      ...prev,
+      ...(companyId ? { companyId } : {}),
+      ...(companyName ? { companyName } : {}),
+      ...(hallName ? { hallName } : {}),
+      ...(hallId ? { hallId } : {}),
+      ...(salesPersonName ? { salesPersonName } : {}),
+      products: prev.products.map((p, i) =>
+        i === 0
+          ? {
+              ...p,
+              ...(category ? { category } : {}),
+              ...(eventType ? { eventType } : {}),
+            }
+          : p
+      ),
+    }))
+  }, [mode, searchParams])
 
   // ─── フォーム更新ヘルパー ───
   const updateForm = useCallback(<K extends keyof ProjectFormState>(key: K, value: ProjectFormState[K]) => {

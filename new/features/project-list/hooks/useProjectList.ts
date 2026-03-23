@@ -5,6 +5,7 @@ import { useAppRouter } from "@/hooks/use-app-router"
 import type { ProjectRepository } from "@/new/api/project-repository"
 import type { Project, Product, ProductComment, ChatMessage, Company, Hall, BookingStatus, ProposalStatus, ExecutionStatus, DesignRequest } from "@/new/api/types"
 import type { ProjectListTab, FilterState, SavedSearchCondition } from "@/new/features/project-list/model/types"
+import { getCategoryByEventType } from "@/new/api/display"
 
 /** Viewに渡す案件グループ表示用の型 */
 export type ProductViewModel = {
@@ -414,8 +415,40 @@ export function useProjectList({ repository }: UseProjectListArgs) {
 
   // ナビゲーション
   const handleCreateNewProject = useCallback(() => {
-    router.push("/new/project-registration")
-  }, [router])
+    const params = new URLSearchParams()
+    if (filters.companyId) {
+      params.set("companyId", filters.companyId)
+      const company = getCompanyByCompanyId(filters.companyId)
+      if (company) params.set("companyName", company.name)
+    }
+    if (filters.hallName) {
+      params.set("hallName", filters.hallName)
+      const hall = allHalls.find((h) => h.name === filters.hallName)
+      if (hall) {
+        params.set("hallId", hall.hallId)
+        // ホールから法人を自動解決（法人フィルタが未設定の場合）
+        if (!filters.companyId) {
+          const company = allCompanies.find((c) => c.id === hall.companyId)
+          if (company) {
+            params.set("companyId", company.companyId)
+            params.set("companyName", company.name)
+          }
+        }
+      }
+    }
+    if (filters.salesPersonId) params.set("salesPersonName", filters.salesPersonId)
+    if (filters.category) params.set("category", filters.category)
+    if (filters.eventType) {
+      params.set("eventType", filters.eventType)
+      // 商材名から商材区分を自動解決（商材区分フィルタが未設定の場合）
+      if (!filters.category) {
+        const category = getCategoryByEventType(filters.eventType)
+        if (category) params.set("category", category)
+      }
+    }
+    const qs = params.toString()
+    router.push(`/new/project-registration${qs ? `?${qs}` : ""}`)
+  }, [router, filters, getCompanyByCompanyId, allHalls, allCompanies])
 
   const handleClickDetail = useCallback((projectNumber: string) => {
     router.push(`/new/project-number/${projectNumber}?role=Sales`)

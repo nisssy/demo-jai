@@ -242,10 +242,10 @@ export function ProjectListFilters(props: ProjectListFiltersProps) {
             </div>
           </div>
 
-          {/* 商品カテゴリ検索 */}
+          {/* 商材区分検索 */}
           <div className="space-y-2">
             <Label htmlFor="search-category" className="text-sm font-semibold">
-              商品カテゴリ
+              商材区分
             </Label>
             <Select
               value={searchCategory || undefined}
@@ -273,25 +273,25 @@ export function ProjectListFilters(props: ProjectListFiltersProps) {
             </Select>
           </div>
 
-          {/* イベント区分検索 */}
+          {/* 商材名検索 */}
           <div className="space-y-2">
-            <Label className="text-sm font-semibold">イベント区分</Label>
+            <Label className="text-sm font-semibold">商材名</Label>
             <Popover open={eventTypeSearchOpen} onOpenChange={onEventTypeSearchOpenChange}>
               <PopoverTrigger asChild>
                 <Button variant="outline" role="combobox" aria-expanded={eventTypeSearchOpen} className="w-full justify-between bg-white">
-                  {searchEventType || "イベント区分を検索..."}
+                  {searchEventType || "商材名を検索..."}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[300px] p-0" align="start">
                 <Command>
                   <CommandInput
-                    placeholder="イベント区分を検索..."
+                    placeholder="商材名を検索..."
                     value={eventTypeSearchQuery}
                     onValueChange={onEventTypeSearchQueryChange}
                   />
                   <CommandList>
-                    <CommandEmpty>イベント区分が見つかりませんでした</CommandEmpty>
+                    <CommandEmpty>商材名が見つかりませんでした</CommandEmpty>
                     <CommandGroup>
                       <CommandItem
                         value="すべて"
@@ -504,7 +504,7 @@ export function ProjectListFilters(props: ProjectListFiltersProps) {
               )}
               {searchCategory && (
                 <Badge variant="secondary" className="gap-1">
-                  カテゴリ: {searchCategory}
+                  商材区分: {searchCategory}
                   <button
                     type="button"
                     onClick={(e) => {
@@ -519,7 +519,7 @@ export function ProjectListFilters(props: ProjectListFiltersProps) {
               )}
               {searchEventType && (
                 <Badge variant="secondary" className="gap-1">
-                  イベント区分: {searchEventType}
+                  商材名: {searchEventType}
                   <button
                     type="button"
                     onClick={(e) => {

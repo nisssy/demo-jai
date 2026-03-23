@@ -645,9 +645,9 @@ export function ProjectRegistrationImpl({
     
     // 商材情報のバリデーション
     productInfos.forEach((productInfo, index) => {
-      // イベント区分が選択されるまでは、カテゴリ/イベント区分以外の入力項目は表示しないため、まずイベント区分を必須にする
+      // 商材名が選択されるまでは、商材区分/商材名以外の入力項目は表示しないため、まず商材名を必須にする
       if (!productInfo.eventType?.trim()) {
-        newErrors[`eventType-${index}`] = `商材情報${index + 1 === 1 ? "①" : index + 1 === 2 ? "②" : index + 1 === 3 ? "③" : index + 1 === 4 ? "④" : "⑤"}のイベント区分を選択してください`
+        newErrors[`eventType-${index}`] = `商材情報${index + 1 === 1 ? "①" : index + 1 === 2 ? "②" : index + 1 === 3 ? "③" : index + 1 === 4 ? "④" : "⑤"}の商材名を選択してください`
         return
       }
 
@@ -2447,7 +2447,7 @@ export function ProjectRegistrationImpl({
                     </div>
                     <div className="grid grid-cols-2 gap-4 pt-2">
                                 <div className="space-y-2">
-                                  <Label htmlFor={`category-${productInfo.id}`}>カテゴリ</Label>
+                                  <Label htmlFor={`category-${productInfo.id}`}>商材区分</Label>
                         <Select
                           value={productInfo.category || undefined}
                           onValueChange={(value) => {
@@ -2475,7 +2475,7 @@ export function ProjectRegistrationImpl({
                           }}
                         >
                           <SelectTrigger id={`category-${productInfo.id}`} className={errors.category && index === 0 ? "border-red-500" : ""}>
-                            <SelectValue placeholder="カテゴリを選択してください" />
+                            <SelectValue placeholder="商材区分を選択してください" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="イベント">イベント</SelectItem>
@@ -2488,7 +2488,7 @@ export function ProjectRegistrationImpl({
                         )}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor={`eventType-${productInfo.id}`}>イベント区分</Label>
+                        <Label htmlFor={`eventType-${productInfo.id}`}>商材名</Label>
                         <Popover
                           open={eventTypeSearchOpen[productInfo.id] || false}
                           onOpenChange={(open) => {
@@ -2502,21 +2502,21 @@ export function ProjectRegistrationImpl({
                               aria-expanded={eventTypeSearchOpen[productInfo.id] || false}
                               className={`w-full justify-between ${errors[`eventType-${index}`] ? "border-red-500" : ""}`}
                             >
-                              {productInfo.eventType || "イベント区分を検索..."}
+                              {productInfo.eventType || "商材名を検索..."}
                               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-[300px] p-0" align="start">
                             <Command>
                               <CommandInput
-                                placeholder="イベント区分を検索..."
+                                placeholder="商材名を検索..."
                                 value={eventTypeSearchQuery[productInfo.id] || ""}
                                 onValueChange={(value) => {
                                   setEventTypeSearchQuery((prev) => ({ ...prev, [productInfo.id]: value }))
                                 }}
                               />
                               <CommandList>
-                                <CommandEmpty>イベント区分が見つかりませんでした</CommandEmpty>
+                                <CommandEmpty>商材名が見つかりませんでした</CommandEmpty>
                                 <CommandGroup>
                                   {getEventTypesByCategory(productInfo.category || "イベント")
                                     .filter((eventType) =>
@@ -2566,7 +2566,7 @@ export function ProjectRegistrationImpl({
                       </div>
                       {!productInfo.eventType?.trim() ? (
                         <div className="col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
-                          まず「イベント区分」を選択してください。選択後に、実施日・時間・キャスティング・請求予定金額などの入力項目が表示されます。
+                          まず「商材名」を選択してください。選択後に、実施日・時間・キャスティング・請求予定金額などの入力項目が表示されます。
                         </div>
                       ) : productInfo.category === "ポイント" ? (
                         <div className="col-span-2">

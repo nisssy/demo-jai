@@ -52,15 +52,15 @@ export const ProductBasicFields = ({
 
   return (
     <div className="space-y-4">
-      {/* ヘッダー（カテゴリ/イベント区分/登録タイプ） */}
+      {/* ヘッダー（商材区分/商材名/登録タイプ） */}
       {!hideHeader && (
         <>
           <div className="border-b border-slate-200 pb-4">
             <h4 className="text-sm font-semibold text-slate-600 mb-3">基本情報</h4>
             <div className="grid grid-cols-2 gap-4">
-              {/* カテゴリ */}
+              {/* 商材区分 */}
               <div className="space-y-2">
-                <Label className="text-sm font-semibold">カテゴリ</Label>
+                <Label className="text-sm font-semibold">商材区分</Label>
                 <Select
                   value={product.category || "placeholder"}
                   onValueChange={(v) => {
@@ -69,10 +69,10 @@ export const ProductBasicFields = ({
                   }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="カテゴリを選択" />
+                    <SelectValue placeholder="商材区分を選択" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="placeholder" disabled>カテゴリを選択</SelectItem>
+                    <SelectItem value="placeholder" disabled>商材区分を選択</SelectItem>
                     <SelectItem value="イベント">イベント</SelectItem>
                     <SelectItem value="オプション">オプション</SelectItem>
                     <SelectItem value="ポイント">ポイント</SelectItem>
@@ -80,9 +80,9 @@ export const ProductBasicFields = ({
                 </Select>
               </div>
 
-              {/* イベント区分 */}
+              {/* 商材名 */}
               <div className="space-y-2">
-                <Label className="text-sm font-semibold">イベント区分</Label>
+                <Label className="text-sm font-semibold">商材名</Label>
                 <Popover open={eventTypeSearchOpen} onOpenChange={onEventTypeSearchOpenChange}>
                   <PopoverTrigger asChild>
                     <Button
@@ -91,15 +91,15 @@ export const ProductBasicFields = ({
                       aria-expanded={eventTypeSearchOpen}
                       className={`w-full justify-between ${errors[`product_${index}_eventType`] ? "border-red-500" : ""}`}
                     >
-                      {product.eventType || "イベント区分を選択..."}
+                      {product.eventType || "商材名を選択..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[300px] p-0" align="start">
                     <Command>
-                      <CommandInput placeholder="イベント区分を検索..." />
+                      <CommandInput placeholder="商材名を検索..." />
                       <CommandList>
-                        <CommandEmpty>イベント区分が見つかりませんでした</CommandEmpty>
+                        <CommandEmpty>商材名が見つかりませんでした</CommandEmpty>
                         <CommandGroup>
                           {eventTypes.map((et) => (
                             <CommandItem key={et} value={et} onSelect={() => onSelectEventType(et)}>
@@ -154,7 +154,7 @@ export const ProductBasicFields = ({
           {!hasEventType && (
             <div className="flex items-center gap-2 text-sm text-slate-500 py-4">
               <AlertTriangle className="h-4 w-4" />
-              まず「イベント区分」を選択してください...
+              まず「商材名」を選択してください...
             </div>
           )}
         </>
