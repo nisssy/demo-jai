@@ -5,6 +5,7 @@ import { useAppRouter } from "@/hooks/use-app-router"
 import type { ProjectRepository } from "@/new/api/project-repository"
 import type { Project, Product, ProductComment, ChatMessage, Company, Hall, BookingStatus, ProposalStatus, ExecutionStatus, DesignRequest } from "@/new/api/types"
 import type { ProjectListTab, FilterState, SavedSearchCondition } from "@/new/features/project-list/model/types"
+import type { Role } from "@/new/types/role"
 import { getCategoryByEventType } from "@/new/api/display"
 
 /** Viewに渡す案件グループ表示用の型 */
@@ -52,6 +53,7 @@ export type ProjectGroupViewModel = {
 
 export type UseProjectListArgs = {
   repository: ProjectRepository
+  role?: Role
 }
 
 const INITIAL_FILTERS: FilterState = {
@@ -170,7 +172,7 @@ function resolveDesignStatus(requests: { status: DesignRequest["status"] }[]): D
   return latest.status
 }
 
-export function useProjectList({ repository }: UseProjectListArgs) {
+export function useProjectList({ repository, role = "Sales" }: UseProjectListArgs) {
   const router = useAppRouter()
   const [activeTab, setActiveTab] = useState<ProjectListTab>("projects")
   const [filters, setFiltersRaw] = useState<FilterState>(() => loadPersistedFilters() ?? INITIAL_FILTERS)
@@ -451,12 +453,12 @@ export function useProjectList({ repository }: UseProjectListArgs) {
   }, [router, filters, getCompanyByCompanyId, allHalls, allCompanies])
 
   const handleClickDetail = useCallback((projectNumber: string) => {
-    router.push(`/new/project-number/${projectNumber}?role=Sales`)
-  }, [router])
+    router.push(`/new/project-number/${projectNumber}?role=${role}`)
+  }, [router, role])
 
   const handleClickProduct = useCallback((productId: number) => {
-    router.push(`/new/project/${productId}?role=Sales`)
-  }, [router])
+    router.push(`/new/project/${productId}?role=${role}`)
+  }, [router, role])
 
   const handleClickMessageProduct = useCallback((productId: number) => {
     router.push(`/new/project-registration?mode=product-edit&productId=${productId}`)
@@ -464,8 +466,8 @@ export function useProjectList({ repository }: UseProjectListArgs) {
 
   // レコード詳細（商材詳細）への遷移
   const handleClickRecord = useCallback((productId: number) => {
-    router.push(`/new/project/${productId}?role=Sales`)
-  }, [router])
+    router.push(`/new/project/${productId}?role=${role}`)
+  }, [router, role])
 
   // 新規商材追加後の遷移
   const handleProductCreated = useCallback((productId: number) => {
@@ -474,8 +476,8 @@ export function useProjectList({ repository }: UseProjectListArgs) {
 
   // 複製後の遷移
   const handleDuplicated = useCallback((newProjectNumber: string) => {
-    router.push(`/new/project-number/${newProjectNumber}?role=Sales`)
-  }, [router])
+    router.push(`/new/project-number/${newProjectNumber}?role=${role}`)
+  }, [router, role])
 
   return {
     activeTab,

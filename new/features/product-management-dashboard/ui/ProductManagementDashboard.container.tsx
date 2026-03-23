@@ -19,7 +19,7 @@ export const ProductManagementDashboardContainer = ({
   repository,
 }: ProductManagementDashboardContainerProps) => {
   const state = useProductManagementDashboard(repository)
-  const projectList = useProjectList({ repository })
+  const projectList = useProjectList({ repository, role: "ProductManagement" })
 
   // 実施前: ProjectWithMachines に変換
   const preEventProjects: ProjectWithMachines[] = useMemo(() => {

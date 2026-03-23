@@ -43,7 +43,7 @@ export const LotteryAdminDashboardContainer = () => {
     pendingPrizeVendorId,
   } = useLotteryAdminDashboard(repository)
 
-  const projectList = useProjectList({ repository })
+  const projectList = useProjectList({ repository, role: "LotteryAdmin" })
 
   return (
     <LotteryAdminDashboardView

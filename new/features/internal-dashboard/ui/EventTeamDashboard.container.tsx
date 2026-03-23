@@ -13,6 +13,6 @@ export const EventTeamDashboardContainer = ({ repository }: Props) => {
     repository,
     productId: dashboard.selectedConfirmationProduct?.id,
   })
-  const projectList = useProjectList({ repository })
+  const projectList = useProjectList({ repository, role: "Internal" })
   return <EventTeamDashboardView {...dashboard} confirmationLotteryForm={confirmationLotteryForm} projectList={projectList} />
 }
