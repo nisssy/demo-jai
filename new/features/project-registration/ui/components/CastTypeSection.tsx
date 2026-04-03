@@ -39,7 +39,6 @@ export const CastTypeSection = ({
 }: CastTypeSectionProps) => {
   const numCount = parseInt(count, 10) || 0
   const exclusiveMembers = castMembers.filter((m) => m.isExclusive)
-  const externalMembers = castMembers.filter((m) => !m.isExclusive)
 
   return (
     <div className={`space-y-4 ${bgClass} rounded-lg p-4`}>
@@ -107,34 +106,6 @@ export const CastTypeSection = ({
             </div>
           </div>
 
-          {/* 外部 */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-700">外部</Label>
-            <div className="grid grid-cols-3 gap-3">
-              {externalMembers.map((member) => {
-                const isSelected = selectedNames.includes(member.name)
-                const availability = checkAvailability?.(member.name)
-                return (
-                  <CastMemberCard
-                    key={member.name}
-                    name={member.name}
-                    isSelected={isSelected}
-                    isExclusive={false}
-                    isNominated={Boolean(nominations[member.name])}
-                    showNomination={isSelected}
-                    hourlyRate={member.hourlyRate}
-                    durationHours={durationHours}
-                    availability={availability}
-                    holdType={holdTypes[member.name]}
-                    onToggle={() => onToggle(member.name)}
-                    onToggleNomination={() => onToggleNomination(member.name)}
-                    onHoldTypeChange={(ht) => onHoldTypeChange(member.name, ht)}
-                    onOpenCalendar={onOpenCalendar ? () => onOpenCalendar(member.name, availability ?? "available") : undefined}
-                  />
-                )
-              })}
-            </div>
-          </div>
         </>
       )}
     </div>
