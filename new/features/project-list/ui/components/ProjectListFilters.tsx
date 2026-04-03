@@ -117,7 +117,7 @@ export const ProjectListFilters = ({
       filters.eventType ||
       filters.hallName ||
       filters.companyId ||
-      filters.prefecture ||
+      filters.prefectures.length > 0 ||
       filters.statuses.length > 0,
   )
 
@@ -134,7 +134,7 @@ export const ProjectListFilters = ({
       eventType: "",
       hallName: "",
       companyId: "",
-      prefecture: "",
+      prefectures: [],
       statuses: [],
     })
   }
@@ -334,23 +334,37 @@ export const ProjectListFilters = ({
             </div>
           </div>
 
-          {/* エリア（都道府県） */}
+          {/* エリア（都道府県・複数選択） */}
           <div className="space-y-2">
             <Label className="text-sm font-semibold">エリア</Label>
-            <Select
-              value={filters.prefecture || "all"}
-              onValueChange={(value) => updateFilter("prefecture", value === "all" ? "" : value)}
-            >
-              <SelectTrigger className="bg-white">
-                <SelectValue placeholder="すべて" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">すべて</SelectItem>
-                {PREFECTURES.map((pref) => (
-                  <SelectItem key={pref} value={pref}>{pref}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-between bg-white">
+                  {filters.prefectures.length > 0
+                    ? `${filters.prefectures.length}件選択中`
+                    : "都道府県を選択..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[300px] p-0" align="start">
+                <div className="p-3 space-y-1 max-h-60 overflow-y-auto">
+                  {PREFECTURES.map((pref) => (
+                    <label key={pref} className="flex items-center gap-2 cursor-pointer text-sm py-0.5">
+                      <Checkbox
+                        checked={filters.prefectures.includes(pref)}
+                        onCheckedChange={() => {
+                          const next = filters.prefectures.includes(pref)
+                            ? filters.prefectures.filter((p) => p !== pref)
+                            : [...filters.prefectures, pref]
+                          updateFilter("prefectures", next)
+                        }}
+                      />
+                      {pref}
+                    </label>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* 商材区分（旧: 商品カテゴリ） */}
@@ -531,12 +545,12 @@ export const ProjectListFilters = ({
                   </button>
                 </Badge>
               )}
-              {filters.prefecture && (
+              {filters.prefectures.length > 0 && (
                 <Badge variant="secondary" className="gap-1">
-                  エリア: {filters.prefecture}
+                  エリア: {filters.prefectures.join(", ")}
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); updateFilter("prefecture", "") }}
+                    onClick={(e) => { e.stopPropagation(); updateFilter("prefectures", []) }}
                     className="ml-1 hover:text-red-600 cursor-pointer"
                   >
                     ×

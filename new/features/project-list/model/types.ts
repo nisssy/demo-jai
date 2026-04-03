@@ -14,7 +14,7 @@ export type FilterState = {
   eventType: string
   hallName: string
   companyId: string
-  prefecture: string
+  prefectures: string[]
   statuses: string[]
 }
 

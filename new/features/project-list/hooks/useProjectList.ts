@@ -68,7 +68,7 @@ const INITIAL_FILTERS: FilterState = {
   eventType: "",
   hallName: "",
   companyId: "",
-  prefecture: "",
+  prefectures: [],
   statuses: [],
 }
 
@@ -318,9 +318,9 @@ export function useProjectList({ repository, role = "Sales" }: UseProjectListArg
       if (filters.hallName && project.hallName !== filters.hallName) continue
       if (filters.companyId && project.companyId !== filters.companyId) continue
       if (filters.salesPersonId && !project.salesPersonName.includes(filters.salesPersonId)) continue
-      if (filters.prefecture) {
+      if (filters.prefectures.length > 0) {
         const hall = allHalls.find((h) => h.name === project.hallName)
-        if (!hall?.prefecture || hall.prefecture !== filters.prefecture) continue
+        if (!hall?.prefecture || !filters.prefectures.includes(hall.prefecture)) continue
       }
 
       // レコード番号フィルタ（商材IDで検索）
