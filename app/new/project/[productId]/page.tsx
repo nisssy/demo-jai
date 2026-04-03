@@ -34,12 +34,24 @@ function ProductContent() {
     )
   }
 
+  // ロールごとのチャット設定
+  const chatProps = role === "Internal"
+    ? { author: "マネジメント部", channelDisplayNames: { "BS・CS": "営業" } }
+    : {}
+
   // デフォルト: Kintone風レコード詳細
   return (
     <>
       <AppHeader currentRole={role} />
-      <main className="px-8 py-8 max-w-7xl mx-auto">
-        <RecordDetail productId={productId} role={role} />
+      <main className="px-8 py-8 max-w-[1400px] mx-auto">
+        <div className="flex gap-6 items-start">
+          <div className="flex-1 min-w-0">
+            <RecordDetail productId={productId} role={role} />
+          </div>
+          <div className="w-96 shrink-0 sticky top-24 h-[calc(100vh-8rem)]">
+            <ProductChat productId={productId} {...chatProps} />
+          </div>
+        </div>
       </main>
     </>
   )
