@@ -68,6 +68,7 @@ const INITIAL_FILTERS: FilterState = {
   eventType: "",
   hallName: "",
   companyId: "",
+  prefecture: "",
   statuses: [],
 }
 
@@ -317,6 +318,10 @@ export function useProjectList({ repository, role = "Sales" }: UseProjectListArg
       if (filters.hallName && project.hallName !== filters.hallName) continue
       if (filters.companyId && project.companyId !== filters.companyId) continue
       if (filters.salesPersonId && !project.salesPersonName.includes(filters.salesPersonId)) continue
+      if (filters.prefecture) {
+        const hall = allHalls.find((h) => h.name === project.hallName)
+        if (!hall?.prefecture || hall.prefecture !== filters.prefecture) continue
+      }
 
       // レコード番号フィルタ（商材IDで検索）
       if (filters.recordNumber) {
@@ -411,7 +416,7 @@ export function useProjectList({ repository, role = "Sales" }: UseProjectListArg
       projectsTabGroups: allGroups,
       messagesTabGroups: messageGroups,
     }
-  }, [repository, filters])
+  }, [repository, filters, allHalls])
 
   const messagesCount = messagesTabGroups.reduce((sum, g) => sum + g.products.length, 0)
 

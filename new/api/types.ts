@@ -350,6 +350,7 @@ export type Hall = {
   salesPersonName: string
   companyId: number
   address?: string
+  prefecture?: string
 }
 
 export type Employee = {

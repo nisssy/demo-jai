@@ -14,6 +14,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import type { FilterState, SavedSearchCondition } from "@/new/features/project-list/model/types"
 import type { Company, Hall } from "@/new/api/types"
 
+/** 47都道府県 */
+const PREFECTURES = [
+  "北海道", "青森県", "岩手県", "宮城県", "秋田県", "山形県", "福島県",
+  "茨城県", "栃木県", "群馬県", "埼玉県", "千葉県", "東京都", "神奈川県",
+  "新潟県", "富山県", "石川県", "福井県", "山梨県", "長野県",
+  "岐阜県", "静岡県", "愛知県", "三重県",
+  "滋賀県", "京都府", "大阪府", "兵庫県", "奈良県", "和歌山県",
+  "鳥取県", "島根県", "岡山県", "広島県", "山口県",
+  "徳島県", "香川県", "愛媛県", "高知県",
+  "福岡県", "佐賀県", "長崎県", "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県",
+]
+
 /** 商材名の選択肢 */
 const PRODUCT_NAME_OPTIONS = [
   "トリニティガール",
@@ -105,6 +117,7 @@ export const ProjectListFilters = ({
       filters.eventType ||
       filters.hallName ||
       filters.companyId ||
+      filters.prefecture ||
       filters.statuses.length > 0,
   )
 
@@ -121,6 +134,7 @@ export const ProjectListFilters = ({
       eventType: "",
       hallName: "",
       companyId: "",
+      prefecture: "",
       statuses: [],
     })
   }
@@ -320,6 +334,25 @@ export const ProjectListFilters = ({
             </div>
           </div>
 
+          {/* エリア（都道府県） */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">エリア</Label>
+            <Select
+              value={filters.prefecture || "all"}
+              onValueChange={(value) => updateFilter("prefecture", value === "all" ? "" : value)}
+            >
+              <SelectTrigger className="bg-white">
+                <SelectValue placeholder="すべて" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">すべて</SelectItem>
+                {PREFECTURES.map((pref) => (
+                  <SelectItem key={pref} value={pref}>{pref}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* 商材区分（旧: 商品カテゴリ） */}
           <div className="space-y-2">
             <Label className="text-sm font-semibold">商材区分</Label>
@@ -492,6 +525,18 @@ export const ProjectListFilters = ({
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); updateFilter("companyId", "") }}
+                    className="ml-1 hover:text-red-600 cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              )}
+              {filters.prefecture && (
+                <Badge variant="secondary" className="gap-1">
+                  エリア: {filters.prefecture}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); updateFilter("prefecture", "") }}
                     className="ml-1 hover:text-red-600 cursor-pointer"
                   >
                     ×

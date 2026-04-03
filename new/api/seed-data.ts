@@ -824,11 +824,11 @@ export const SEED_COMPANIES: Company[] = [
 // ─── Halls ───
 
 export const SEED_HALLS: Hall[] = [
-  { id: 1, hallId: "HALL-001", name: "パチンコキング新宿店", salesPersonName: "山田 太郎", companyId: 1, address: "東京都新宿区01-1-1" },
-  { id: 2, hallId: "HALL-005", name: "グランドホール渋谷", salesPersonName: "山田 太郎", companyId: 2, address: "東京都渋谷区05-1-1" },
-  { id: 3, hallId: "HALL-010", name: "エスパス日拓高田馬場", salesPersonName: "山田 太郎", companyId: 3, address: "東京都豊島区10-1-1" },
-  { id: 4, hallId: "HALL-020", name: "パチンコパーラー池袋", salesPersonName: "山田 太郎", companyId: 4, address: "東京都豊島区20-1-1" },
-  { id: 5, hallId: "HALL-030", name: "メガガイア品川", salesPersonName: "山田 太郎", companyId: 5, address: "東京都港区30-1-1" },
+  { id: 1, hallId: "HALL-001", name: "パチンコキング新宿店", salesPersonName: "山田 太郎", companyId: 1, address: "東京都新宿区01-1-1", prefecture: "東京都" },
+  { id: 2, hallId: "HALL-005", name: "グランドホール渋谷", salesPersonName: "山田 太郎", companyId: 2, address: "東京都渋谷区05-1-1", prefecture: "東京都" },
+  { id: 3, hallId: "HALL-010", name: "エスパス日拓高田馬場", salesPersonName: "山田 太郎", companyId: 3, address: "東京都豊島区10-1-1", prefecture: "東京都" },
+  { id: 4, hallId: "HALL-020", name: "パチンコパーラー池袋", salesPersonName: "山田 太郎", companyId: 4, address: "東京都豊島区20-1-1", prefecture: "東京都" },
+  { id: 5, hallId: "HALL-030", name: "メガガイア品川", salesPersonName: "山田 太郎", companyId: 5, address: "東京都港区30-1-1", prefecture: "東京都" },
 ]
 
 // ─── Employees ───
