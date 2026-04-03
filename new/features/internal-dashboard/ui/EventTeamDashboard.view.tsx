@@ -25,6 +25,7 @@ import type { useProjectList } from "@/new/features/project-list/hooks/useProjec
 export type EventTeamDashboardViewProps = UseEventTeamDashboardReturn & {
   confirmationLotteryForm: UseLotteryFormReturn
   projectList: ReturnType<typeof useProjectList>
+  onClickProduct: (productId: number) => void
 }
 
 const tabTriggerClass = "relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
@@ -135,6 +136,7 @@ export function EventTeamDashboardView(props: EventTeamDashboardViewProps) {
             onOpenHoldFailure={props.openHoldFailure}
             onOpenCastAssignment={props.openCastAssignment}
             onOpenChat={props.openChatDrawer}
+            onClickProduct={props.onClickProduct}
           />
         </TabsContent>
 
@@ -144,6 +146,7 @@ export function EventTeamDashboardView(props: EventTeamDashboardViewProps) {
             getProjectForProduct={props.getProjectForProduct}
             onOpenDetail={props.openConfirmationDetail}
             onOpenChat={props.openChatDrawer}
+            onClickProduct={props.onClickProduct}
           />
         </TabsContent>
 
@@ -155,6 +158,7 @@ export function EventTeamDashboardView(props: EventTeamDashboardViewProps) {
             onOpenStatusHistory={props.openStatusHistory}
             onOpenCostumeArrangement={props.openCostumeArrangement}
             onOpenChat={props.openChatDrawer}
+            onClickProduct={props.onClickProduct}
           />
         </TabsContent>
 
@@ -165,6 +169,7 @@ export function EventTeamDashboardView(props: EventTeamDashboardViewProps) {
             onOpenSurveyResult={props.openSurveyResult}
             onOpenCostInput={props.openCostInput}
             onOpenCostExport={() => props.setShowCostExportModal(true)}
+            onClickProduct={props.onClickProduct}
           />
         </TabsContent>
       </Tabs>

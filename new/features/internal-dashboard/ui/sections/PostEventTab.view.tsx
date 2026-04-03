@@ -11,6 +11,7 @@ export type PostEventTabViewProps = {
   onOpenSurveyResult: (product: Product) => void
   onOpenCostInput: (product: Product) => void
   onOpenCostExport: () => void
+  onClickProduct: (productId: number) => void
 }
 
 export function PostEventTabView({
@@ -19,6 +20,7 @@ export function PostEventTabView({
   onOpenSurveyResult,
   onOpenCostInput,
   onOpenCostExport,
+  onClickProduct,
 }: PostEventTabViewProps) {
   if (products.length === 0) {
     return (
@@ -61,7 +63,11 @@ export function PostEventTabView({
 
                   return (
                     <TableRow key={product.id}>
-                      <TableCell className="font-medium sticky left-0 bg-white z-10">{product.eventProductName}</TableCell>
+                      <TableCell className="font-medium sticky left-0 bg-white z-10">
+                        <button type="button" className="text-blue-600 hover:text-blue-800 hover:underline" onClick={() => onClickProduct(product.id)}>
+                          {product.eventProductName}
+                        </button>
+                      </TableCell>
                       <TableCell>{product.projectNumber}</TableCell>
                       <TableCell>{product.eventDate || "未定"}</TableCell>
                       <TableCell>{product.eventType}</TableCell>

@@ -6,6 +6,7 @@ import { useState } from "react"
 import { ChevronLeft, Plus, Copy } from "lucide-react"
 import { useAppRouter } from "@/hooks/use-app-router"
 import type { BookingStatus } from "@/new/api/types"
+import type { Role } from "@/new/types/role"
 import type { ProjectRepository } from "@/new/api/project-repository"
 import { DuplicateProductModal } from "@/new/features/project-list/ui/components/DuplicateProductModal"
 import type { ProjectInfo, ProductSummary, DepartmentActivitySummary } from "@/new/features/project-detail/model/types"
@@ -18,6 +19,7 @@ export type ProjectDetailViewProps = {
   projectInfo: ProjectInfo | null
   products: ProductSummary[]
   departmentActivity: DepartmentActivitySummary
+  role: Role
   // ナビゲーション
   onUpdateProjectInfo: () => void
   onAddProduct: () => void
@@ -47,6 +49,7 @@ export const ProjectDetailView = ({
   projectInfo,
   products,
   departmentActivity,
+  role,
   onUpdateProjectInfo,
   onAddProduct,
   onEditProduct,
@@ -56,6 +59,7 @@ export const ProjectDetailView = ({
   repository,
   onDuplicated,
 }: ProjectDetailViewProps) => {
+  const canEdit = role === "Sales"
   const router = useAppRouter()
   const [duplicateModalOpen, setDuplicateModalOpen] = useState(false)
 
@@ -98,7 +102,7 @@ export const ProjectDetailView = ({
       <div className="flex gap-6 items-start">
         {/* 左カラム: 案件情報 + サマリ（sticky） */}
         <div className="w-72 shrink-0 sticky top-24 space-y-4">
-          <ProjectInfoCard projectInfo={projectInfo} onEdit={onUpdateProjectInfo} />
+          <ProjectInfoCard projectInfo={projectInfo} onEdit={canEdit ? onUpdateProjectInfo : undefined} />
           {products.length > 0 && (
             <ProjectSummaryCard products={products} onCreateQuote={onCreateQuote} />
           )}
@@ -113,19 +117,23 @@ export const ProjectDetailView = ({
                 商材一覧
                 <Badge variant="outline">{products.length}件</Badge>
               </CardTitle>
-              <Button onClick={onAddProduct}>
-                <Plus className="h-4 w-4 mr-2" />
-                商材を追加
-              </Button>
+              {canEdit && (
+                <Button onClick={onAddProduct}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  商材を追加
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               {products.length === 0 ? (
                 <div className="text-center py-12 text-slate-500">
                   <p className="mb-4">商材が登録されていません</p>
-                  <Button variant="outline" onClick={onAddProduct}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    最初の商材を追加
-                  </Button>
+                  {canEdit && (
+                    <Button variant="outline" onClick={onAddProduct}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      最初の商材を追加
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -152,13 +160,13 @@ export const ProjectDetailView = ({
                           <TableRow
                             key={product.id}
                             className="hover:bg-blue-50/50 cursor-pointer transition-colors"
-                            onClick={() => router.push(`/new/project/${product.id}?role=Sales`)}
+                            onClick={() => router.push(`/new/project/${product.id}?role=${role}`)}
                           >
                             <TableCell>
                               <button
                                 type="button"
                                 className="text-blue-600 hover:text-blue-800 hover:underline font-medium text-sm"
-                                onClick={(e) => { e.stopPropagation(); router.push(`/new/project/${product.id}?role=Sales`) }}
+                                onClick={(e) => { e.stopPropagation(); router.push(`/new/project/${product.id}?role=${role}`) }}
                               >
                                 {product.id}
                               </button>

@@ -8,6 +8,7 @@ import type { ProposalStatus } from "@/new/api/types"
 
 type RecordDetailViewProps = {
   data: RecordDetailData | null
+  canEdit: boolean
   onBack: () => void
   onEdit: () => void
   onGoToProject: () => void
@@ -42,7 +43,7 @@ function getStatusColor(proposalStatus: string): string {
   }
 }
 
-export const RecordDetailView = ({ data, onBack, onEdit, onGoToProject }: RecordDetailViewProps) => {
+export const RecordDetailView = ({ data, canEdit, onBack, onEdit, onGoToProject }: RecordDetailViewProps) => {
   if (!data) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -88,10 +89,12 @@ export const RecordDetailView = ({ data, onBack, onEdit, onGoToProject }: Record
             <p className="text-sm text-slate-500">レコード番号: {product.id}</p>
           </div>
         </div>
-        <Button className="gap-2" onClick={onEdit}>
-          <Pencil className="h-4 w-4" />
-          編集
-        </Button>
+        {canEdit && (
+          <Button className="gap-2" onClick={onEdit}>
+            <Pencil className="h-4 w-4" />
+            編集
+          </Button>
+        )}
       </div>
 
       {/* メッセージエリア */}

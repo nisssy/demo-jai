@@ -9,6 +9,7 @@ type ProductConfirmationTabViewProps = {
   getProjectForProduct: (product: Product) => Project | undefined
   onOpenDetail: (product: Product) => void
   onOpenChat: (product: Product) => void
+  onClickProduct: (productId: number) => void
 }
 
 export function ProductConfirmationTabView({
@@ -16,6 +17,7 @@ export function ProductConfirmationTabView({
   getProjectForProduct,
   onOpenDetail,
   onOpenChat,
+  onClickProduct,
 }: ProductConfirmationTabViewProps) {
   if (products.length === 0) {
     return (
@@ -55,7 +57,11 @@ export function ProductConfirmationTabView({
               const project = getProjectForProduct(product)
               return (
                 <TableRow key={product.id}>
-                  <TableCell className="font-medium">{product.eventProductName || product.eventType}</TableCell>
+                  <TableCell className="font-medium">
+                    <button type="button" className="text-blue-600 hover:text-blue-800 hover:underline" onClick={() => onClickProduct(product.id)}>
+                      {product.eventProductName || product.eventType}
+                    </button>
+                  </TableCell>
                   <TableCell>{project?.projectName ?? "-"}</TableCell>
                   <TableCell>{product.projectNumber}</TableCell>
                   <TableCell>{product.category}</TableCell>

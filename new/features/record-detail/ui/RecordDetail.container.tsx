@@ -7,19 +7,22 @@ import { RecordDetailView } from "./RecordDetail.view"
 
 type RecordDetailContainerProps = {
   productId: number
+  role?: import("@/new/types/role").Role
 }
 
-export const RecordDetailContainer = ({ productId }: RecordDetailContainerProps) => {
+export const RecordDetailContainer = ({ productId, role = "Sales" }: RecordDetailContainerProps) => {
   const repository = useMemo(() => new LocalStorageProjectRepository(), [])
 
-  const { data, handleBack, handleEdit, handleGoToProject } = useRecordDetail({
+  const { data, canEdit, handleBack, handleEdit, handleGoToProject } = useRecordDetail({
     repository,
     productId,
+    role,
   })
 
   return (
     <RecordDetailView
       data={data}
+      canEdit={canEdit}
       onBack={handleBack}
       onEdit={handleEdit}
       onGoToProject={handleGoToProject}

@@ -8,10 +8,12 @@ import { PROPOSAL_STATUS_LABELS } from "@/new/api/display"
 import type { ProposalStatus } from "@/new/api/types"
 import type { BookingStatus } from "@/new/api/types"
 import type { ProjectInfo, ProductSummary, CastSummary, DepartmentActivitySummary } from "@/new/features/project-detail/model/types"
+import type { Role } from "@/new/types/role"
 
 export type UseProjectDetailArgs = {
   repository: ProjectRepository
   projectNumber: string
+  role?: Role
 }
 
 /** デザイン依頼ステータスを解決 */
@@ -50,7 +52,7 @@ function toUndecidedCasts(product: Product): { type: string; count: number }[] {
   return result
 }
 
-export function useProjectDetail({ repository, projectNumber }: UseProjectDetailArgs) {
+export function useProjectDetail({ repository, projectNumber, role = "Sales" }: UseProjectDetailArgs) {
   const router = useAppRouter()
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -230,8 +232,8 @@ export function useProjectDetail({ repository, projectNumber }: UseProjectDetail
 
   // 戻る
   const handleBack = useCallback(() => {
-    router.push("/?role=Sales")
-  }, [router])
+    router.push(`/?role=${role}`)
+  }, [router, role])
 
   return {
     projectInfo,

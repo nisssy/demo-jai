@@ -16,7 +16,7 @@ function ProjectDetailContent() {
     <>
       <AppHeader currentRole={role} />
       <main className="px-8 py-8 max-w-7xl mx-auto">
-        <ProjectDetail projectNumber={projectNumber} />
+        <ProjectDetail projectNumber={projectNumber} role={role} />
       </main>
     </>
   )

@@ -5,7 +5,7 @@ import type { ProjectInfo } from "@/new/features/project-detail/model/types"
 
 type ProjectInfoCardProps = {
   projectInfo: ProjectInfo
-  onEdit: () => void
+  onEdit?: () => void
 }
 
 export const ProjectInfoCard = ({ projectInfo, onEdit }: ProjectInfoCardProps) => {
@@ -13,10 +13,12 @@ export const ProjectInfoCard = ({ projectInfo, onEdit }: ProjectInfoCardProps) =
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <CardTitle className="text-base">案件情報</CardTitle>
-        <Button variant="outline" size="sm" onClick={onEdit}>
-          <Edit2 className="h-3.5 w-3.5 mr-1.5" />
-          編集
-        </Button>
+        {onEdit && (
+          <Button variant="outline" size="sm" onClick={onEdit}>
+            <Edit2 className="h-3.5 w-3.5 mr-1.5" />
+            編集
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         <div className="space-y-3 text-sm">

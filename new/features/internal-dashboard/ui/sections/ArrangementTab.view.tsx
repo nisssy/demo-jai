@@ -12,6 +12,7 @@ export type ArrangementTabViewProps = {
   onOpenCostumeArrangement: (product: Product) => void
   onOpenStatusHistory: (product: Product) => void
   onOpenChat: (product: Product) => void
+  onClickProduct: (productId: number) => void
 }
 
 function TrinityGirlTable({
@@ -20,12 +21,14 @@ function TrinityGirlTable({
   onOpenCostumeArrangement,
   onOpenStatusHistory,
   onOpenChat,
+  onClickProduct,
 }: {
   products: Product[]
   onOpenAutoArrangement: (product: Product) => void
   onOpenCostumeArrangement: (product: Product) => void
   onOpenStatusHistory: (product: Product) => void
   onOpenChat: (product: Product) => void
+  onClickProduct: (productId: number) => void
 }) {
   if (products.length === 0) {
     return <div className="text-center py-8 text-slate-500">トリニティガールの手配案件はありません</div>
@@ -84,7 +87,11 @@ function TrinityGirlTable({
 
               return (
                 <TableRow key={product.id}>
-                  <TableCell className="font-medium sticky left-0 bg-white z-10">{product.eventProductName}</TableCell>
+                  <TableCell className="font-medium sticky left-0 bg-white z-10">
+                    <button type="button" className="text-blue-600 hover:text-blue-800 hover:underline" onClick={() => onClickProduct(product.id)}>
+                      {product.eventProductName}
+                    </button>
+                  </TableCell>
                   <TableCell>{product.projectNumber}</TableCell>
                   <TableCell>{product.eventDate || "未定"}</TableCell>
                   <TableCell>
@@ -170,6 +177,7 @@ export function ArrangementTabView({
   onOpenCostumeArrangement,
   onOpenStatusHistory,
   onOpenChat,
+  onClickProduct,
 }: ArrangementTabViewProps) {
   return (
     <Card>
@@ -184,6 +192,7 @@ export function ArrangementTabView({
           onOpenCostumeArrangement={onOpenCostumeArrangement}
           onOpenStatusHistory={onOpenStatusHistory}
           onOpenChat={onOpenChat}
+          onClickProduct={onClickProduct}
         />
       </CardContent>
     </Card>

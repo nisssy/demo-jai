@@ -20,6 +20,7 @@ export type CastArrangementTabViewProps = {
   onOpenHoldFailure: (castName: string, castRole: "companion" | "director" | "mc", productId: number) => void
   onOpenCastAssignment: (product: Product) => void
   onOpenChat: (product: Product) => void
+  onClickProduct: (productId: number) => void
 }
 
 const subTabTriggerClass = "relative px-3 py-2 text-sm font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
@@ -34,10 +35,12 @@ function ProductionGroupList({
   groups,
   renderActions,
   onOpenChat,
+  onClickProduct,
 }: {
   groups: ProductionGroup[]
   renderActions: (castName: string, roleKey: "companion" | "director" | "mc", productId: number, status: BookingStatus) => React.ReactNode
   onOpenChat: (product: Product) => void
+  onClickProduct: (productId: number) => void
 }) {
   if (groups.length === 0) {
     return <div className="text-center py-8 text-slate-500">対象のキャストはありません</div>
@@ -76,7 +79,11 @@ function ProductionGroupList({
                     <TableBody>
                       {cast.entries.map((entry, i) => (
                         <TableRow key={`${entry.product.id}-${i}`}>
-                          <TableCell className="font-medium">{entry.product.eventProductName}</TableCell>
+                          <TableCell className="font-medium">
+                            <button type="button" className="text-blue-600 hover:text-blue-800 hover:underline" onClick={() => onClickProduct(entry.product.id)}>
+                              {entry.product.eventProductName}
+                            </button>
+                          </TableCell>
                           <TableCell>{entry.product.projectNumber}</TableCell>
                           <TableCell>{entry.product.eventDate || "未定"}</TableCell>
                           <TableCell>{entry.product.eventType}</TableCell>
@@ -119,6 +126,7 @@ export function CastArrangementTabView({
   onOpenHoldFailure,
   onOpenCastAssignment,
   onOpenChat,
+  onClickProduct,
 }: CastArrangementTabViewProps) {
   return (
     <Card>
@@ -153,6 +161,7 @@ export function CastArrangementTabView({
             <ProductionGroupList
               groups={tentativeGroups}
               onOpenChat={onOpenChat}
+              onClickProduct={onClickProduct}
               renderActions={(castName, roleKey, productId, status) => (
                 <>
                   <Button size="sm" variant="outline" onClick={() => onCompleteCast(castName, roleKey, productId)}>
@@ -172,6 +181,7 @@ export function CastArrangementTabView({
             <ProductionGroupList
               groups={confirmedGroups}
               onOpenChat={onOpenChat}
+              onClickProduct={onClickProduct}
               renderActions={(castName, roleKey, productId, status) => (
                 <>
                   <Button size="sm" variant="outline" onClick={() => onCompleteCast(castName, roleKey, productId)}>
@@ -213,7 +223,11 @@ export function CastArrangementTabView({
               <TableBody>
                 {undecidedCastRequests.map((req) => (
                   <TableRow key={req.product.id}>
-                    <TableCell className="font-medium">{req.product.eventProductName}</TableCell>
+                    <TableCell className="font-medium">
+                      <button type="button" className="text-blue-600 hover:text-blue-800 hover:underline" onClick={() => onClickProduct(req.product.id)}>
+                        {req.product.eventProductName}
+                      </button>
+                    </TableCell>
                     <TableCell>{req.projectName}</TableCell>
                     <TableCell>{req.product.projectNumber}</TableCell>
                     <TableCell>{req.product.eventDate || "未定"}</TableCell>

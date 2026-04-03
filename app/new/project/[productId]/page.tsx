@@ -39,7 +39,7 @@ function ProductContent() {
     <>
       <AppHeader currentRole={role} />
       <main className="px-8 py-8 max-w-7xl mx-auto">
-        <RecordDetail productId={productId} />
+        <RecordDetail productId={productId} role={role} />
       </main>
     </>
   )
