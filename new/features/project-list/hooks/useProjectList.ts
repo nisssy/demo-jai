@@ -94,7 +94,10 @@ function loadPersistedFilters(): FilterState | null {
   if (typeof window === "undefined") return null
   try {
     const data = localStorage.getItem(FILTER_PERSISTENCE_KEY)
-    return data ? JSON.parse(data) : null
+    if (!data) return null
+    const parsed = JSON.parse(data)
+    // 古いデータに新フィールドが欠落している場合をINITIAL_FILTERSで補完
+    return { ...INITIAL_FILTERS, ...parsed }
   } catch {
     return null
   }
@@ -212,7 +215,7 @@ export function useProjectList({ repository, role = "Sales" }: UseProjectListArg
   const handleApplyCondition = useCallback((id: string) => {
     const condition = savedConditions.find((c) => c.id === id)
     if (condition) {
-      setFilters(condition.filters)
+      setFilters({ ...INITIAL_FILTERS, ...condition.filters })
     }
   }, [savedConditions, setFilters])
 
