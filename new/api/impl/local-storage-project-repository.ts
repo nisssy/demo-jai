@@ -266,6 +266,10 @@ export class LocalStorageProjectRepository implements ProjectRepository {
         executionStatus: "実施前",
         readingCertainty: undefined,
         managementConfirmationStatus: "unconfirmed",
+        // キャストの予約ステータスもリセット
+        companionBookingStatus: {},
+        directorBookingStatus: {},
+        mcBookingStatus: {},
         chatMessages: [],
         comments: [],
         statusHistory: [],
