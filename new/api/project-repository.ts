@@ -26,7 +26,7 @@ export interface ProjectRepository {
   generateProjectNumber(): string
 
   // 複製
-  duplicateProject(projectNumber: string, productIds: number[]): { project: Project; products: Product[] }
+  duplicateProject(projectNumber: string, productIds: number[], mode?: "new" | "same"): { project: Project; products: Product[] }
 
   // マスタ
   getCompanies(): Company[]

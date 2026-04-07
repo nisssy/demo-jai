@@ -5,6 +5,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Copy } from "lucide-react"
 import type { ProjectRepository } from "@/new/api/project-repository"
@@ -28,6 +30,7 @@ export const DuplicateProductModal = ({
 }: DuplicateProductModalProps) => {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [isDuplicating, setIsDuplicating] = useState(false)
+  const [duplicateMode, setDuplicateMode] = useState<"same" | "new">("same")
 
   const products = useMemo(() => {
     if (!projectNumber) return []
@@ -47,6 +50,7 @@ export const DuplicateProductModal = ({
       setSelectedIds(new Set())
     }
     setIsDuplicating(false)
+    setDuplicateMode("same")
     onOpenChange(nextOpen)
   }, [onOpenChange, products])
 
@@ -77,7 +81,7 @@ export const DuplicateProductModal = ({
     if (!projectNumber || selectedIds.size === 0) return
     setIsDuplicating(true)
     try {
-      const result = repository.duplicateProject(projectNumber, Array.from(selectedIds))
+      const result = repository.duplicateProject(projectNumber, Array.from(selectedIds), duplicateMode)
       onOpenChange(false)
       onDuplicated(result.project.projectNumber)
     } catch {
@@ -98,9 +102,28 @@ export const DuplicateProductModal = ({
         {project && (
           <div className="text-sm text-slate-600 space-y-1">
             <p>案件 <span className="font-medium text-slate-900">{project.projectNumber}</span> の商材を選択して複製します。</p>
-            <p className="text-xs text-slate-500">新しい案件番号で案件と選択した商材がコピーされます。</p>
+            <p className="text-xs text-slate-500">
+              {duplicateMode === "same"
+                ? "同じ案件に商材レコードが追加されます。"
+                : "新しい案件番号で案件と選択した商材がコピーされます。"}
+            </p>
           </div>
         )}
+
+        <RadioGroup
+          value={duplicateMode}
+          onValueChange={(v) => setDuplicateMode(v as "same" | "new")}
+          className="flex gap-6 px-1"
+        >
+          <div className="flex items-center gap-2">
+            <RadioGroupItem id="dup-mode-same" value="same" />
+            <Label htmlFor="dup-mode-same" className="cursor-pointer text-sm">同案件に追加</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <RadioGroupItem id="dup-mode-new" value="new" />
+            <Label htmlFor="dup-mode-new" className="cursor-pointer text-sm">新案件として追加</Label>
+          </div>
+        </RadioGroup>
 
         {products.length === 0 ? (
           <div className="text-center py-8 text-slate-500">商材がありません</div>

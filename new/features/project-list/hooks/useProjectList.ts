@@ -58,6 +58,7 @@ export type UseProjectListArgs = {
 
 const INITIAL_FILTERS: FilterState = {
   projectNumber: "",
+  projectNo: "",
   recordNumber: "",
   projectName: "",
   salesPersonId: "",
@@ -69,6 +70,8 @@ const INITIAL_FILTERS: FilterState = {
   hallName: "",
   companyId: "",
   prefectures: [],
+  areas: [],
+  departments: [],
   statuses: [],
 }
 
@@ -271,13 +274,13 @@ export function useProjectList({ repository, role = "Sales" }: UseProjectListArg
 
   // 法人/ホール選択ハンドラ
   const handleSelectHall = useCallback((hallName: string) => {
-    setFilters((prev) => ({ ...prev, hallName, companyId: "" }))
+    setFilters((prev) => ({ ...prev, hallName }))
     setCompanyHallSearchOpen(false)
     setCompanyHallSearchQuery("")
   }, [])
 
   const handleSelectCompany = useCallback((companyId: string) => {
-    setFilters((prev) => ({ ...prev, companyId, hallName: "" }))
+    setFilters((prev) => ({ ...prev, companyId }))
     setCompanyHallSearchOpen(false)
     setCompanyHallSearchQuery("")
   }, [])

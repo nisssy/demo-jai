@@ -232,8 +232,8 @@ export const RecordDetailView = ({ data, canEdit, onBack, onEdit, onGoToProject 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Field label="提案ステータス" value={proposalStatusLabel} />
             <Field label="実施ステータス" value={executionStatusLabel} />
-            {product.readingCertainty && <Field label="ヨミ" value={product.readingCertainty} />}
-            {product.managementConfirmationStatus && <Field label="マネジメント部確認" value={product.managementConfirmationStatus} />}
+            <Field label="ヨミ" value={product.readingCertainty || "-"} />
+            <Field label="マネジメント部確認" value={!product.managementConfirmationStatus || product.managementConfirmationStatus === "unconfirmed" ? "-" : product.managementConfirmationStatus} />
           </div>
         </CardContent>
       </Card>

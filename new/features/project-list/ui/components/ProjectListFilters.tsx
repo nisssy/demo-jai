@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -36,6 +35,25 @@ const PRODUCT_NAME_OPTIONS = [
   "スロセレ",
 ]
 
+/** 担当エリア選択肢 */
+const AREA_OPTIONS = [
+  "東京本社①",
+  "東京本社②",
+  "関東①",
+  "関東②",
+  "関西",
+  "東海",
+  "九州",
+]
+
+/** 部署選択肢 */
+const DEPARTMENT_OPTIONS = [
+  "営業部",
+  "管理部",
+  "経理部",
+  "企画部",
+]
+
 /** ステータス選択肢 */
 const STATUS_OPTIONS = [
   { value: "提案前", label: "提案前" },
@@ -49,13 +67,13 @@ const STATUS_OPTIONS = [
 type ProjectListFiltersProps = {
   filters: FilterState
   onFiltersChange: (filters: FilterState) => void
-  // 法人/ホール検索
-  companyHallSearchOpen: boolean
-  onCompanyHallSearchOpenChange: (open: boolean) => void
-  companyHallSearchType: "hall" | "company"
-  onCompanyHallSearchTypeChange: (type: "hall" | "company") => void
-  companyHallSearchQuery: string
-  onCompanyHallSearchQueryChange: (query: string) => void
+  // 法人/ホール検索（一部はビュー側ローカル状態に移行）
+  companyHallSearchOpen?: boolean
+  onCompanyHallSearchOpenChange?: (open: boolean) => void
+  companyHallSearchType?: "hall" | "company"
+  onCompanyHallSearchTypeChange?: (type: "hall" | "company") => void
+  companyHallSearchQuery?: string
+  onCompanyHallSearchQueryChange?: (query: string) => void
   filteredCompanies: Company[]
   filteredHalls: Hall[]
   getCompanyByCompanyId: (companyId: string) => Company | undefined
@@ -72,12 +90,6 @@ type ProjectListFiltersProps = {
 export const ProjectListFilters = ({
   filters,
   onFiltersChange,
-  companyHallSearchOpen,
-  onCompanyHallSearchOpenChange,
-  companyHallSearchType,
-  onCompanyHallSearchTypeChange,
-  companyHallSearchQuery,
-  onCompanyHallSearchQueryChange,
   filteredCompanies,
   filteredHalls,
   getCompanyByCompanyId,
@@ -94,6 +106,17 @@ export const ProjectListFilters = ({
   const [saveName, setSaveName] = useState("")
   const [productNameSearchOpen, setProductNameSearchOpen] = useState(false)
   const [productNameQuery, setProductNameQuery] = useState("")
+  // 法人・ホール（独立化したポップオーバー用ローカル状態）
+  const [companyPopoverOpen, setCompanyPopoverOpen] = useState(false)
+  const [hallPopoverOpen, setHallPopoverOpen] = useState(false)
+  const [companyQuery, setCompanyQuery] = useState("")
+  const [hallQuery, setHallQuery] = useState("")
+  const companyResults = companyQuery
+    ? filteredCompanies.filter((c) => c.name.toLowerCase().includes(companyQuery.toLowerCase()))
+    : filteredCompanies
+  const hallResults = hallQuery
+    ? filteredHalls.filter((h) => h.name.toLowerCase().includes(hallQuery.toLowerCase()))
+    : filteredHalls
 
   const updateFilter = <K extends keyof FilterState>(key: K, value: FilterState[K]) => {
     onFiltersChange({ ...filters, [key]: value })
@@ -118,12 +141,16 @@ export const ProjectListFilters = ({
       filters.hallName ||
       filters.companyId ||
       filters.prefectures.length > 0 ||
+      filters.areas.length > 0 ||
+      filters.departments.length > 0 ||
+      filters.projectNo ||
       filters.statuses.length > 0,
   )
 
   const clearAll = () => {
     onFiltersChange({
       projectNumber: "",
+      projectNo: "",
       recordNumber: "",
       projectName: "",
       salesPersonId: "",
@@ -135,6 +162,8 @@ export const ProjectListFilters = ({
       hallName: "",
       companyId: "",
       prefectures: [],
+      areas: [],
+      departments: [],
       statuses: [],
     })
   }
@@ -252,97 +281,99 @@ export const ProjectListFilters = ({
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* 法人/ホール検索 */}
+          {/* 法人 */}
           <div className="space-y-2">
-            <Label className="text-sm font-semibold">法人/ホール</Label>
-            <div className="flex gap-2">
-              <Popover open={companyHallSearchOpen} onOpenChange={onCompanyHallSearchOpenChange}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" role="combobox" aria-expanded={companyHallSearchOpen} className="flex-1 justify-between bg-white">
-                    {companyHallSearchType === "company"
-                      ? filters.companyId
-                        ? getCompanyByCompanyId(filters.companyId)?.name || "法人名を検索..."
-                        : "法人名を検索..."
-                      : filters.hallName || "ホール名を検索..."}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[400px] p-0" align="start">
-                  <Command>
-                    <CommandInput
-                      placeholder={companyHallSearchType === "hall" ? "ホール名を検索..." : "法人名を検索..."}
-                      value={companyHallSearchQuery}
-                      onValueChange={onCompanyHallSearchQueryChange}
-                    />
-                    <CommandList>
-                      {companyHallSearchType === "hall" ? (
-                        <>
-                          <CommandEmpty>ホールが見つかりませんでした</CommandEmpty>
-                          <CommandGroup>
-                            {filteredHalls.map((hall) => (
-                              <CommandItem
-                                key={hall.id}
-                                value={hall.name}
-                                onSelect={() => onSelectHall(hall.name)}
-                              >
-                                <Check className={`mr-2 h-4 w-4 ${filters.hallName === hall.name ? "opacity-100" : "opacity-0"}`} />
-                                <div className="flex flex-col">
-                                  <span>{hall.name}</span>
-                                  <span className="text-xs text-slate-500">担当: {hall.salesPersonName}</span>
-                                </div>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </>
-                      ) : (
-                        <>
-                          <CommandEmpty>法人が見つかりませんでした</CommandEmpty>
-                          <CommandGroup>
-                            {filteredCompanies.map((company) => (
-                              <CommandItem
-                                key={company.id}
-                                value={company.name}
-                                onSelect={() => onSelectCompany(company.companyId)}
-                              >
-                                <Check className={`mr-2 h-4 w-4 ${filters.companyId === company.companyId ? "opacity-100" : "opacity-0"}`} />
-                                <div className="flex flex-col">
-                                  <span>{company.name}</span>
-                                  <span className="text-xs text-slate-500">法人ID: {company.companyId}</span>
-                                </div>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </>
+            <Label className="text-sm font-semibold">法人</Label>
+            <Popover open={companyPopoverOpen} onOpenChange={setCompanyPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" className="w-full justify-between bg-white">
+                  {filters.companyId
+                    ? getCompanyByCompanyId(filters.companyId)?.name || "法人を検索..."
+                    : "法人を検索..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[360px] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="法人名を検索..." value={companyQuery} onValueChange={setCompanyQuery} />
+                  <CommandList>
+                    <CommandEmpty>法人が見つかりませんでした</CommandEmpty>
+                    <CommandGroup>
+                      {filters.companyId && (
+                        <CommandItem value="__clear_company__" onSelect={() => { onSelectCompany(""); setCompanyPopoverOpen(false) }}>
+                          <span className="text-slate-500">選択を解除</span>
+                        </CommandItem>
                       )}
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-              <Tabs
-                value={companyHallSearchType}
-                onValueChange={(value) => onCompanyHallSearchTypeChange(value as "hall" | "company")}
-              >
-                <TabsList className="h-10 bg-white">
-                  <TabsTrigger value="company" className="px-3">
-                    法人
-                  </TabsTrigger>
-                  <TabsTrigger value="hall" className="px-3">
-                    ホール
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
+                      {companyResults.map((company) => (
+                        <CommandItem
+                          key={company.id}
+                          value={company.name}
+                          onSelect={() => { onSelectCompany(company.companyId); setCompanyPopoverOpen(false) }}
+                        >
+                          <Check className={`mr-2 h-4 w-4 ${filters.companyId === company.companyId ? "opacity-100" : "opacity-0"}`} />
+                          <div className="flex flex-col">
+                            <span>{company.name}</span>
+                            <span className="text-xs text-slate-500">法人ID: {company.companyId}</span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
-          {/* エリア（都道府県・複数選択） */}
+          {/* ホール */}
           <div className="space-y-2">
-            <Label className="text-sm font-semibold">エリア</Label>
+            <Label className="text-sm font-semibold">ホール</Label>
+            <Popover open={hallPopoverOpen} onOpenChange={setHallPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" className="w-full justify-between bg-white">
+                  {filters.hallName || "ホールを検索..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[360px] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="ホール名を検索..." value={hallQuery} onValueChange={setHallQuery} />
+                  <CommandList>
+                    <CommandEmpty>ホールが見つかりませんでした</CommandEmpty>
+                    <CommandGroup>
+                      {filters.hallName && (
+                        <CommandItem value="__clear_hall__" onSelect={() => { onSelectHall(""); setHallPopoverOpen(false) }}>
+                          <span className="text-slate-500">選択を解除</span>
+                        </CommandItem>
+                      )}
+                      {hallResults.map((hall) => (
+                        <CommandItem
+                          key={hall.id}
+                          value={hall.name}
+                          onSelect={() => { onSelectHall(hall.name); setHallPopoverOpen(false) }}
+                        >
+                          <Check className={`mr-2 h-4 w-4 ${filters.hallName === hall.name ? "opacity-100" : "opacity-0"}`} />
+                          <div className="flex flex-col">
+                            <span>{hall.name}</span>
+                            <span className="text-xs text-slate-500">担当: {hall.salesPersonName}</span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* 都道府県（複数選択） */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">都道府県</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-between bg-white">
                   {filters.prefectures.length > 0
                     ? `${filters.prefectures.length}件選択中`
-                    : "都道府県を選択..."}
+                    : "都道府県を検索..."}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
@@ -360,6 +391,100 @@ export const ProjectListFilters = ({
                         }}
                       />
                       {pref}
+                    </label>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* 担当エリア（複数選択） */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">担当エリア</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-between bg-white">
+                  {filters.areas.length > 0
+                    ? `${filters.areas.length}件選択中`
+                    : "担当エリアを検索..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[260px] p-0" align="start">
+                <div className="p-3 space-y-1 max-h-60 overflow-y-auto">
+                  {AREA_OPTIONS.map((area) => (
+                    <label key={area} className="flex items-center gap-2 cursor-pointer text-sm py-0.5">
+                      <Checkbox
+                        checked={filters.areas.includes(area)}
+                        onCheckedChange={() => {
+                          const next = filters.areas.includes(area)
+                            ? filters.areas.filter((a) => a !== area)
+                            : [...filters.areas, area]
+                          updateFilter("areas", next)
+                        }}
+                      />
+                      {area}
+                    </label>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* 部署（複数選択） */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">部署</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-between bg-white">
+                  {filters.departments.length > 0
+                    ? `${filters.departments.length}件選択中`
+                    : "部署を検索..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[260px] p-0" align="start">
+                <div className="p-3 space-y-1 max-h-60 overflow-y-auto">
+                  {DEPARTMENT_OPTIONS.map((dept) => (
+                    <label key={dept} className="flex items-center gap-2 cursor-pointer text-sm py-0.5">
+                      <Checkbox
+                        checked={filters.departments.includes(dept)}
+                        onCheckedChange={() => {
+                          const next = filters.departments.includes(dept)
+                            ? filters.departments.filter((d) => d !== dept)
+                            : [...filters.departments, dept]
+                          updateFilter("departments", next)
+                        }}
+                      />
+                      {dept}
+                    </label>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* ステータス（複数選択） */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">ステータス</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-between bg-white">
+                  {filters.statuses.length > 0
+                    ? `${filters.statuses.length}件選択中`
+                    : "ステータスを選択..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[260px] p-0" align="start">
+                <div className="p-3 space-y-1 max-h-60 overflow-y-auto">
+                  {STATUS_OPTIONS.map((opt) => (
+                    <label key={opt.value} className="flex items-center gap-2 cursor-pointer text-sm py-0.5">
+                      <Checkbox
+                        checked={filters.statuses.includes(opt.value)}
+                        onCheckedChange={() => toggleStatus(opt.value)}
+                      />
+                      {opt.label}
                     </label>
                   ))}
                 </div>
@@ -467,22 +592,6 @@ export const ProjectListFilters = ({
             </div>
           </div>
 
-          {/* ステータス（複数選択） */}
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold">ステータス</Label>
-            <div className="bg-white border rounded-md p-3 space-y-2">
-              {STATUS_OPTIONS.map((opt) => (
-                <label key={opt.value} className="flex items-center gap-2 cursor-pointer text-sm">
-                  <Checkbox
-                    checked={filters.statuses.includes(opt.value)}
-                    onCheckedChange={() => toggleStatus(opt.value)}
-                  />
-                  {opt.label}
-                </label>
-              ))}
-            </div>
-          </div>
-
           {/* ホール担当検索 */}
           <div className="space-y-2">
             <Label className="text-sm font-semibold">ホール担当</Label>
@@ -494,7 +603,18 @@ export const ProjectListFilters = ({
             />
           </div>
 
-          {/* 案件No検索 */}
+          {/* 案件No */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">案件No</Label>
+            <Input
+              placeholder="案件Noを入力..."
+              value={filters.projectNo}
+              onChange={(e) => updateFilter("projectNo", e.target.value)}
+              className="bg-white"
+            />
+          </div>
+
+          {/* 案件番号 */}
           <div className="space-y-2">
             <Label className="text-sm font-semibold">案件番号</Label>
             <Input
@@ -547,7 +667,7 @@ export const ProjectListFilters = ({
               )}
               {filters.prefectures.length > 0 && (
                 <Badge variant="secondary" className="gap-1">
-                  エリア: {filters.prefectures.join(", ")}
+                  都道府県: {filters.prefectures.join(", ")}
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); updateFilter("prefectures", []) }}
