@@ -167,7 +167,7 @@ export const LotteryTabs = ({ lotteryForm: f }: LotteryTabsProps) => {
       </SectionCard>
       )}
 
-      {f.productId && (role === "LotteryAdmin" || (isSalesOrInternal && !isSmartPoint)) && (
+      {f.productId && (role === "LotteryAdmin" || (isSalesOrInternal && !isSmartPoint)) && (role !== "Sales" || f.proposalStatus === "order-received") && (
         <SectionCard title="商材管理">
           <ProductManagementSection productId={f.productId} serviceName={f.serviceName} />
         </SectionCard>
