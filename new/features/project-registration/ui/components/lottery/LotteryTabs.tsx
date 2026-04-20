@@ -11,6 +11,7 @@ import { LotteryPrizeSet } from "./LotteryPrizeSet"
 import { LotteryQuoteInputs } from "./LotteryQuoteInputs"
 import { LotteryQuoteConfig } from "./LotteryQuoteConfig"
 import { DesignVendorEstimateSection } from "./DesignVendorEstimateSection"
+import { QuotePdfDownload } from "./QuotePdfDownload"
 import { LotteryProduction } from "./LotteryProduction"
 import { ExtractionConditionSection } from "./ExtractionConditionSection"
 import { ProductManagementSection } from "./ProductManagementSection"
@@ -128,6 +129,13 @@ export const LotteryTabs = ({ lotteryForm: f }: LotteryTabsProps) => {
           onUpdateItem={f.updateHallQuoteItem}
           readOnly={role !== "Sales"}
         />
+        {role === "Sales" && (
+          <QuotePdfDownload
+            eventName={f.eventName}
+            hallQuotes={f.hallQuotes}
+            dmMailing={f.dmMailing}
+          />
+        )}
       </SectionCard>
 
       {(role !== "Sales" || f.proposalStatus === "order-received") && (
