@@ -9,7 +9,6 @@ import { LotteryPrizeSet } from "./LotteryPrizeSet"
 import { LotteryQuoteConfig } from "./LotteryQuoteConfig"
 import { LotteryProduction } from "./LotteryProduction"
 import { ExtractionConditionSection } from "./ExtractionConditionSection"
-import { DesignVendorEstimateSection } from "./DesignVendorEstimateSection"
 import { ProductManagementSection } from "./ProductManagementSection"
 import { PspLinkButton } from "../PspLinkButton"
 
@@ -81,18 +80,12 @@ export const LotteryTabs = ({ lotteryForm: f }: LotteryTabsProps) => {
       </SectionCard>
 
       <SectionCard title="見積り">
-        <DesignVendorEstimateSection
-          productId={f.productId}
-          onApplyQuoteToItem={(amount) => {
-            f.updateTotalQuoteItem(1, String(amount))
-            f.addDesignCorrectionToHallQuotes(amount)
-          }}
-        />
         <LotteryQuoteConfig
           quoteGenerated={f.quoteGenerated}
           hallQuotes={f.hallQuotes}
           dmMailing={f.dmMailing}
           onUpdateItem={f.updateHallQuoteItem}
+          readOnly={role === "LotteryAdmin"}
         />
       </SectionCard>
 

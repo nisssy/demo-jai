@@ -335,35 +335,6 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
     }
   }, [isPercentageValid, totalAmount, generateHallQuotes])
 
-  // デザイン修正費をホール別見積もりに追加
-  const addDesignCorrectionToHallQuotes = useCallback((amount: number) => {
-    setHallQuotes((prev) => {
-      if (prev.length === 0) return prev
-      const now = new Date()
-      const dd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(Math.min(now.getDate() + 14, 24)).padStart(2, "0")}`
-      const prd = (() => { const d = new Date(dd); const nme = new Date(d.getFullYear(), d.getMonth() + 2, 0); return `${nme.getFullYear()}-${String(nme.getMonth() + 1).padStart(2, "0")}-${String(nme.getDate()).padStart(2, "0")}` })()
-      const odl = (() => { const d = new Date(dd); d.setDate(d.getDate() - 7); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` })()
-      return prev.map((hq) => {
-        const pct = hq.percentage || 100
-        const hallAmount = Math.floor((amount * pct) / 100)
-        const existing = hq.quoteItems.find((item) => item.name === "デザイン修正費")
-        const newItem: QuoteItem = {
-          id: Math.max(...hq.quoteItems.map((i) => i.id), 0) + 1,
-          name: "デザイン修正費", category: "イベント", eventSubject: "修正費", modelNumber: "", rentalGrade: "-",
-          quantity: 1, unitPrice: hallAmount, included: true,
-          purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: prd,
-          salesUnitPrice: Math.floor(hallAmount * 1.2),
-          orderVendorName: "", orderDeadline: odl, deliveryDate: dd, orderId: "", orderDate: "", note: "",
-        }
-        const updatedItems = existing
-          ? hq.quoteItems.map((item) => item.name === "デザイン修正費" ? { ...item, unitPrice: hallAmount, salesUnitPrice: Math.floor(hallAmount * 1.2) } : item)
-          : [...hq.quoteItems, newItem]
-        const newTotal = updatedItems.filter((i) => i.included).reduce((s, i) => s + i.quantity * i.unitPrice, 0)
-        return { ...hq, quoteItems: updatedItems, calculatedAmount: newTotal }
-      })
-    })
-  }, [])
-
   // ホール別見積もりの個別項目を編集
   const updateHallQuoteItem = useCallback((hallName: string, itemId: number, updates: Partial<QuoteItem>) => {
     setHallQuotes((prev) => prev.map((hq) => {
@@ -805,7 +776,6 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
     hallPercentages,
     companyPercentages,
     updateTotalQuoteItem,
-    addDesignCorrectionToHallQuotes,
     setPosterPrintQuantity,
     setPosterPrintUnitPrice,
     setDmOrderCount,

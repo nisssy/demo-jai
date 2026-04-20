@@ -1,3 +1,4 @@
+import { Fragment } from "react"
 import type { HallQuote, QuoteItem } from "@/new/api/types"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -8,6 +9,7 @@ type LotteryQuoteConfigProps = {
   hallQuotes: HallQuote[]
   dmMailing: "yes" | "no"
   onUpdateItem: (hallName: string, itemId: number, updates: Partial<QuoteItem>) => void
+  readOnly?: boolean
 }
 
 export const LotteryQuoteConfig = ({
@@ -15,6 +17,7 @@ export const LotteryQuoteConfig = ({
   hallQuotes,
   dmMailing,
   onUpdateItem,
+  readOnly = false,
 }: LotteryQuoteConfigProps) => {
   if (!quoteGenerated || hallQuotes.length === 0) return null
 
@@ -71,110 +74,157 @@ export const LotteryQuoteConfig = ({
                       const purchaseAmount = item.quantity * item.unitPrice
                       const salesPrice = item.salesUnitPrice || item.unitPrice
                       const salesAmount = item.quantity * salesPrice
+                      const textCell = "text-xs text-slate-700 whitespace-nowrap"
                       return (
-                        <>
+                        <Fragment key={item.id}>
                           {/* ── データ1行目 ── */}
-                          <tr key={`${item.id}-1`} className="border-t border-slate-200 hover:bg-slate-50">
+                          <tr className="border-t border-slate-200 hover:bg-slate-50">
                             <td rowSpan={2} className="px-2 py-1 text-center text-slate-600 border-r border-slate-100 align-middle font-mono">
                               H{String(item.id).padStart(4, "0")}
                             </td>
                             <td rowSpan={2} className="px-2 py-1 border-r border-slate-100 align-middle">
-                              <Input
-                                value={item.name}
-                                onChange={(e) => onUpdateItem(hq.hallName, item.id, { name: e.target.value })}
-                                className="h-7 text-xs border-slate-200 min-w-[120px]"
-                              />
+                              {readOnly ? (
+                                <span className={textCell}>{item.name}</span>
+                              ) : (
+                                <Input
+                                  value={item.name}
+                                  onChange={(e) => onUpdateItem(hq.hallName, item.id, { name: e.target.value })}
+                                  className="h-7 text-xs border-slate-200 min-w-[120px]"
+                                />
+                              )}
                             </td>
                             <td className="px-2 py-0.5 border-r border-slate-100">
-                              <Input
-                                value={item.category || ""}
-                                onChange={(e) => onUpdateItem(hq.hallName, item.id, { category: e.target.value })}
-                                className="h-6 text-xs border-slate-200 min-w-[70px]"
-                              />
+                              {readOnly ? (
+                                <span className={textCell}>{item.category || ""}</span>
+                              ) : (
+                                <Input
+                                  value={item.category || ""}
+                                  onChange={(e) => onUpdateItem(hq.hallName, item.id, { category: e.target.value })}
+                                  className="h-6 text-xs border-slate-200 min-w-[70px]"
+                                />
+                              )}
                             </td>
                             <td className="px-2 py-0.5 border-r border-slate-100">
-                              <Input
-                                value={item.modelNumber || ""}
-                                onChange={(e) => onUpdateItem(hq.hallName, item.id, { modelNumber: e.target.value })}
-                                className="h-6 text-xs border-slate-200 min-w-[65px]"
-                              />
+                              {readOnly ? (
+                                <span className={textCell}>{item.modelNumber || ""}</span>
+                              ) : (
+                                <Input
+                                  value={item.modelNumber || ""}
+                                  onChange={(e) => onUpdateItem(hq.hallName, item.id, { modelNumber: e.target.value })}
+                                  className="h-6 text-xs border-slate-200 min-w-[65px]"
+                                />
+                              )}
                             </td>
                             <td rowSpan={2} className="px-2 py-1 border-r border-slate-100 align-middle">
-                              <Input
-                                type="number"
-                                value={item.quantity}
-                                onChange={(e) => onUpdateItem(hq.hallName, item.id, { quantity: parseInt(e.target.value) || 0 })}
-                                className="h-7 text-xs text-right border-slate-200 w-[60px] ml-auto"
-                              />
+                              {readOnly ? (
+                                <div className={`${textCell} text-right`}>{item.quantity}</div>
+                              ) : (
+                                <Input
+                                  type="number"
+                                  value={item.quantity}
+                                  onChange={(e) => onUpdateItem(hq.hallName, item.id, { quantity: parseInt(e.target.value) || 0 })}
+                                  className="h-7 text-xs text-right border-slate-200 w-[60px] ml-auto"
+                                />
+                              )}
                             </td>
                             <td rowSpan={2} className="px-2 py-1 border-r border-slate-100 align-middle text-center">
                               <input
                                 type="checkbox"
                                 checked={item.purchaseReducedTax === "対象"}
                                 onChange={(e) => onUpdateItem(hq.hallName, item.id, { purchaseReducedTax: e.target.checked ? "対象" : "対象外" })}
-                                className="h-4 w-4 rounded border-slate-300 accent-slate-600 cursor-pointer"
+                                disabled={readOnly}
+                                className="h-4 w-4 rounded border-slate-300 accent-slate-600 cursor-pointer disabled:cursor-default disabled:opacity-70"
                               />
                             </td>
                             <td className="px-2 py-0.5 border-r border-slate-100">
-                              <Input
-                                type="number"
-                                value={item.unitPrice}
-                                onChange={(e) => onUpdateItem(hq.hallName, item.id, { unitPrice: parseInt(e.target.value) || 0 })}
-                                className="h-6 text-xs text-right border-slate-200 w-[75px] ml-auto"
-                              />
+                              {readOnly ? (
+                                <div className={`${textCell} text-right`}>{item.unitPrice}</div>
+                              ) : (
+                                <Input
+                                  type="number"
+                                  value={item.unitPrice}
+                                  onChange={(e) => onUpdateItem(hq.hallName, item.id, { unitPrice: parseInt(e.target.value) || 0 })}
+                                  className="h-6 text-xs text-right border-slate-200 w-[75px] ml-auto"
+                                />
+                              )}
                             </td>
                             <td rowSpan={2} className="px-2 py-1 border-r border-slate-100 align-middle text-center">
                               <input
                                 type="checkbox"
                                 checked={item.salesReducedTax === "対象"}
                                 onChange={(e) => onUpdateItem(hq.hallName, item.id, { salesReducedTax: e.target.checked ? "対象" : "対象外" })}
-                                className="h-4 w-4 rounded border-slate-300 accent-slate-600 cursor-pointer"
+                                disabled={readOnly}
+                                className="h-4 w-4 rounded border-slate-300 accent-slate-600 cursor-pointer disabled:cursor-default disabled:opacity-70"
                               />
                             </td>
                             <td className="px-2 py-0.5 border-r border-slate-100">
-                              <Input
-                                type="number"
-                                value={salesPrice}
-                                onChange={(e) => onUpdateItem(hq.hallName, item.id, { salesUnitPrice: parseInt(e.target.value) || 0 })}
-                                className="h-6 text-xs text-right border-slate-200 w-[75px] ml-auto"
-                              />
+                              {readOnly ? (
+                                <div className={`${textCell} text-right`}>{salesPrice}</div>
+                              ) : (
+                                <Input
+                                  type="number"
+                                  value={salesPrice}
+                                  onChange={(e) => onUpdateItem(hq.hallName, item.id, { salesUnitPrice: parseInt(e.target.value) || 0 })}
+                                  className="h-6 text-xs text-right border-slate-200 w-[75px] ml-auto"
+                                />
+                              )}
                             </td>
                             <td rowSpan={2} className="px-2 py-1 border-r border-slate-100 align-middle">
-                              <Input
-                                value={item.orderVendorName || ""}
-                                onChange={(e) => onUpdateItem(hq.hallName, item.id, { orderVendorName: e.target.value })}
-                                className="h-7 text-xs border-slate-200 min-w-[80px]"
-                              />
+                              {readOnly ? (
+                                <span className={textCell}>{item.orderVendorName || ""}</span>
+                              ) : (
+                                <Input
+                                  value={item.orderVendorName || ""}
+                                  onChange={(e) => onUpdateItem(hq.hallName, item.id, { orderVendorName: e.target.value })}
+                                  className="h-7 text-xs border-slate-200 min-w-[80px]"
+                                />
+                              )}
                             </td>
                             <td className="px-2 py-0.5 border-r border-slate-100">
-                              <Input
-                                type="date"
-                                value={item.deliveryDate || ""}
-                                onChange={(e) => onUpdateItem(hq.hallName, item.id, { deliveryDate: e.target.value })}
-                                className="h-6 text-xs border-slate-200 min-w-[120px]"
-                              />
+                              {readOnly ? (
+                                <span className={textCell}>{item.deliveryDate || ""}</span>
+                              ) : (
+                                <Input
+                                  type="date"
+                                  value={item.deliveryDate || ""}
+                                  onChange={(e) => onUpdateItem(hq.hallName, item.id, { deliveryDate: e.target.value })}
+                                  className="h-6 text-xs border-slate-200 min-w-[120px]"
+                                />
+                              )}
                             </td>
                             <td rowSpan={2} className="px-2 py-1 border-r border-slate-100 align-middle">
-                              <Input
-                                type="date"
-                                value={item.orderDeadline || ""}
-                                onChange={(e) => onUpdateItem(hq.hallName, item.id, { orderDeadline: e.target.value })}
-                                className="h-7 text-xs border-slate-200 min-w-[120px]"
-                              />
+                              {readOnly ? (
+                                <span className={textCell}>{item.orderDeadline || ""}</span>
+                              ) : (
+                                <Input
+                                  type="date"
+                                  value={item.orderDeadline || ""}
+                                  onChange={(e) => onUpdateItem(hq.hallName, item.id, { orderDeadline: e.target.value })}
+                                  className="h-7 text-xs border-slate-200 min-w-[120px]"
+                                />
+                              )}
                             </td>
                             <td className="px-2 py-0.5 border-r border-slate-100">
-                              <Input
-                                value={item.orderId || ""}
-                                onChange={(e) => onUpdateItem(hq.hallName, item.id, { orderId: e.target.value })}
-                                className="h-6 text-xs border-slate-200 min-w-[70px]"
-                              />
+                              {readOnly ? (
+                                <span className={textCell}>{item.orderId || ""}</span>
+                              ) : (
+                                <Input
+                                  value={item.orderId || ""}
+                                  onChange={(e) => onUpdateItem(hq.hallName, item.id, { orderId: e.target.value })}
+                                  className="h-6 text-xs border-slate-200 min-w-[70px]"
+                                />
+                              )}
                             </td>
                             <td rowSpan={2} className="px-2 py-1 border-r border-slate-100 align-middle">
-                              <Input
-                                value={item.note || ""}
-                                onChange={(e) => onUpdateItem(hq.hallName, item.id, { note: e.target.value })}
-                                className="h-7 text-xs border-slate-200 min-w-[60px]"
-                              />
+                              {readOnly ? (
+                                <span className={textCell}>{item.note || ""}</span>
+                              ) : (
+                                <Input
+                                  value={item.note || ""}
+                                  onChange={(e) => onUpdateItem(hq.hallName, item.id, { note: e.target.value })}
+                                  className="h-7 text-xs border-slate-200 min-w-[60px]"
+                                />
+                              )}
                             </td>
                             <td rowSpan={2} className="px-2 py-1 text-center align-middle">
                               <Button
@@ -192,20 +242,28 @@ export const LotteryQuoteConfig = ({
                             </td>
                           </tr>
                           {/* ── データ2行目（サブ行） ── */}
-                          <tr key={`${item.id}-2`} className="hover:bg-slate-50">
+                          <tr className="hover:bg-slate-50">
                             <td className="px-2 py-0.5 border-r border-slate-100 border-t border-slate-50">
-                              <Input
-                                value={item.eventSubject || ""}
-                                onChange={(e) => onUpdateItem(hq.hallName, item.id, { eventSubject: e.target.value })}
-                                className="h-6 text-xs border-slate-200 min-w-[70px]"
-                              />
+                              {readOnly ? (
+                                <span className={textCell}>{item.eventSubject || ""}</span>
+                              ) : (
+                                <Input
+                                  value={item.eventSubject || ""}
+                                  onChange={(e) => onUpdateItem(hq.hallName, item.id, { eventSubject: e.target.value })}
+                                  className="h-6 text-xs border-slate-200 min-w-[70px]"
+                                />
+                              )}
                             </td>
                             <td className="px-2 py-0.5 border-r border-slate-100 border-t border-slate-50">
-                              <Input
-                                value={item.rentalGrade || ""}
-                                onChange={(e) => onUpdateItem(hq.hallName, item.id, { rentalGrade: e.target.value })}
-                                className="h-6 text-xs border-slate-200 min-w-[65px]"
-                              />
+                              {readOnly ? (
+                                <span className={textCell}>{item.rentalGrade || ""}</span>
+                              ) : (
+                                <Input
+                                  value={item.rentalGrade || ""}
+                                  onChange={(e) => onUpdateItem(hq.hallName, item.id, { rentalGrade: e.target.value })}
+                                  className="h-6 text-xs border-slate-200 min-w-[65px]"
+                                />
+                              )}
                             </td>
                             <td className="px-2 py-0.5 border-r border-slate-100 border-t border-slate-50 text-right font-medium text-slate-900 whitespace-nowrap">
                               ¥{purchaseAmount.toLocaleString()}
@@ -214,23 +272,31 @@ export const LotteryQuoteConfig = ({
                               ¥{salesAmount.toLocaleString()}
                             </td>
                             <td className="px-2 py-0.5 border-r border-slate-100 border-t border-slate-50">
-                              <Input
-                                type="date"
-                                value={item.purchaseRecordDate || ""}
-                                onChange={(e) => onUpdateItem(hq.hallName, item.id, { purchaseRecordDate: e.target.value })}
-                                className="h-6 text-xs border-slate-200 min-w-[120px]"
-                              />
+                              {readOnly ? (
+                                <span className={textCell}>{item.purchaseRecordDate || ""}</span>
+                              ) : (
+                                <Input
+                                  type="date"
+                                  value={item.purchaseRecordDate || ""}
+                                  onChange={(e) => onUpdateItem(hq.hallName, item.id, { purchaseRecordDate: e.target.value })}
+                                  className="h-6 text-xs border-slate-200 min-w-[120px]"
+                                />
+                              )}
                             </td>
                             <td className="px-2 py-0.5 border-r border-slate-100 border-t border-slate-50">
-                              <Input
-                                type="date"
-                                value={item.orderDate || ""}
-                                onChange={(e) => onUpdateItem(hq.hallName, item.id, { orderDate: e.target.value })}
-                                className="h-6 text-xs border-slate-200 min-w-[120px]"
-                              />
+                              {readOnly ? (
+                                <span className={textCell}>{item.orderDate || ""}</span>
+                              ) : (
+                                <Input
+                                  type="date"
+                                  value={item.orderDate || ""}
+                                  onChange={(e) => onUpdateItem(hq.hallName, item.id, { orderDate: e.target.value })}
+                                  className="h-6 text-xs border-slate-200 min-w-[120px]"
+                                />
+                              )}
                             </td>
                           </tr>
-                        </>
+                        </Fragment>
                       )
                     })}
                   </tbody>

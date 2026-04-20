@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation"
 import { useAppRouter } from "@/hooks/use-app-router"
 import type { ProjectRepository } from "@/new/api/project-repository"
 import type { Company, Hall, Product, ProductComment, ChatMessage, ManagementConfirmationStatus } from "@/new/api/types"
-import { getCategoryByEventType, getEventTypesByCategory } from "@/new/api/display"
+import { getAllEventTypes, getCategoryByEventType, getEventTypesByCategory } from "@/new/api/display"
 import type { RegistrationMode, ProjectFormState, ProductFormState, FormErrors } from "@/new/features/project-registration/model/types"
 import type { LotteryFormState } from "@/new/features/project-registration/model/lottery-types"
 import { EMPTY_PRODUCT } from "@/new/features/project-registration/model/types"
@@ -357,7 +357,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
   }, [])
 
   const getEventTypesForProduct = useCallback((category: string) => {
-    return category ? getEventTypesByCategory(category) : []
+    return category ? getEventTypesByCategory(category) : getAllEventTypes()
   }, [])
 
   // ─── 商材追加/削除 ───
