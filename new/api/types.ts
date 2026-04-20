@@ -37,6 +37,9 @@ export type SlotReport = {
 /** マネジメント部確認ステータス */
 export type ManagementConfirmationStatus = "unconfirmed" | "under-review" | "revision-requested" | "approved"
 
+/** 支払チェックステータス */
+export type PaymentCheckStatus = "unconfirmed" | "confirming" | "confirmed"
+
 /** 月次計上ステータス */
 export type BillingStatus =
   | "draft"                // 抽出済み（未送信）
@@ -172,6 +175,8 @@ export type Product = {
   prizeDeliveryInfoByVendor?: PrizeDeliveryInfoByVendor[]
   // マネジメント部確認
   managementConfirmationStatus?: ManagementConfirmationStatus
+  // 事務担当
+  adminPersonId?: number
   // 部門間チャット
   chatMessages?: ChatMessage[]
 }
@@ -364,6 +369,7 @@ export type Hall = {
   hallId: string
   name: string
   salesPersonName: string
+  insightPersonName?: string
   companyId: number
   address?: string
   prefecture?: string

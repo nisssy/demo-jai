@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import type { Company, Hall } from "@/new/api/types"
+import type { Company, Hall, Employee } from "@/new/api/types"
 import { getAllCategories, getAllEventTypes } from "@/new/api/display"
 
 export type BillingFilterState = {
@@ -26,6 +26,14 @@ export type BillingFilterState = {
   projectNumber: string
   recordNumber: string
   projectName: string
+  // 請求タブ追加フィルタ
+  proposalStatuses: string[]
+  executionStatuses: string[]
+  designOrderStatuses: string[]
+  prizeOrderStatuses: string[]
+  listConfirmStatuses: string[]
+  serviceName: string
+  adminPersonId: string
 }
 
 export const INITIAL_BILLING_FILTERS: BillingFilterState = {
@@ -43,6 +51,13 @@ export const INITIAL_BILLING_FILTERS: BillingFilterState = {
   projectNumber: "",
   recordNumber: "",
   projectName: "",
+  proposalStatuses: [],
+  executionStatuses: [],
+  designOrderStatuses: [],
+  prizeOrderStatuses: [],
+  listConfirmStatuses: [],
+  serviceName: "",
+  adminPersonId: "",
 }
 
 const PREFECTURES = [
@@ -60,15 +75,32 @@ const AREA_OPTIONS = ["東京本社①", "東京本社②", "関東①", "関東
 const DEPARTMENT_OPTIONS = ["営業部", "管理部", "経理部", "企画部"]
 const CATEGORY_OPTIONS = getAllCategories()
 const PRODUCT_NAME_OPTIONS = getAllEventTypes()
+const PROPOSAL_STATUS_OPTIONS = [
+  { value: "before-proposal", label: "提案前" },
+  { value: "proposing", label: "提案中" },
+  { value: "order-received", label: "受注済み" },
+]
+const EXECUTION_STATUS_OPTIONS = ["実施前", "実施中", "終了"]
+const DONE_NOT_OPTIONS = [
+  { value: "done", label: "実施済み" },
+  { value: "not", label: "未実施" },
+]
+const LIST_CONFIRM_OPTIONS = [
+  { value: "done", label: "確認済" },
+  { value: "not", label: "確認前" },
+]
+const SERVICE_NAME_OPTIONS = ["たまリッチ", "SmartPoint"]
 
 type BillingFiltersProps = {
   filters: BillingFilterState
   onFiltersChange: (filters: BillingFilterState) => void
   companies: Company[]
   halls: Hall[]
+  employees?: Employee[]
+  showInvoiceFilters?: boolean
 }
 
-export const BillingFilters = ({ filters, onFiltersChange, companies, halls }: BillingFiltersProps) => {
+export const BillingFilters = ({ filters, onFiltersChange, companies, halls, employees = [], showInvoiceFilters = false }: BillingFiltersProps) => {
   const [companyOpen, setCompanyOpen] = useState(false)
   const [companyQuery, setCompanyQuery] = useState("")
   const [hallOpen, setHallOpen] = useState(false)
@@ -78,7 +110,7 @@ export const BillingFilters = ({ filters, onFiltersChange, companies, halls }: B
     onFiltersChange({ ...filters, [key]: value })
   }
 
-  const toggleMulti = (key: "prefectures" | "areas" | "departments", value: string) => {
+  const toggleMulti = (key: "prefectures" | "areas" | "departments" | "proposalStatuses" | "executionStatuses" | "designOrderStatuses" | "prizeOrderStatuses" | "listConfirmStatuses", value: string) => {
     const cur = filters[key]
     update(key, cur.includes(value) ? cur.filter((v) => v !== value) : [...cur, value])
   }
@@ -294,6 +326,142 @@ export const BillingFilters = ({ filters, onFiltersChange, companies, halls }: B
           <Label className="text-xs">案件名</Label>
           <Input value={filters.projectName} onChange={(e) => update("projectName", e.target.value)} className="h-8 text-xs" placeholder="案件名" />
         </div>
+
+        {/* 請求タブ固有フィルタ */}
+        {showInvoiceFilters && (
+          <>
+            {/* 見積ステータス */}
+            <div className="space-y-1">
+              <Label className="text-xs">見積ステータス</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full justify-between text-xs h-8 font-normal">
+                    {filters.proposalStatuses.length > 0 ? `${filters.proposalStatuses.length}件選択` : "選択"}
+                    <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[160px] p-2">
+                  {PROPOSAL_STATUS_OPTIONS.map((o) => (
+                    <label key={o.value} className="flex items-center gap-2 py-0.5 cursor-pointer">
+                      <Checkbox checked={filters.proposalStatuses.includes(o.value)} onCheckedChange={() => toggleMulti("proposalStatuses", o.value)} className="h-3.5 w-3.5" />
+                      <span className="text-xs">{o.label}</span>
+                    </label>
+                  ))}
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* 実施ステータス */}
+            <div className="space-y-1">
+              <Label className="text-xs">実施ステータス</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full justify-between text-xs h-8 font-normal">
+                    {filters.executionStatuses.length > 0 ? `${filters.executionStatuses.length}件選択` : "選択"}
+                    <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[140px] p-2">
+                  {EXECUTION_STATUS_OPTIONS.map((s) => (
+                    <label key={s} className="flex items-center gap-2 py-0.5 cursor-pointer">
+                      <Checkbox checked={filters.executionStatuses.includes(s)} onCheckedChange={() => toggleMulti("executionStatuses", s)} className="h-3.5 w-3.5" />
+                      <span className="text-xs">{s}</span>
+                    </label>
+                  ))}
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* 当選デザイン依頼 */}
+            <div className="space-y-1">
+              <Label className="text-xs">当選デザイン依頼</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full justify-between text-xs h-8 font-normal">
+                    {filters.designOrderStatuses.length > 0 ? `${filters.designOrderStatuses.length}件選択` : "選択"}
+                    <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[140px] p-2">
+                  {DONE_NOT_OPTIONS.map((o) => (
+                    <label key={o.value} className="flex items-center gap-2 py-0.5 cursor-pointer">
+                      <Checkbox checked={filters.designOrderStatuses.includes(o.value)} onCheckedChange={() => toggleMulti("designOrderStatuses", o.value)} className="h-3.5 w-3.5" />
+                      <span className="text-xs">{o.label}</span>
+                    </label>
+                  ))}
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* 景品発注依頼 */}
+            <div className="space-y-1">
+              <Label className="text-xs">景品発注依頼</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full justify-between text-xs h-8 font-normal">
+                    {filters.prizeOrderStatuses.length > 0 ? `${filters.prizeOrderStatuses.length}件選択` : "選択"}
+                    <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[140px] p-2">
+                  {DONE_NOT_OPTIONS.map((o) => (
+                    <label key={o.value} className="flex items-center gap-2 py-0.5 cursor-pointer">
+                      <Checkbox checked={filters.prizeOrderStatuses.includes(o.value)} onCheckedChange={() => toggleMulti("prizeOrderStatuses", o.value)} className="h-3.5 w-3.5" />
+                      <span className="text-xs">{o.label}</span>
+                    </label>
+                  ))}
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* リスト確認 */}
+            <div className="space-y-1">
+              <Label className="text-xs">リスト確認</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full justify-between text-xs h-8 font-normal">
+                    {filters.listConfirmStatuses.length > 0 ? `${filters.listConfirmStatuses.length}件選択` : "選択"}
+                    <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[140px] p-2">
+                  {LIST_CONFIRM_OPTIONS.map((o) => (
+                    <label key={o.value} className="flex items-center gap-2 py-0.5 cursor-pointer">
+                      <Checkbox checked={filters.listConfirmStatuses.includes(o.value)} onCheckedChange={() => toggleMulti("listConfirmStatuses", o.value)} className="h-3.5 w-3.5" />
+                      <span className="text-xs">{o.label}</span>
+                    </label>
+                  ))}
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* サービス名 */}
+            <div className="space-y-1">
+              <Label className="text-xs">サービス名</Label>
+              <Select value={filters.serviceName || "_all"} onValueChange={(v) => update("serviceName", v === "_all" ? "" : v)}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_all" className="text-xs">すべて</SelectItem>
+                  {SERVICE_NAME_OPTIONS.map((s) => <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 事務担当者 */}
+            <div className="space-y-1">
+              <Label className="text-xs">事務担当者</Label>
+              <Select value={filters.adminPersonId || "_all"} onValueChange={(v) => update("adminPersonId", v === "_all" ? "" : v)}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_all" className="text-xs">すべて</SelectItem>
+                  {employees.filter((e) => e.department === "事務管理課").map((e) => (
+                    <SelectItem key={e.id} value={String(e.id)} className="text-xs">{e.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Active filter badges */}
@@ -311,6 +479,13 @@ export const BillingFilters = ({ filters, onFiltersChange, companies, halls }: B
           {filters.projectNumber && <Badge variant="secondary" className="text-xs">案件: {filters.projectNumber}</Badge>}
           {filters.recordNumber && <Badge variant="secondary" className="text-xs">レコード: {filters.recordNumber}</Badge>}
           {filters.projectName && <Badge variant="secondary" className="text-xs">{filters.projectName}</Badge>}
+          {filters.proposalStatuses.map((s) => <Badge key={s} variant="secondary" className="text-xs">{PROPOSAL_STATUS_OPTIONS.find((o) => o.value === s)?.label ?? s}</Badge>)}
+          {filters.executionStatuses.map((s) => <Badge key={s} variant="secondary" className="text-xs">{s}</Badge>)}
+          {filters.designOrderStatuses.map((s) => <Badge key={s} variant="secondary" className="text-xs">デザイン: {DONE_NOT_OPTIONS.find((o) => o.value === s)?.label ?? s}</Badge>)}
+          {filters.prizeOrderStatuses.map((s) => <Badge key={s} variant="secondary" className="text-xs">景品: {DONE_NOT_OPTIONS.find((o) => o.value === s)?.label ?? s}</Badge>)}
+          {filters.listConfirmStatuses.map((s) => <Badge key={s} variant="secondary" className="text-xs">リスト: {LIST_CONFIRM_OPTIONS.find((o) => o.value === s)?.label ?? s}</Badge>)}
+          {filters.serviceName && <Badge variant="secondary" className="text-xs">{filters.serviceName}</Badge>}
+          {filters.adminPersonId && <Badge variant="secondary" className="text-xs">事務: {employees.find((e) => String(e.id) === filters.adminPersonId)?.name ?? filters.adminPersonId}</Badge>}
         </div>
       )}
     </div>

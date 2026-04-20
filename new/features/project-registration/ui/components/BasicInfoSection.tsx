@@ -15,6 +15,7 @@ type BasicInfoSectionProps = {
   hallName: string
   projectName: string
   salesPersonName: string
+  insightPersonName?: string
   requestDate: string
   errors: FormErrors
   // 法人検索
@@ -44,6 +45,7 @@ export const BasicInfoSection = ({
   hallName,
   projectName,
   salesPersonName,
+  insightPersonName,
   requestDate,
   errors,
   companySearchOpen,
@@ -195,6 +197,17 @@ export const BasicInfoSection = ({
               className={errors.salesPersonName ? "border-red-500" : ""}
             />
             {errors.salesPersonName && <p className="text-xs text-red-500">{errors.salesPersonName}</p>}
+          </div>
+
+          {/* インサイト担当 */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">インサイト担当</Label>
+            <Input
+              placeholder="ホール選択時に自動入力"
+              value={insightPersonName ?? ""}
+              readOnly
+              className="bg-slate-50"
+            />
           </div>
 
           {/* 作成日 */}

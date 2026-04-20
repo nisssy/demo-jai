@@ -7,7 +7,7 @@
 import type { Project, Product, DesignRequest, MonthlyBilling, Company, Hall, Employee, CastSchedule, MachineMaster } from "./types"
 
 /** シードデータのスキーマバージョン。型定義やシードデータを変更したらインクリメントする */
-export const SEED_VERSION = 35
+export const SEED_VERSION = 39
 
 // ─── Projects ───
 
@@ -154,6 +154,7 @@ export const SEED_PRODUCTS: Product[] = [
     eventDate: "2026/02/01",
     estimatedBillingAmount: 480000,
     proposalStatus: "order-received",
+    adminPersonId: 4,
     managementConfirmationStatus: "approved",
     executionStatus: "終了",
     companionCount: "1",
@@ -186,6 +187,19 @@ export const SEED_PRODUCTS: Product[] = [
       nextEventDesired: "はい",
       improvementRequest: "もう少し長い時間開催して欲しい",
     },
+    hallQuotes: [
+      {
+        hallName: "パチンコキング新宿店",
+        quoteItems: [
+          { id: 1, name: "コンパニオン派遣費", category: "イベント", eventSubject: "人件費", modelNumber: "CP-001", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 80000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-03-31", salesUnitPrice: 96000, orderVendorName: "キャスト事務所A", orderDeadline: "2026-01-20", deliveryDate: "-", orderId: "", orderDate: "", note: "" },
+          { id: 2, name: "MC派遣費", category: "イベント", eventSubject: "人件費", modelNumber: "MC-001", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 60000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-03-31", salesUnitPrice: 72000, orderVendorName: "キャスト事務所B", orderDeadline: "2026-01-20", deliveryDate: "-", orderId: "", orderDate: "", note: "" },
+          { id: 3, name: "交通費", category: "イベント", eventSubject: "交通費", modelNumber: "TR-001", rentalGrade: "-", setting: "-", quantity: 2, unitPrice: 7500, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-03-31", salesUnitPrice: 9000, orderVendorName: "-", orderDeadline: "-", deliveryDate: "-", orderId: "", orderDate: "", note: "" },
+          { id: 4, name: "機材レンタル", category: "イベント", eventSubject: "備品費", modelNumber: "EQ-001", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 45000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-03-31", salesUnitPrice: 54000, orderVendorName: "レンタル業者A", orderDeadline: "2026-01-25", deliveryDate: "2026-01-31", orderId: "", orderDate: "", note: "" },
+        ],
+        percentage: 100,
+        calculatedAmount: 480000,
+      },
+    ],
     eventPhotos: ["/images/event1-photo1.jpg", "/images/event1-photo2.jpg", "/images/event1-photo3.jpg"],
     reportUploaded: true,
     reportUploadedAt: "2026-02-03T10:00:00Z",
@@ -233,6 +247,7 @@ export const SEED_PRODUCTS: Product[] = [
     eventDate: "2026/03/20",
     estimatedBillingAmount: 1200000,
     proposalStatus: "order-received",
+    adminPersonId: 5,
     managementConfirmationStatus: "approved",
     companionCount: "0",
     directorCount: "0",
@@ -395,6 +410,7 @@ export const SEED_PRODUCTS: Product[] = [
     eventDate: "2026/01/20",
     estimatedBillingAmount: 720000,
     proposalStatus: "order-received",
+    adminPersonId: 4,
     managementConfirmationStatus: "approved",
     executionStatus: "終了",
     companionCount: "2",
@@ -419,6 +435,19 @@ export const SEED_PRODUCTS: Product[] = [
     transportationFee: 30000,
     accommodationFee: 15000,
     postPRCost: 20000,
+    hallQuotes: [
+      {
+        hallName: "エスパス日拓高田馬場",
+        quoteItems: [
+          { id: 1, name: "コンパニオン派遣費", category: "イベント", eventSubject: "人件費", modelNumber: "CP-002", rentalGrade: "-", setting: "-", quantity: 2, unitPrice: 80000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-02-28", salesUnitPrice: 96000, orderVendorName: "キャスト事務所A", orderDeadline: "2026-01-10", deliveryDate: "-", orderId: "", orderDate: "", note: "" },
+          { id: 2, name: "ディレクター派遣費", category: "イベント", eventSubject: "人件費", modelNumber: "DR-001", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 100000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-02-28", salesUnitPrice: 120000, orderVendorName: "キャスト事務所B", orderDeadline: "2026-01-10", deliveryDate: "-", orderId: "", orderDate: "", note: "" },
+          { id: 3, name: "交通費・宿泊費", category: "イベント", eventSubject: "交通費", modelNumber: "TR-002", rentalGrade: "-", setting: "-", quantity: 3, unitPrice: 15000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-02-28", salesUnitPrice: 18000, orderVendorName: "-", orderDeadline: "-", deliveryDate: "-", orderId: "", orderDate: "", note: "" },
+          { id: 4, name: "事後PR費", category: "イベント", eventSubject: "広告費", modelNumber: "PR-001", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 20000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-02-28", salesUnitPrice: 24000, orderVendorName: "広告代理店A", orderDeadline: "2026-01-25", deliveryDate: "2026-02-01", orderId: "", orderDate: "", note: "" },
+        ],
+        percentage: 100,
+        calculatedAmount: 720000,
+      },
+    ],
     surveySent: true,
     surveySentDate: "2026-01-21",
     surveyResult: {
@@ -508,6 +537,7 @@ export const SEED_PRODUCTS: Product[] = [
     eventDate: "2026/03/04",
     estimatedBillingAmount: 380000,
     proposalStatus: "order-received",
+    adminPersonId: 5,
     managementConfirmationStatus: "approved",
     executionStatus: "実施前",
     companionCount: "1",
@@ -525,6 +555,17 @@ export const SEED_PRODUCTS: Product[] = [
     targetMachineFormSent: true,
     targetMachineNames: ["スマスロ北斗の拳", "エヴァンゲリオン"],
     threeSetPlan: true,
+    hallQuotes: [
+      {
+        hallName: "メガガイア品川",
+        quoteItems: [
+          { id: 1, name: "コンパニオン派遣費", category: "イベント", eventSubject: "人件費", modelNumber: "CP-005", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 80000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-04-30", salesUnitPrice: 96000, orderVendorName: "キャスト事務所A", orderDeadline: "2026-02-20", deliveryDate: "-", orderId: "", orderDate: "", note: "" },
+          { id: 2, name: "交通費", category: "イベント", eventSubject: "交通費", modelNumber: "TR-006", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 8000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-04-30", salesUnitPrice: 9600, orderVendorName: "-", orderDeadline: "-", deliveryDate: "-", orderId: "", orderDate: "", note: "" },
+        ],
+        percentage: 100,
+        calculatedAmount: 380000,
+      },
+    ],
   },
   // Product 11: スロセレ 3点セット 3月第2週（PJ-005）
   {
@@ -537,6 +578,7 @@ export const SEED_PRODUCTS: Product[] = [
     eventDate: "2026/03/11",
     estimatedBillingAmount: 380000,
     proposalStatus: "order-received",
+    adminPersonId: 4,
     managementConfirmationStatus: "approved",
     executionStatus: "実施前",
     companionCount: "1",
@@ -554,6 +596,17 @@ export const SEED_PRODUCTS: Product[] = [
     targetMachineFormSent: true,
     targetMachineNames: ["リゼロ", "ハナハナ"],
     threeSetPlan: true,
+    hallQuotes: [
+      {
+        hallName: "メガガイア品川",
+        quoteItems: [
+          { id: 1, name: "コンパニオン派遣費", category: "イベント", eventSubject: "人件費", modelNumber: "CP-006", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 80000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-04-30", salesUnitPrice: 96000, orderVendorName: "キャスト事務所A", orderDeadline: "2026-02-25", deliveryDate: "-", orderId: "", orderDate: "", note: "" },
+          { id: 2, name: "交通費", category: "イベント", eventSubject: "交通費", modelNumber: "TR-007", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 8000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-04-30", salesUnitPrice: 9600, orderVendorName: "-", orderDeadline: "-", deliveryDate: "-", orderId: "", orderDate: "", note: "" },
+        ],
+        percentage: 100,
+        calculatedAmount: 380000,
+      },
+    ],
   },
   // Product 7: トリニティガール（受注・実施前 - 各種手配タブ用）
   {
@@ -566,6 +619,7 @@ export const SEED_PRODUCTS: Product[] = [
     eventDate: "2026/04/10",
     estimatedBillingAmount: 700000,
     proposalStatus: "order-received",
+    adminPersonId: 5,
     managementConfirmationStatus: "under-review",
     executionStatus: "実施前",
     companionCount: "2",
@@ -589,6 +643,19 @@ export const SEED_PRODUCTS: Product[] = [
     pachitownMachineNames: ["P北斗の拳10", "Pバジリスク絆2天膳"],
     pachitownLinked: false,
     bannerGenerated: false,
+    hallQuotes: [
+      {
+        hallName: "パチンコキング新宿店",
+        quoteItems: [
+          { id: 1, name: "コンパニオン派遣費", category: "イベント", eventSubject: "人件費", modelNumber: "CP-003", rentalGrade: "-", setting: "-", quantity: 2, unitPrice: 80000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-05-31", salesUnitPrice: 96000, orderVendorName: "キャスト事務所A", orderDeadline: "2026-03-25", deliveryDate: "-", orderId: "", orderDate: "", note: "" },
+          { id: 2, name: "ディレクター派遣費", category: "イベント", eventSubject: "人件費", modelNumber: "DR-002", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 100000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-05-31", salesUnitPrice: 120000, orderVendorName: "キャスト事務所B", orderDeadline: "2026-03-25", deliveryDate: "-", orderId: "", orderDate: "", note: "" },
+          { id: 3, name: "交通費", category: "イベント", eventSubject: "交通費", modelNumber: "TR-003", rentalGrade: "-", setting: "-", quantity: 3, unitPrice: 10000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-05-31", salesUnitPrice: 12000, orderVendorName: "-", orderDeadline: "-", deliveryDate: "-", orderId: "", orderDate: "", note: "" },
+          { id: 4, name: "マスト見掲載費", category: "イベント", eventSubject: "広告費", modelNumber: "MS-001", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 50000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-05-31", salesUnitPrice: 60000, orderVendorName: "広告代理店B", orderDeadline: "2026-04-01", deliveryDate: "2026-04-08", orderId: "", orderDate: "", note: "" },
+        ],
+        percentage: 100,
+        calculatedAmount: 700000,
+      },
+    ],
   },
   // Product 8: スロセレ（受注・実施前 - 各種手配タブ用）
   {
@@ -601,6 +668,7 @@ export const SEED_PRODUCTS: Product[] = [
     eventDate: "2026/04/20",
     estimatedBillingAmount: 380000,
     proposalStatus: "order-received",
+    adminPersonId: 4,
     managementConfirmationStatus: "approved",
     executionStatus: "実施前",
     companionCount: "0",
@@ -620,6 +688,18 @@ export const SEED_PRODUCTS: Product[] = [
       { status: "受注", timestamp: "2026-03-01T09:00:00Z", changedBy: "佐藤 次郎" },
       { status: "キャスト手配完了", timestamp: "2026-03-10T10:00:00Z", changedBy: "マネジメント部" },
     ],
+    hallQuotes: [
+      {
+        hallName: "メガガイア品川",
+        quoteItems: [
+          { id: 1, name: "ディレクター派遣費", category: "イベント", eventSubject: "人件費", modelNumber: "DR-003", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 100000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-05-31", salesUnitPrice: 120000, orderVendorName: "キャスト事務所B", orderDeadline: "2026-04-05", deliveryDate: "-", orderId: "", orderDate: "", note: "" },
+          { id: 2, name: "MC派遣費", category: "イベント", eventSubject: "人件費", modelNumber: "MC-002", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 60000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-05-31", salesUnitPrice: 72000, orderVendorName: "キャスト事務所C", orderDeadline: "2026-04-05", deliveryDate: "-", orderId: "", orderDate: "", note: "" },
+          { id: 3, name: "交通費", category: "イベント", eventSubject: "交通費", modelNumber: "TR-004", rentalGrade: "-", setting: "-", quantity: 2, unitPrice: 8000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-05-31", salesUnitPrice: 9600, orderVendorName: "-", orderDeadline: "-", deliveryDate: "-", orderId: "", orderDate: "", note: "" },
+        ],
+        percentage: 100,
+        calculatedAmount: 380000,
+      },
+    ],
   },
   // Product 9: スロセレ（実施中 - 商材管理課 実施中タブ + 外注業者 中間レポート用）
   {
@@ -632,6 +712,7 @@ export const SEED_PRODUCTS: Product[] = [
     eventDate: "2026/02/15",
     estimatedBillingAmount: 350000,
     proposalStatus: "order-received",
+    adminPersonId: 5,
     managementConfirmationStatus: "approved",
     executionStatus: "実施中",
     companionCount: "1",
@@ -680,6 +761,18 @@ export const SEED_PRODUCTS: Product[] = [
       { channel: "商材管理課", author: "商材管理課", content: "2月中旬イベント、中間レポートの入力をお願いします。", timestamp: "2026-02-16T09:00:00Z" },
       { channel: "商材管理課", author: "外注業者", content: "中間レポートを入力しました。ご確認ください。", timestamp: "2026-02-16T14:00:00Z" },
     ],
+    hallQuotes: [
+      {
+        hallName: "パチンコパーラー池袋",
+        quoteItems: [
+          { id: 1, name: "コンパニオン派遣費", category: "イベント", eventSubject: "人件費", modelNumber: "CP-004", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 80000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-03-31", salesUnitPrice: 96000, orderVendorName: "キャスト事務所A", orderDeadline: "2026-02-01", deliveryDate: "-", orderId: "", orderDate: "", note: "" },
+          { id: 2, name: "交通費", category: "イベント", eventSubject: "交通費", modelNumber: "TR-005", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 5000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-03-31", salesUnitPrice: 6000, orderVendorName: "-", orderDeadline: "-", deliveryDate: "-", orderId: "", orderDate: "", note: "" },
+          { id: 3, name: "機材レンタル", category: "イベント", eventSubject: "備品費", modelNumber: "EQ-002", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 30000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-03-31", salesUnitPrice: 36000, orderVendorName: "レンタル業者A", orderDeadline: "2026-02-10", deliveryDate: "2026-02-14", orderId: "", orderDate: "", note: "" },
+        ],
+        percentage: 100,
+        calculatedAmount: 350000,
+      },
+    ],
   },
   // Product 12: 合同抽選会（受注済み - 事務管理課 未入力状態）
   {
@@ -693,6 +786,7 @@ export const SEED_PRODUCTS: Product[] = [
     eventDate: "2026/05/03",
     estimatedBillingAmount: 900000,
     proposalStatus: "order-received",
+    adminPersonId: 4,
     managementConfirmationStatus: "approved",
     companionCount: "0",
     directorCount: "0",
@@ -826,11 +920,11 @@ export const SEED_COMPANIES: Company[] = [
 // ─── Halls ───
 
 export const SEED_HALLS: Hall[] = [
-  { id: 1, hallId: "HALL-001", name: "パチンコキング新宿店", salesPersonName: "山田 太郎", companyId: 1, address: "東京都新宿区01-1-1", prefecture: "東京都", area: "東京本社①" },
-  { id: 2, hallId: "HALL-005", name: "グランドホール渋谷", salesPersonName: "山田 太郎", companyId: 2, address: "東京都渋谷区05-1-1", prefecture: "東京都", area: "東京本社①" },
-  { id: 3, hallId: "HALL-010", name: "エスパス日拓高田馬場", salesPersonName: "山田 太郎", companyId: 3, address: "東京都豊島区10-1-1", prefecture: "東京都", area: "東京本社②" },
-  { id: 4, hallId: "HALL-020", name: "パチンコパーラー池袋", salesPersonName: "山田 太郎", companyId: 4, address: "東京都豊島区20-1-1", prefecture: "東京都", area: "関東①" },
-  { id: 5, hallId: "HALL-030", name: "メガガイア品川", salesPersonName: "山田 太郎", companyId: 5, address: "東京都港区30-1-1", prefecture: "東京都", area: "関東②" },
+  { id: 1, hallId: "HALL-001", name: "パチンコキング新宿店", salesPersonName: "山田 太郎", insightPersonName: "佐藤 花子", companyId: 1, address: "東京都新宿区01-1-1", prefecture: "東京都", area: "東京本社①" },
+  { id: 2, hallId: "HALL-005", name: "グランドホール渋谷", salesPersonName: "山田 太郎", insightPersonName: "鈴木 次郎", companyId: 2, address: "東京都渋谷区05-1-1", prefecture: "東京都", area: "東京本社①" },
+  { id: 3, hallId: "HALL-010", name: "エスパス日拓高田馬場", salesPersonName: "山田 太郎", insightPersonName: "佐藤 花子", companyId: 3, address: "東京都豊島区10-1-1", prefecture: "東京都", area: "東京本社②" },
+  { id: 4, hallId: "HALL-020", name: "パチンコパーラー池袋", salesPersonName: "山田 太郎", insightPersonName: "鈴木 次郎", companyId: 4, address: "東京都豊島区20-1-1", prefecture: "東京都", area: "関東①" },
+  { id: 5, hallId: "HALL-030", name: "メガガイア品川", salesPersonName: "山田 太郎", insightPersonName: "佐藤 花子", companyId: 5, address: "東京都港区30-1-1", prefecture: "東京都", area: "関東②" },
 ]
 
 // ─── Employees ───
@@ -839,6 +933,8 @@ export const SEED_EMPLOYEES: Employee[] = [
   { id: 1, name: "山田 太郎", department: "営業部" },
   { id: 2, name: "佐藤 次郎", department: "営業部" },
   { id: 3, name: "田中 三郎", department: "管理部" },
+  { id: 4, name: "高橋 花子", department: "事務管理課" },
+  { id: 5, name: "渡辺 美咲", department: "事務管理課" },
 ]
 
 // ─── Productions (プロダクション/所属事務所) ───

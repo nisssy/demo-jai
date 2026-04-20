@@ -23,6 +23,8 @@ export type FilterState = {
   designOrderStatuses: string[]
   prizeOrderStatuses: string[]
   listConfirmStatuses: string[]
+  adminPersonId: string
+  insightPersonName: string
 }
 
 /** 保存済み検索条件 */

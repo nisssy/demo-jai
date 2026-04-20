@@ -44,6 +44,7 @@ export const MonthlyBillingContainer = ({ repository }: MonthlyBillingContainerP
   // Master data
   const companies = useMemo(() => repository.getCompanies(), [repository])
   const halls = useMemo(() => repository.getHalls(), [repository])
+  const employees = useMemo(() => repository.getEmployees(), [repository])
 
   return (
     <MonthlyBillingView
@@ -77,6 +78,12 @@ export const MonthlyBillingContainer = ({ repository }: MonthlyBillingContainerP
       selectedInvoiceRow={billing.selectedInvoiceRow}
       onSelectInvoiceRow={billing.setSelectedInvoiceRow}
       invoiceHallQuote={invoiceHallQuote}
+      onConfirmQuote={billing.confirmQuote}
+      confirmedQuoteIds={billing.confirmedQuoteIds}
+      bulkConfirmRows={billing.bulkConfirmRows}
+      onBulkConfirm={billing.handleBulkConfirm}
+      onCancelBulkConfirm={billing.cancelBulkConfirm}
+      getInvoiceHallQuote={billing.getInvoiceHallQuote}
       // 支払いタブ
       paymentFilters={billing.paymentFilters}
       onPaymentFiltersChange={billing.setPaymentFilters}
@@ -84,9 +91,15 @@ export const MonthlyBillingContainer = ({ repository }: MonthlyBillingContainerP
       selectedPaymentRow={billing.selectedPaymentRow}
       onSelectPaymentRow={billing.setSelectedPaymentRow}
       onPaymentRowClick={billing.handlePaymentRowClick}
+      selectedPaymentBilling={billing.selectedPaymentBilling}
+      getPaymentCheckStatus={billing.getPaymentCheckStatus}
+      onSendPaymentToVendor={billing.sendPaymentToVendor}
+      onConfirmPayment={billing.confirmPayment}
+      paymentVendors={billing.paymentVendors}
       // master data
       companies={companies}
       halls={halls}
+      employees={employees}
     />
   )
 }

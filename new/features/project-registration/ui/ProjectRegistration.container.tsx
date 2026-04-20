@@ -8,17 +8,20 @@ import { useCastCalendar } from "@/new/features/project-registration/hooks/useCa
 import { ProjectRegistrationView } from "./ProjectRegistration.view"
 import type { ProductComment } from "@/new/api/types"
 import type { RegistrationMode } from "@/new/features/project-registration/model/types"
+import type { Role } from "@/new/types/role"
 
 type ProjectRegistrationContainerProps = {
   mode: RegistrationMode
   productId?: number
   comments?: ProductComment[]
+  role?: Role
 }
 
 export const ProjectRegistrationContainer = ({
   mode,
   productId,
   comments,
+  role = "Sales",
 }: ProjectRegistrationContainerProps) => {
   const repository = useMemo(() => new LocalStorageProjectRepository(), [])
   const lotteryForm = useLotteryForm({ repository, productId })
@@ -36,5 +39,7 @@ export const ProjectRegistrationContainer = ({
     endTime: firstProduct?.endTime ?? "",
   })
 
-  return <ProjectRegistrationView {...hookResult} lotteryForm={lotteryForm} castCalendar={castCalendar} />
+  const allEmployees = useMemo(() => repository.getEmployees(), [repository])
+
+  return <ProjectRegistrationView {...hookResult} lotteryForm={lotteryForm} castCalendar={castCalendar} role={role} allEmployees={allEmployees} />
 }

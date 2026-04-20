@@ -2,8 +2,11 @@
 
 import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChevronDown, ChevronUp } from "lucide-react"
-import type { Product, ManagementConfirmationStatus } from "@/new/api/types"
+import type { Product, ManagementConfirmationStatus, Employee } from "@/new/api/types"
+import type { Role } from "@/new/types/role"
+import { LocalStorageProjectRepository } from "@/new/api/impl/local-storage-project-repository"
 import type { ProjectFormState, ProductFormState } from "@/new/features/project-registration/model/types"
 import type { OrderStatus, ExecutionStatus } from "@/new/features/project-registration/model/lottery-types"
 import { PROPOSAL_STATUS_LABELS, EXECUTION_STATUS_LABELS } from "@/new/api/display"
@@ -20,6 +23,8 @@ type Props = {
   onReadingCertaintyChange: (value: "A" | "B" | "C" | "") => void
   onExecutionStatusChange: (status: ExecutionStatus) => void
   onConfirmOrder: () => void
+  role?: Role
+  allEmployees?: Employee[]
 }
 
 const getProposalColor = (s: string) => {
@@ -63,10 +68,27 @@ export const ProductEditHeader = ({
   onReadingCertaintyChange,
   onExecutionStatusChange,
   onConfirmOrder,
+  role = "Sales",
+  allEmployees = [],
 }: Props) => {
   const [open, setOpen] = useState(false)
+  const [adminPersonId, setAdminPersonId] = useState<number | null>(productEntity?.adminPersonId ?? null)
 
   const isLottery = product.category === "ポイント"
+  const isOrderReceived = proposalStatus === "order-received"
+  const canEditAdmin = role === "LotteryAdmin" && isOrderReceived
+
+  const handleAdminPersonChange = (employeeId: number | null) => {
+    setAdminPersonId(employeeId)
+    if (productEntity) {
+      const repo = new LocalStorageProjectRepository()
+      repo.updateProduct(productEntity.id, { adminPersonId: employeeId ?? undefined })
+    }
+  }
+
+  const adminPersonName = adminPersonId
+    ? allEmployees.find((e) => e.id === adminPersonId)?.name ?? "-"
+    : "-"
   const estimated = Number((product as any).estimatedBillingAmount) || 0
 
   const proposalLabel = (PROPOSAL_STATUS_LABELS as Record<string, string>)[proposalStatus] ?? proposalStatus
@@ -130,6 +152,29 @@ export const ProductEditHeader = ({
             <Field label="作成日" value={form.requestDate} />
             <Field label="発注日" value={(product as any).createdAt?.slice?.(0, 10)} />
             <Field label="担当営業" value={form.salesPersonName} />
+            <Field label="インサイト担当" value={form.insightPersonName || "-"} />
+            {isOrderReceived && (
+              canEditAdmin ? (
+                <div className="space-y-1">
+                  <div className="text-xs text-slate-500 font-medium">事務担当</div>
+                  <Select
+                    value={adminPersonId ? String(adminPersonId) : ""}
+                    onValueChange={(v) => handleAdminPersonChange(v ? Number(v) : null)}
+                  >
+                    <SelectTrigger className="h-[38px] text-sm">
+                      <SelectValue placeholder="事務担当を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allEmployees.filter((e) => e.department === "事務管理課").map((emp) => (
+                        <SelectItem key={emp.id} value={String(emp.id)}>{emp.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <Field label="事務担当" value={adminPersonName} />
+              )
+            )}
           </div>
 
           <div className="rounded-lg border bg-slate-50/60 p-4 space-y-3">

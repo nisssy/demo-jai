@@ -54,6 +54,17 @@ export class LocalStorageProjectRepository implements ProjectRepository {
       for (const key of Object.values(STORAGE_KEYS)) {
         localStorage.removeItem(key)
       }
+      // コンポーネントローカルのlocalStorageキーもクリア
+      const keysToRemove: string[] = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && (key.startsWith("extraction_") || key.startsWith("design_estimate_") || key.startsWith("psp_linked_"))) {
+          keysToRemove.push(key)
+        }
+      }
+      for (const key of keysToRemove) {
+        localStorage.removeItem(key)
+      }
     }
 
     localStorage.setItem(STORAGE_KEYS.version, String(SEED_VERSION))

@@ -2,7 +2,8 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChevronLeft } from "lucide-react"
-import type { Company, Hall, Product, ProductComment, ManagementConfirmationStatus } from "@/new/api/types"
+import type { Company, Hall, Product, ProductComment, ManagementConfirmationStatus, Employee } from "@/new/api/types"
+import type { Role } from "@/new/types/role"
 import type { RegistrationMode, ProjectFormState, ProductFormState, FormErrors } from "@/new/features/project-registration/model/types"
 import type { UseLotteryFormReturn } from "@/new/features/project-registration/hooks/useLotteryForm"
 import type { UseCastCalendarReturn } from "@/new/features/project-registration/hooks/useCastCalendar"
@@ -81,6 +82,9 @@ export type ProjectRegistrationViewProps = {
   lotteryForm: UseLotteryFormReturn
   // キャストカレンダー
   castCalendar: UseCastCalendarReturn
+  // ロール
+  role?: Role
+  allEmployees?: Employee[]
 }
 
 export const ProjectRegistrationView = ({
@@ -127,6 +131,8 @@ export const ProjectRegistrationView = ({
   handleBack,
   lotteryForm,
   castCalendar,
+  role = "Sales",
+  allEmployees = [],
 }: ProjectRegistrationViewProps) => {
   const isProductMode = mode === "product-add" || mode === "product-edit"
   const isProjectEditMode = mode === "project-edit"
@@ -309,6 +315,8 @@ export const ProjectRegistrationView = ({
           onReadingCertaintyChange={(value) => updateProduct(0, "readingCertainty", value)}
           onExecutionStatusChange={(status) => updateProduct(0, "executionStatus", status)}
           onConfirmOrder={() => { updateProduct(0, "proposalStatus", "order-received"); updateProduct(0, "readingCertainty", "") }}
+          role={role}
+          allEmployees={allEmployees}
         />
       )}
 
@@ -349,6 +357,7 @@ export const ProjectRegistrationView = ({
           hallName={form.hallName}
           projectName={form.projectName}
           salesPersonName={form.salesPersonName}
+          insightPersonName={form.insightPersonName}
           requestDate={form.requestDate}
           errors={errors}
           companySearchOpen={companySearchOpen}

@@ -3,7 +3,7 @@
 import { useMemo, useCallback, useState, useEffect } from "react"
 import { useAppRouter } from "@/hooks/use-app-router"
 import type { ProjectRepository } from "@/new/api/project-repository"
-import type { Product, Project } from "@/new/api/types"
+import type { Product, Project, Employee } from "@/new/api/types"
 import { PROPOSAL_STATUS_LABELS, EXECUTION_STATUS_LABELS } from "@/new/api/display"
 import type { ProposalStatus } from "@/new/api/types"
 import type { Role } from "@/new/types/role"
@@ -16,6 +16,7 @@ export type RecordDetailData = {
   designOrdered: boolean
   prizeOrdered: boolean
   listConfirmed: boolean
+  adminPersonName: string | null
 }
 
 export type UseRecordDetailArgs = {
@@ -28,6 +29,7 @@ export function useRecordDetail({ repository, productId, role }: UseRecordDetail
   const router = useAppRouter()
 
   const canEdit = role === "Sales"
+  const allEmployees = useMemo(() => repository.getEmployees(), [repository])
 
   const data = useMemo<RecordDetailData | null>(() => {
     const product = repository.getProducts().find((p) => p.id === productId)
@@ -35,6 +37,9 @@ export function useRecordDetail({ repository, productId, role }: UseRecordDetail
 
     const project = repository.getProjectByProjectNumber(product.projectNumber)
     if (!project) return null
+
+    const employees = repository.getEmployees()
+    const adminPerson = product.adminPersonId ? employees.find((e) => e.id === product.adminPersonId) : null
 
     return {
       product,
@@ -44,6 +49,7 @@ export function useRecordDetail({ repository, productId, role }: UseRecordDetail
       designOrdered: !!product.notificationOrderSentAt,
       prizeOrdered: !!product.prizeOrderRequestedAt,
       listConfirmed: !!product.winnerListValidatedAt,
+      adminPersonName: adminPerson?.name ?? null,
     }
   }, [repository, productId])
 
@@ -60,6 +66,13 @@ export function useRecordDetail({ repository, productId, role }: UseRecordDetail
       router.push(`/new/project-number/${data.project.projectNumber}?role=${role}`)
     }
   }, [router, data, role])
+
+  // 事務担当の編集可否: 事務管理ロール + 受注済み
+  const canEditAdmin = role === "LotteryAdmin" && data?.product.proposalStatus === "order-received"
+
+  const handleAdminPersonChange = useCallback((employeeId: number | null) => {
+    repository.updateProduct(productId, { adminPersonId: employeeId ?? undefined })
+  }, [repository, productId])
 
   // PSP連携状態（localStorage永続化）
   const [pspLinked, setPspLinked] = useState(false)
@@ -79,9 +92,12 @@ export function useRecordDetail({ repository, productId, role }: UseRecordDetail
   return {
     data,
     canEdit,
+    canEditAdmin,
+    allEmployees,
     handleBack,
     handleEdit,
     handleGoToProject,
+    handleAdminPersonChange,
     pspLinked,
     togglePsp,
   }

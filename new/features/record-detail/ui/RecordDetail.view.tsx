@@ -1,16 +1,21 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChevronLeft, Pencil, Link2, CheckCircle2 } from "lucide-react"
 import type { RecordDetailData } from "../hooks/useRecordDetail"
+import type { Employee } from "@/new/api/types"
 import { BOOKING_STATUS_LABELS } from "@/new/api/display"
 
 type RecordDetailViewProps = {
   data: RecordDetailData | null
   canEdit: boolean
+  canEditAdmin: boolean
+  allEmployees: Employee[]
   onBack: () => void
   onEdit: () => void
   onGoToProject: () => void
+  onAdminPersonChange: (employeeId: number | null) => void
   pspLinked: boolean
   onTogglePsp: () => void
 }
@@ -66,7 +71,7 @@ const SectionHeader = ({ title, right }: { title: string; right?: React.ReactNod
   </div>
 )
 
-export const RecordDetailView = ({ data, canEdit, onBack, onEdit, onGoToProject, pspLinked, onTogglePsp }: RecordDetailViewProps) => {
+export const RecordDetailView = ({ data, canEdit, canEditAdmin, allEmployees, onBack, onEdit, onGoToProject, onAdminPersonChange, pspLinked, onTogglePsp }: RecordDetailViewProps) => {
   if (!data) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -144,6 +149,26 @@ export const RecordDetailView = ({ data, canEdit, onBack, onEdit, onGoToProject,
               <Field label="商材区分" value={product.category} />
               <Field label="商材名" value={product.eventProductName || product.eventType} />
               <Field label="実施日" value={product.eventDate} />
+              {canEditAdmin ? (
+                <div className="space-y-1">
+                  <div className="text-xs text-slate-500 font-medium">事務担当</div>
+                  <Select
+                    value={product.adminPersonId ? String(product.adminPersonId) : ""}
+                    onValueChange={(v) => onAdminPersonChange(v ? Number(v) : null)}
+                  >
+                    <SelectTrigger className="h-[38px] text-sm">
+                      <SelectValue placeholder="事務担当を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allEmployees.map((emp) => (
+                        <SelectItem key={emp.id} value={String(emp.id)}>{emp.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <Field label="事務担当" value={data.adminPersonName ?? "-"} />
+              )}
               {isLottery && product.eventStartDate && <Field label="掲載開始日" value={product.eventStartDate} />}
               {isLottery && product.eventEndDate && <Field label="掲載終了日" value={product.eventEndDate} />}
               {!isLottery && product.startTime && <Field label="開始時間" value={product.startTime} />}

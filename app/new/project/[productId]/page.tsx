@@ -15,18 +15,23 @@ function ProductContent() {
   const role = (searchParams?.get("role") ?? "Sales") as Role
   const mode = searchParams?.get("mode")
 
-  // mode=edit の場合は従来の編集画面、それ以外はKintone風レコード詳細
-  if (mode === "edit") {
+  // mode=detail の場合はKintone風レコード詳細、それ以外は編集画面
+  if (mode === "detail") {
+    // ロールごとのチャット設定
+    const chatProps = role === "Internal"
+      ? { author: "マネジメント部", channelDisplayNames: { "BS・CS": "営業" } }
+      : {}
+
     return (
       <>
         <AppHeader currentRole={role} />
         <main className="px-8 py-8 max-w-[1400px] mx-auto">
           <div className="flex gap-6 items-start">
             <div className="flex-1 min-w-0">
-              <ProjectRegistration mode="product-edit" productId={productId} />
+              <RecordDetail productId={productId} role={role} />
             </div>
             <div className="w-96 shrink-0 sticky top-24 h-[calc(100vh-8rem)]">
-              <ProductChat productId={productId} />
+              <ProductChat productId={productId} {...chatProps} />
             </div>
           </div>
         </main>
@@ -34,22 +39,17 @@ function ProductContent() {
     )
   }
 
-  // ロールごとのチャット設定
-  const chatProps = role === "Internal"
-    ? { author: "マネジメント部", channelDisplayNames: { "BS・CS": "営業" } }
-    : {}
-
-  // デフォルト: Kintone風レコード詳細
+  // デフォルト: 編集画面
   return (
     <>
       <AppHeader currentRole={role} />
       <main className="px-8 py-8 max-w-[1400px] mx-auto">
         <div className="flex gap-6 items-start">
           <div className="flex-1 min-w-0">
-            <RecordDetail productId={productId} role={role} />
+            <ProjectRegistration mode="product-edit" productId={productId} role={role} />
           </div>
           <div className="w-96 shrink-0 sticky top-24 h-[calc(100vh-8rem)]">
-            <ProductChat productId={productId} {...chatProps} />
+            <ProductChat productId={productId} />
           </div>
         </div>
       </main>

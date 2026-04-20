@@ -55,6 +55,7 @@ function createInitialForm(): ProjectFormState {
     hallName: "",
     projectName: "",
     salesPersonName: "",
+    insightPersonName: "",
     requestDate: todayString(),
     products: [{ ...EMPTY_PRODUCT }],
   }
@@ -129,6 +130,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
           hallName: project.hallName,
           projectName: project.projectName,
           salesPersonName: project.salesPersonName,
+          insightPersonName: allHalls.find((h) => h.hallId === project.hallId)?.insightPersonName ?? "",
           requestDate: normalizeDateForInput(project.requestDate),
         }))
         setProjectNameTouched(true)
@@ -184,6 +186,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
           hallName: project.hallName,
           projectName: project.projectName,
           salesPersonName: project.salesPersonName,
+          insightPersonName: allHalls.find((h) => h.hallId === project.hallId)?.insightPersonName ?? "",
           requestDate: normalizeDateForInput(project.requestDate),
           products: [productForm],
         })
@@ -199,6 +202,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
             hallName: project.hallName,
             projectName: project.projectName,
             salesPersonName: project.salesPersonName,
+            insightPersonName: allHalls.find((h) => h.hallId === project.hallId)?.insightPersonName ?? "",
             requestDate: normalizeDateForInput(project.requestDate),
           } : {}),
           products: [productForm],
@@ -216,6 +220,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
         hallName: project.hallName,
         projectName: project.projectName,
         salesPersonName: project.salesPersonName,
+        insightPersonName: allHalls.find((h) => h.hallId === project.hallId)?.insightPersonName ?? "",
         requestDate: normalizeDateForInput(project.requestDate),
       }))
       setProjectNameTouched(true)
@@ -294,6 +299,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
       hallId: "",
       hallName: "",
       salesPersonName: "",
+      insightPersonName: "",
       projectName: autoName ? "" : prev.projectName,
     }))
     setCompanySearchOpen(false)
@@ -315,6 +321,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
         hallId: hall.hallId,
         hallName: hall.name,
         salesPersonName: hall.salesPersonName,
+        insightPersonName: hall.insightPersonName ?? "",
         projectName: newName,
         ...(company ? { companyId: company.companyId, companyName: company.name } : {}),
       }
@@ -881,6 +888,9 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
           chatMessages: castMessages.length > 0 ? castMessages : undefined,
           ...buildLotteryFields(p),
         })
+        // 新規作成した商材のlocalStorageをクリア（以前のデータが残っていた場合のため）
+        localStorage.removeItem(`extraction_${createdProduct.id}`)
+        localStorage.removeItem(`design_estimate_${createdProduct.id}`)
         if (!firstCreatedProductId) firstCreatedProductId = createdProduct.id
       }
     }

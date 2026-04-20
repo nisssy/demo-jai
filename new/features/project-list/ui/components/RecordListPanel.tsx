@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Download, PackagePlus, Copy, Send, Gift } from "lucide-react"
 import type { FilterState, SavedSearchCondition } from "@/new/features/project-list/model/types"
 import type { ProjectGroupViewModel } from "@/new/features/project-list/hooks/useProjectList"
-import type { Company, Hall } from "@/new/api/types"
+import type { Company, Hall, Employee } from "@/new/api/types"
 import type { ProjectRepository } from "@/new/api/project-repository"
 import type { ProposalStatus } from "@/new/api/types"
 import { PROPOSAL_STATUS_LABELS, EXECUTION_STATUS_LABELS } from "@/new/api/display"
@@ -136,6 +136,7 @@ export const RecordListPanel = ({
   adminBulkMode = false,
 }: RecordListPanelProps) => {
   const router = useAppRouter()
+  const employees = repository.getEmployees()
   const [addProductModalOpen, setAddProductModalOpen] = useState(false)
   const [duplicateModalOpen, setDuplicateModalOpen] = useState(false)
   const [duplicateTargetProjectNumber, setDuplicateTargetProjectNumber] = useState<string | null>(null)
@@ -235,6 +236,7 @@ export const RecordListPanel = ({
         onDeleteCondition={onDeleteCondition}
         onApplyCondition={onApplyCondition}
         onExportConditions={onExportConditions}
+        employees={employees}
       />
 
       {recordRows.length === 0 ? (

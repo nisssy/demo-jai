@@ -50,6 +50,7 @@ export type ProjectFormState = {
   hallName: string
   projectName: string
   salesPersonName: string
+  insightPersonName: string
   requestDate: string
   products: ProductFormState[]
 }

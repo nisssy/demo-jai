@@ -79,6 +79,8 @@ const INITIAL_FILTERS: FilterState = {
   designOrderStatuses: [],
   prizeOrderStatuses: [],
   listConfirmStatuses: [],
+  adminPersonId: "",
+  insightPersonName: "",
 }
 
 const SAVED_CONDITIONS_KEY = "saved_search_conditions"
@@ -334,6 +336,12 @@ export function useProjectList({ repository, role = "Sales" }: UseProjectListArg
       if (filters.companyId && project.companyId !== filters.companyId) continue
       if (filters.salesPersonId && !project.salesPersonName.includes(filters.salesPersonId)) continue
 
+      // インサイト担当フィルタ
+      if (filters.insightPersonName) {
+        const hall = allHalls.find((h) => h.name === project.hallName)
+        if (!hall?.insightPersonName || !hall.insightPersonName.includes(filters.insightPersonName)) continue
+      }
+
       // 都道府県フィルタ
       if (filters.prefectures.length > 0) {
         const hall = allHalls.find((h) => h.name === project.hallName)
@@ -399,6 +407,12 @@ export function useProjectList({ repository, role = "Sales" }: UseProjectListArg
         if (filters.listConfirmStatuses.length > 0) {
           const label = p.listConfirmed ? "確認済み" : "未確認"
           if (!filters.listConfirmStatuses.includes(label)) return false
+        }
+        if (filters.adminPersonId) {
+          const product = repository.getProductById(p.id)
+          if (!product?.adminPersonId) return false
+          const adminEmp = allEmployees.find((e) => e.id === product.adminPersonId)
+          if (!adminEmp?.name || !adminEmp.name.includes(filters.adminPersonId)) return false
         }
         if (filters.dateFrom || filters.dateTo) {
           const dateValue = filters.dateMode === "execution" ? p.eventDate : project.createdAt
@@ -566,5 +580,6 @@ export function useProjectList({ repository, role = "Sales" }: UseProjectListArg
     addProductModalOpen,
     setAddProductModalOpen,
     repository,
+    allEmployees,
   }
 }

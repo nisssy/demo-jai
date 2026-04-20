@@ -1,38 +1,44 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import type { Company, Hall } from "@/new/api/types"
-import { BillingFilters, type BillingFilterState } from "./BillingFilters"
+import type { PaymentCheckStatus } from "@/new/api/types"
+import { PAYMENT_CHECK_STATUS_LABELS } from "@/new/api/display"
+import { PaymentFilters, type PaymentFilterState } from "./PaymentFilters"
 
 export type PaymentRow = {
   vendorId: string
   vendorName: string
-  paymentAmount: number
-  status: "支払い前" | "支払い中" | "支払い完了"
+  purchaseAmountExTax: number
+  purchaseAmountIncTax: number
+  checkStatus: PaymentCheckStatus
   billingId: string
 }
 
-type BillingPaymentTabProps = {
-  filters: BillingFilterState
-  onFiltersChange: (filters: BillingFilterState) => void
-  rows: PaymentRow[]
-  onClickRow: (row: PaymentRow) => void
-  companies: Company[]
-  halls: Hall[]
+type VendorOption = {
+  vendorId: string
+  vendorName: string
 }
 
-const statusColor = (s: PaymentRow["status"]) => {
+type BillingPaymentTabProps = {
+  filters: PaymentFilterState
+  onFiltersChange: (filters: PaymentFilterState) => void
+  rows: PaymentRow[]
+  onClickRow: (row: PaymentRow) => void
+  vendors: VendorOption[]
+}
+
+const checkStatusColor = (s: PaymentCheckStatus) => {
   switch (s) {
-    case "支払い前": return "bg-slate-100 text-slate-700"
-    case "支払い中": return "bg-amber-100 text-amber-800"
-    case "支払い完了": return "bg-green-100 text-green-800"
+    case "unconfirmed": return "bg-slate-100 text-slate-700"
+    case "confirming": return "bg-amber-100 text-amber-800"
+    case "confirmed": return "bg-green-100 text-green-800"
   }
 }
 
-export const BillingPaymentTab = ({ filters, onFiltersChange, rows, onClickRow, companies, halls }: BillingPaymentTabProps) => {
+export const BillingPaymentTab = ({ filters, onFiltersChange, rows, onClickRow, vendors }: BillingPaymentTabProps) => {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="p-4 shrink-0">
-        <BillingFilters filters={filters} onFiltersChange={onFiltersChange} companies={companies} halls={halls} />
+        <PaymentFilters filters={filters} onFiltersChange={onFiltersChange} vendors={vendors} />
       </div>
       <div className="flex-1 overflow-y-auto px-4 pb-4">
         {rows.length === 0 ? (
@@ -42,16 +48,18 @@ export const BillingPaymentTab = ({ filters, onFiltersChange, rows, onClickRow, 
             <div className="flex items-center justify-between px-4 py-3 border-b bg-slate-50">
               <div className="text-sm text-slate-600">{rows.length}件のレコード</div>
               <div className="text-sm font-medium text-slate-700">
-                合計: ¥{rows.reduce((s, r) => s + r.paymentAmount, 0).toLocaleString()}
+                合計（税込）: ¥{rows.reduce((s, r) => s + r.purchaseAmountIncTax, 0).toLocaleString()}
               </div>
             </div>
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
-                    <TableHead className="font-semibold text-slate-700">業者</TableHead>
-                    <TableHead className="font-semibold text-slate-700 text-right">支払い金額</TableHead>
+                    <TableHead className="font-semibold text-slate-700">発注先ID</TableHead>
+                    <TableHead className="font-semibold text-slate-700">発注先名</TableHead>
                     <TableHead className="font-semibold text-slate-700">ステータス</TableHead>
+                    <TableHead className="font-semibold text-slate-700 text-right">仕入金額（税抜）</TableHead>
+                    <TableHead className="font-semibold text-slate-700 text-right">仕入金額（税込）</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -61,11 +69,15 @@ export const BillingPaymentTab = ({ filters, onFiltersChange, rows, onClickRow, 
                       className="hover:bg-blue-50/50 cursor-pointer transition-colors"
                       onClick={() => onClickRow(row)}
                     >
+                      <TableCell className="text-sm font-mono text-slate-600">{row.vendorId}</TableCell>
                       <TableCell className="text-sm text-slate-900">{row.vendorName}</TableCell>
-                      <TableCell className="text-right text-sm font-medium text-slate-900">¥{row.paymentAmount.toLocaleString()}</TableCell>
                       <TableCell>
-                        <Badge className={`text-xs px-2 py-0.5 ${statusColor(row.status)}`}>{row.status}</Badge>
+                        <Badge className={`text-xs px-2 py-0.5 ${checkStatusColor(row.checkStatus)}`}>
+                          {PAYMENT_CHECK_STATUS_LABELS[row.checkStatus]}
+                        </Badge>
                       </TableCell>
+                      <TableCell className="text-right text-sm font-medium text-slate-900">¥{row.purchaseAmountExTax.toLocaleString()}</TableCell>
+                      <TableCell className="text-right text-sm font-medium text-slate-900">¥{row.purchaseAmountIncTax.toLocaleString()}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

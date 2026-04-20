@@ -3,23 +3,24 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import type { MonthlyBilling, Company, Hall, HallQuote } from "@/new/api/types"
+import type { MonthlyBilling, Company, Hall, HallQuote, Employee, PaymentCheckStatus } from "@/new/api/types"
 import type { BillingMode, UndeliveredItem } from "../hooks/useMonthlyBilling"
 import type { BillingFilterState } from "./components/BillingFilters"
+import type { PaymentFilterState } from "./components/PaymentFilters"
 import type { InvoiceRow } from "./components/BillingInvoiceTab"
 import type { PaymentRow } from "./components/BillingPaymentTab"
 import { BillingInvoiceTab } from "./components/BillingInvoiceTab"
 import { BillingPaymentTab } from "./components/BillingPaymentTab"
 import { InvoiceDetailView } from "./components/InvoiceDetailView"
-import { BillingDetail } from "./components/BillingDetail"
-import { VendorBillingList } from "./components/VendorBillingList"
+import { BulkInvoiceConfirmView } from "./components/BulkInvoiceConfirmView"
+import { PaymentDetailView } from "./components/PaymentDetailView"
 
 export interface MonthlyBillingViewProps {
   billingMode: BillingMode
   onChangeBillingMode: (mode: BillingMode) => void
   selectedMonth: string
   onChangeMonth: (month: string) => void
-  // Payment mode props (vendor detail)
+  // Payment mode props
   billings: MonthlyBilling[]
   selectedBillingId: string | null
   onSelectBilling: (id: string) => void
@@ -35,7 +36,7 @@ export interface MonthlyBillingViewProps {
   closingReported: boolean
   onReportClosing: () => void
   onDownloadCsv: () => void
-  // Carry-over dialog props
+  // Carry-over
   pendingCarryOver: UndeliveredItem[] | null
   onConfirmCarryOver: () => void
   onCancelCarryOver: () => void
@@ -47,16 +48,28 @@ export interface MonthlyBillingViewProps {
   selectedInvoiceRow: InvoiceRow | null
   onSelectInvoiceRow: (row: InvoiceRow | null) => void
   invoiceHallQuote: HallQuote | null
+  onConfirmQuote: (quoteId: string) => void
+  confirmedQuoteIds: Set<string>
+  bulkConfirmRows: InvoiceRow[] | null
+  onBulkConfirm: (rows: InvoiceRow[]) => void
+  onCancelBulkConfirm: () => void
+  getInvoiceHallQuote: (productId: number, hallIndex: number) => HallQuote | null
   // 支払いタブ
-  paymentFilters: BillingFilterState
-  onPaymentFiltersChange: (f: BillingFilterState) => void
+  paymentFilters: PaymentFilterState
+  onPaymentFiltersChange: (f: PaymentFilterState) => void
   paymentRows: PaymentRow[]
   selectedPaymentRow: PaymentRow | null
   onSelectPaymentRow: (row: PaymentRow | null) => void
   onPaymentRowClick: (row: PaymentRow) => void
+  selectedPaymentBilling: MonthlyBilling | null
+  getPaymentCheckStatus: (billingId: string) => PaymentCheckStatus
+  onSendPaymentToVendor: (billingId: string) => void
+  onConfirmPayment: (billingId: string) => void
+  paymentVendors: { vendorId: string; vendorName: string }[]
   // master data
   companies: Company[]
   halls: Hall[]
+  employees: Employee[]
 }
 
 const MODE_TABS: { mode: BillingMode; label: string }[] = [
@@ -67,10 +80,13 @@ const MODE_TABS: { mode: BillingMode; label: string }[] = [
 export const MonthlyBillingView = (props: MonthlyBillingViewProps) => {
   const { billingMode, onChangeBillingMode } = props
 
+  // Determine if we're in a drilldown view
+  const isDrilledDown = Boolean(props.selectedInvoiceRow) || Boolean(props.selectedPaymentRow) || Boolean(props.bulkConfirmRows)
+
   return (
     <div className="flex flex-col h-full">
       {/* Mode tabs - only show when not drilled down */}
-      {!props.selectedInvoiceRow && !props.selectedPaymentRow && (
+      {!isDrilledDown && (
         <div className="flex border-b shrink-0">
           {MODE_TABS.map((tab) => (
             <button
@@ -90,8 +106,17 @@ export const MonthlyBillingView = (props: MonthlyBillingViewProps) => {
 
       {/* Content area */}
       <div className="flex-1 overflow-hidden">
-        {/* Invoice detail drilldown */}
-        {props.selectedInvoiceRow && props.invoiceHallQuote ? (
+        {/* Bulk confirm drilldown */}
+        {props.bulkConfirmRows ? (
+          <BulkInvoiceConfirmView
+            rows={props.bulkConfirmRows}
+            getHallQuote={props.getInvoiceHallQuote}
+            confirmedIds={props.confirmedQuoteIds}
+            onConfirm={props.onConfirmQuote}
+            onBack={props.onCancelBulkConfirm}
+          />
+        ) : props.selectedInvoiceRow && props.invoiceHallQuote ? (
+          /* Invoice detail drilldown */
           <InvoiceDetailView
             quoteId={props.selectedInvoiceRow.quoteId}
             projectNumber={props.selectedInvoiceRow.projectNumber}
@@ -100,35 +125,32 @@ export const MonthlyBillingView = (props: MonthlyBillingViewProps) => {
             hallQuote={props.invoiceHallQuote}
             status={props.selectedInvoiceRow.status}
             onBack={() => props.onSelectInvoiceRow(null)}
+            onConfirm={props.onConfirmQuote}
+            confirmed={props.confirmedQuoteIds.has(props.selectedInvoiceRow.quoteId)}
           />
-        ) : props.selectedPaymentRow && props.selectedBilling ? (
-          /* Payment detail drilldown - vendor billing detail */
-          <div className="flex flex-col h-full">
-            <div className="p-3 border-b shrink-0">
-              <Button variant="ghost" size="sm" onClick={() => props.onSelectPaymentRow(null)} className="text-xs">
-                ← 支払い一覧に戻る
-              </Button>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              <BillingDetail
-                billing={props.selectedBilling}
-                chatText={props.chatText}
-                onChatTextChange={props.onChatTextChange}
-                onSendChat={props.onSendChat}
-                onSendToVendor={props.onSendToVendor}
-                onResendToVendor={props.onResendToVendor}
-                onSendAgreement={props.onSendAgreement}
-              />
-            </div>
-          </div>
+        ) : props.selectedPaymentRow && props.selectedPaymentBilling ? (
+          /* Payment detail drilldown */
+          <PaymentDetailView
+            billing={props.selectedPaymentBilling}
+            checkStatus={props.getPaymentCheckStatus(props.selectedPaymentBilling.id)}
+            chatText={props.chatText}
+            onChatTextChange={props.onChatTextChange}
+            onSendChat={props.onSendChat}
+            onSendToVendor={() => props.onSendPaymentToVendor(props.selectedPaymentBilling!.id)}
+            onConfirm={() => props.onConfirmPayment(props.selectedPaymentBilling!.id)}
+            onBack={() => props.onSelectPaymentRow(null)}
+          />
         ) : billingMode === "invoice" ? (
           <BillingInvoiceTab
             filters={props.invoiceFilters}
             onFiltersChange={props.onInvoiceFiltersChange}
             rows={props.invoiceRows}
             onClickRow={(row) => props.onSelectInvoiceRow(row)}
+            onBulkConfirm={props.onBulkConfirm}
+            onBulkDetail={props.onBulkConfirm}
             companies={props.companies}
             halls={props.halls}
+            employees={props.employees}
           />
         ) : (
           <div className="flex flex-col h-full">
@@ -158,7 +180,7 @@ export const MonthlyBillingView = (props: MonthlyBillingViewProps) => {
               )}
             </div>
 
-            {/* Payment tab: search filters + table */}
+            {/* Payment tab */}
             <BillingPaymentTab
               filters={props.paymentFilters}
               onFiltersChange={props.onPaymentFiltersChange}
@@ -167,8 +189,7 @@ export const MonthlyBillingView = (props: MonthlyBillingViewProps) => {
                 props.onPaymentRowClick(row)
                 props.onSelectPaymentRow(row)
               }}
-              companies={props.companies}
-              halls={props.halls}
+              vendors={props.paymentVendors}
             />
 
             {/* Carry-over dialog */}

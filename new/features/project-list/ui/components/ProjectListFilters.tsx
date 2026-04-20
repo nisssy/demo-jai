@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import type { FilterState, SavedSearchCondition } from "@/new/features/project-list/model/types"
-import type { Company, Hall } from "@/new/api/types"
+import type { Company, Hall, Employee } from "@/new/api/types"
 import { getAllCategories, getAllEventTypes, getEventTypesByCategory } from "@/new/api/display"
 
 /** 47都道府県 */
@@ -105,6 +105,8 @@ type ProjectListFiltersProps = {
   onDeleteCondition: (id: string) => void
   onApplyCondition: (id: string) => void
   onExportConditions: () => void
+  // 事務担当者
+  employees?: Employee[]
 }
 
 export const ProjectListFilters = ({
@@ -128,6 +130,7 @@ export const ProjectListFilters = ({
   onDeleteCondition,
   onApplyCondition,
   onExportConditions,
+  employees = [],
 }: ProjectListFiltersProps) => {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [savedListOpen, setSavedListOpen] = useState(false)
@@ -172,7 +175,8 @@ export const ProjectListFilters = ({
       filters.executionStatuses.length > 0 ||
       filters.designOrderStatuses.length > 0 ||
       filters.prizeOrderStatuses.length > 0 ||
-      filters.listConfirmStatuses.length > 0,
+      filters.listConfirmStatuses.length > 0 ||
+      filters.insightPersonName,
   )
 
   const clearAll = () => {
@@ -197,6 +201,8 @@ export const ProjectListFilters = ({
       designOrderStatuses: [],
       prizeOrderStatuses: [],
       listConfirmStatuses: [],
+      adminPersonId: "",
+      insightPersonName: "",
     })
   }
 
@@ -755,6 +761,28 @@ export const ProjectListFilters = ({
             />
           </div>
 
+          {/* インサイト担当検索 */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">インサイト担当</Label>
+            <Input
+              placeholder="インサイト担当を検索..."
+              value={filters.insightPersonName}
+              onChange={(e) => updateFilter("insightPersonName", e.target.value)}
+              className="bg-white"
+            />
+          </div>
+
+          {/* 事務担当検索 */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">事務担当</Label>
+            <Input
+              placeholder="事務担当を検索..."
+              value={filters.adminPersonId}
+              onChange={(e) => updateFilter("adminPersonId", e.target.value)}
+              className="bg-white"
+            />
+          </div>
+
           {/* 案件番号検索 */}
           <div className="space-y-2">
             <Label className="text-sm font-semibold">案件番号</Label>
@@ -962,6 +990,18 @@ export const ProjectListFilters = ({
                   </button>
                 </Badge>
               )}
+              {filters.insightPersonName && (
+                <Badge variant="secondary" className="gap-1">
+                  インサイト担当: {filters.insightPersonName}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); updateFilter("insightPersonName", "") }}
+                    className="ml-1 hover:text-red-600 cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              )}
               {filters.projectNumber && (
                 <Badge variant="secondary" className="gap-1">
                   案件番号: {filters.projectNumber}
@@ -992,6 +1032,18 @@ export const ProjectListFilters = ({
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); updateFilter("projectName", "") }}
+                    className="ml-1 hover:text-red-600 cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              )}
+              {filters.adminPersonId && (
+                <Badge variant="secondary" className="gap-1">
+                  事務担当: {filters.adminPersonId}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); updateFilter("adminPersonId", "") }}
                     className="ml-1 hover:text-red-600 cursor-pointer"
                   >
                     ×
