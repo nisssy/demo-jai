@@ -99,7 +99,7 @@ export const LotteryTabs = ({ lotteryForm: f }: LotteryTabsProps) => {
       </SectionCard>
 
       <SectionCard title="見積り">
-        {role !== "LotteryAdmin" && f.posterDesignChange === "yes" && (
+        {role === "Sales" && f.posterDesignChange === "yes" && (
           <DesignVendorEstimateSection
             productId={f.productId}
             onApplyQuoteToItem={(amount) => {
@@ -108,7 +108,7 @@ export const LotteryTabs = ({ lotteryForm: f }: LotteryTabsProps) => {
             }}
           />
         )}
-        {role !== "LotteryAdmin" && (
+        {role === "Sales" && (
           <LotteryQuoteInputs
             totalQuoteItems={f.quoteConfig.totalQuoteItems}
             posterPrintQuantity={f.posterPrintQuantity}
@@ -137,7 +137,7 @@ export const LotteryTabs = ({ lotteryForm: f }: LotteryTabsProps) => {
           hallQuotes={f.hallQuotes}
           dmMailing={f.dmMailing}
           onUpdateItem={f.updateHallQuoteItem}
-          readOnly={role === "LotteryAdmin"}
+          readOnly={role !== "Sales"}
         />
       </SectionCard>
 
