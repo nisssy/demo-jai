@@ -66,6 +66,17 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
   const [serviceName, setServiceName] = useState<"たまリッチ" | "SmartPoint" | "">("たまリッチ")
   const [dmMailing, setDmMailing] = useState<"yes" | "no">("yes")
   const [posterDesignChange, setPosterDesignChange] = useState<"yes" | "no">("no")
+
+  // ポスターデザイン変更無を選択したらポスターデザイン費用を固定値で自動反映
+  const DEFAULT_POSTER_DESIGN_AMOUNT = "50000"
+  useEffect(() => {
+    if (posterDesignChange === "no") {
+      setQuoteConfig((prev) => ({
+        ...prev,
+        totalQuoteItems: { ...prev.totalQuoteItems, 1: DEFAULT_POSTER_DESIGN_AMOUNT },
+      }))
+    }
+  }, [posterDesignChange])
   const [eventStartDate, setEventStartDate] = useState("")
   const [eventEndDate, setEventEndDate] = useState("")
   const [salesPersonId, setSalesPersonId] = useState("")

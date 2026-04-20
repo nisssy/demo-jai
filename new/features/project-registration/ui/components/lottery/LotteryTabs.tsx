@@ -99,7 +99,7 @@ export const LotteryTabs = ({ lotteryForm: f }: LotteryTabsProps) => {
       </SectionCard>
 
       <SectionCard title="見積り">
-        {role !== "LotteryAdmin" && (
+        {role !== "LotteryAdmin" && f.posterDesignChange === "yes" && (
           <DesignVendorEstimateSection
             productId={f.productId}
             onApplyQuoteToItem={(amount) => {

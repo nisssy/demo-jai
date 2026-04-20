@@ -112,12 +112,14 @@ export const DesignVendorEstimateSection = ({ productId, onApplyQuoteToItem }: P
     })
   }
 
-  const handleApply = () => {
-    if (state.quoteAmount != null) {
-      update({ quoteApplied: true })
-      onApplyQuoteToItem?.(state.quoteAmount)
-    }
-  }
+  // 仮見積金額が届いたら自動でデザイン修正費に反映
+  useEffect(() => {
+    if (!isEditable) return
+    if (state.quoteAmount == null || state.quoteApplied) return
+    onApplyQuoteToItem?.(state.quoteAmount)
+    update({ quoteApplied: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.quoteAmount, state.quoteApplied, isEditable])
 
   return (
     <Card className="border-purple-200 bg-purple-50/30">
@@ -228,13 +230,7 @@ export const DesignVendorEstimateSection = ({ productId, onApplyQuoteToItem }: P
                 <span className="text-slate-500">仮見積金額:</span>{" "}
                 <span className="font-bold text-slate-900">¥{state.quoteAmount.toLocaleString()}</span>
               </div>
-              {isEditable && !state.quoteApplied && (
-                <Button size="sm" variant="outline" onClick={handleApply} className="gap-1">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  仮見積確認・見積セクションへ反映
-                </Button>
-              )}
-              {state.quoteApplied && (
+              {state.quoteApplied && isEditable && (
                 <span className="text-xs text-emerald-700 flex items-center gap-1">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   デザイン修正費に反映済み
