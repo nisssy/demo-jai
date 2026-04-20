@@ -119,17 +119,6 @@ export const LotteryTabs = ({ lotteryForm: f }: LotteryTabsProps) => {
             onPosterPrintQuantityChange={f.setPosterPrintQuantity}
             onPosterPrintUnitPriceChange={f.setPosterPrintUnitPrice}
             onDmOrderCountChange={f.setDmOrderCount}
-            proportionMode={f.proportionMode}
-            halls={f.halls}
-            hallPercentages={f.hallPercentages}
-            companyPercentages={f.companyPercentages}
-            onProportionModeChange={f.setProportionMode}
-            onHallPercentageChange={f.updateHallPercentage}
-            onCompanyPercentageChange={f.updateCompanyPercentage}
-            onDistributeEvenly={f.handleDistributeEvenly}
-            totalAmount={f.quoteCalc.totalAmount}
-            percentageSum={f.quoteCalc.percentageSum}
-            isPercentageValid={f.quoteCalc.isPercentageValid}
           />
         )}
         <LotteryQuoteConfig

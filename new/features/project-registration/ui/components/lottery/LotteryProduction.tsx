@@ -78,7 +78,7 @@ export const LotteryProduction = (props: LotteryProductionProps) => {
           {props.dmMailing === "yes" && (
             <TabsTrigger value="dm" className="text-xs gap-1.5">
               <Mail className="h-3.5 w-3.5" />
-              DM
+              告知DM
               <StatusBadge status={props.dmStatus} />
             </TabsTrigger>
           )}
@@ -258,11 +258,11 @@ function PosterTab(props: LotteryProductionProps) {
 function DmTab(props: LotteryProductionProps & { designPartners: typeof TRADING_PARTNERS }) {
   return (
     <div className="space-y-5">
-      {/* DM作成依頼 */}
+      {/* 告知DM作成依頼 */}
       <div className="space-y-3 rounded-lg border p-4">
         <div>
-          <Label className="text-sm font-semibold">DM作成依頼</Label>
-          <p className="text-xs text-slate-500 mt-0.5">デザイン会社にDM作成を依頼します。</p>
+          <Label className="text-sm font-semibold">告知DM作成依頼</Label>
+          <p className="text-xs text-slate-500 mt-0.5">デザイン会社に告知DM作成を依頼します。</p>
         </div>
         <Button
           onClick={() => props.onShowDmCreateModal(true)}
@@ -270,19 +270,19 @@ function DmTab(props: LotteryProductionProps & { designPartners: typeof TRADING_
           className="w-full text-xs gap-1 bg-gradient-to-r from-blue-600/80 to-blue-700/80"
         >
           <Mail className="h-3.5 w-3.5" />
-          DM作成依頼（依頼文自動生成）
+          告知DM作成依頼（依頼文自動生成）
         </Button>
       </div>
 
-      {/* DMプレビュー */}
+      {/* 告知DMプレビュー */}
       <div className="space-y-4 rounded-lg border p-4">
         <div>
-          <Label className="text-sm font-semibold">DM プレビュー</Label>
+          <Label className="text-sm font-semibold">告知DM プレビュー</Label>
           <p className="text-xs text-slate-500 mt-0.5">アップロード確認 → 修正依頼（チャット）</p>
         </div>
 
         {!props.latestDmRequest ? (
-          <p className="text-xs text-slate-400 py-3">まだDM作成依頼はありません。上記の「DM作成依頼」から依頼してください。</p>
+          <p className="text-xs text-slate-400 py-3">まだ告知DM作成依頼はありません。上記の「告知DM作成依頼」から依頼してください。</p>
         ) : (
           <>
             <div className="flex items-center justify-between text-xs">

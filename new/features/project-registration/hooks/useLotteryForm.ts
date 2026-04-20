@@ -255,6 +255,12 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
     }
   }, [halls, proportionMode])
 
+  // 有効ホール数が変わったら自動で割合を均等分配（割合UIを廃止したため）
+  const validHallNamesKey = halls.filter((h) => h.hallName.trim()).map((h) => h.hallName).join(",")
+  useEffect(() => {
+    if (validHallNamesKey) handleDistributeEvenly()
+  }, [validHallNamesKey, handleDistributeEvenly])
+
   const quoteCalc = useMemo(() => ({
     posterPrintTotal,
     totalAmount,

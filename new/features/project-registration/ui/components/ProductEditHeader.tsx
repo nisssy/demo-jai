@@ -127,7 +127,7 @@ export const ProductEditHeader = ({
         <div className="max-w-5xl mx-auto px-4 pb-4 space-y-4 max-h-[calc(100vh-140px)] overflow-y-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Field label="レコード番号" value={(product as any).id ?? "-"} />
-            <Field label="営業申込日" value={form.requestDate} />
+            <Field label="作成日" value={form.requestDate} />
             <Field label="発注日" value={(product as any).createdAt?.slice?.(0, 10)} />
             <Field label="担当営業" value={form.salesPersonName} />
           </div>

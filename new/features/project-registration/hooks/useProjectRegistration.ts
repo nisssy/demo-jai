@@ -38,7 +38,12 @@ export type UseProjectRegistrationArgs = {
 
 function todayString(): string {
   const d = new Date()
-  return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+}
+
+function normalizeDateForInput(value: string | undefined): string {
+  if (!value) return ""
+  return value.replace(/\//g, "-")
 }
 
 function createInitialForm(): ProjectFormState {
@@ -124,7 +129,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
           hallName: project.hallName,
           projectName: project.projectName,
           salesPersonName: project.salesPersonName,
-          requestDate: project.requestDate,
+          requestDate: normalizeDateForInput(project.requestDate),
         }))
         setProjectNameTouched(true)
       }
@@ -179,7 +184,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
           hallName: project.hallName,
           projectName: project.projectName,
           salesPersonName: project.salesPersonName,
-          requestDate: project.requestDate,
+          requestDate: normalizeDateForInput(project.requestDate),
           products: [productForm],
         })
         setProjectNameTouched(true)
@@ -194,7 +199,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
             hallName: project.hallName,
             projectName: project.projectName,
             salesPersonName: project.salesPersonName,
-            requestDate: project.requestDate,
+            requestDate: normalizeDateForInput(project.requestDate),
           } : {}),
           products: [productForm],
         }))
@@ -211,7 +216,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
         hallName: project.hallName,
         projectName: project.projectName,
         salesPersonName: project.salesPersonName,
-        requestDate: project.requestDate,
+        requestDate: normalizeDateForInput(project.requestDate),
       }))
       setProjectNameTouched(true)
     }
@@ -556,7 +561,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
       if (!form.companyName.trim()) newErrors.companyName = "法人名を選択してください"
       if (!form.hallName.trim()) newErrors.hallName = "ホール名を選択してください"
       if (!form.salesPersonName.trim()) newErrors.salesPersonName = "ホール担当営業を入力してください"
-      if (!form.requestDate.trim()) newErrors.requestDate = "依頼日を入力してください"
+      if (!form.requestDate.trim()) newErrors.requestDate = "作成日を入力してください"
     }
 
     if (isProjectEditMode) {

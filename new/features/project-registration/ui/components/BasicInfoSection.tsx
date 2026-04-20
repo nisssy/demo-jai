@@ -197,9 +197,9 @@ export const BasicInfoSection = ({
             {errors.salesPersonName && <p className="text-xs text-red-500">{errors.salesPersonName}</p>}
           </div>
 
-          {/* 依頼日 */}
+          {/* 作成日 */}
           <div className="space-y-2">
-            <Label className="text-sm font-semibold">依頼日</Label>
+            <Label className="text-sm font-semibold">作成日</Label>
             <Input
               type="date"
               value={requestDate}
