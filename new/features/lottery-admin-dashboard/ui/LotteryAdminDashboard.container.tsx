@@ -29,6 +29,8 @@ export const LotteryAdminDashboardContainer = () => {
     confirmSendNotificationOrder,
     cancelSendNotificationOrder,
     pendingNotificationVendor,
+    notificationDraftDeadline,
+    setNotificationDraftDeadline,
     designVendors,
     notificationDesignRequests,
     notificationCommentText,
@@ -65,6 +67,8 @@ export const LotteryAdminDashboardContainer = () => {
       onConfirmSendNotification={confirmSendNotificationOrder}
       onCancelSendNotification={cancelSendNotificationOrder}
       pendingNotificationVendor={pendingNotificationVendor}
+      notificationDraftDeadline={notificationDraftDeadline}
+      onNotificationDraftDeadlineChange={setNotificationDraftDeadline}
       designVendors={designVendors}
       notificationDesignRequests={notificationDesignRequests}
       notificationCommentText={notificationCommentText}

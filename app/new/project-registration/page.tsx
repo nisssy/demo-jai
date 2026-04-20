@@ -6,6 +6,7 @@ import { AppHeader } from "@/new/ui/AppHeader"
 import { ProjectRegistration } from "@/new/features/project-registration/ui/project-registration"
 import { ProductChat } from "@/new/features/product-chat/ui/product-chat"
 import type { RegistrationMode } from "@/new/features/project-registration/model/types"
+import type { Role } from "@/new/types/role"
 
 function ProjectRegistrationContent() {
   const searchParams = useSearchParams()
@@ -13,12 +14,13 @@ function ProjectRegistrationContent() {
   const productIdParam = searchParams?.get("productId")
   const productId = productIdParam ? Number(productIdParam) : undefined
   const correctionRequest = searchParams?.get("correctionRequest") ?? undefined
+  const role = (searchParams?.get("role") as Role | null) ?? "Sales"
 
   const showChat = mode === "product-edit" && productId != null
 
   return (
     <>
-      <AppHeader currentRole="Sales" />
+      <AppHeader currentRole={role} />
       <main className="px-8 py-8 max-w-[1400px] mx-auto">
         {showChat ? (
           <div className="flex gap-6 items-start">

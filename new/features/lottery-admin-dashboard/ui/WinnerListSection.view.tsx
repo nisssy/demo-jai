@@ -23,6 +23,8 @@ export interface WinnerListSectionViewProps {
   onReset: () => void
   onDismissError: () => void
   onValidate: () => void
+  /** "admin" → PSP連携のみ, "sales" → ファイルアップロードのみ, 省略時 → 両方 */
+  mode?: "admin" | "sales"
 }
 
 export const WinnerListSectionView = ({
@@ -36,9 +38,12 @@ export const WinnerListSectionView = ({
   onReset,
   onDismissError,
   onValidate,
+  mode,
 }: WinnerListSectionViewProps) => {
   const hasUploaded = !!winnerListUploadedAt
   const isValidated = !!winnerListValidatedAt
+  const showPsp = mode !== "sales"
+  const showFile = mode !== "admin"
 
   return (
     <Card>
@@ -51,36 +56,37 @@ export const WinnerListSectionView = ({
       </CardHeader>
       <CardContent className="space-y-4">
         {!hasUploaded ? (
-          /* ─── アップロード前: PSP連携 + ファイルアップロード 2カラム ─── */
-          <div className="grid grid-cols-2 gap-4">
-            {/* 左: PSP連携 */}
-            <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-6 text-center bg-muted/20 hover:bg-muted/30 transition-colors">
-              <p className="font-medium mb-2">PSP連携</p>
-              <p className="text-sm text-muted-foreground mb-4">ホールがアップロードしたデータを同期</p>
-              <div className="flex flex-col gap-2">
-                <Button onClick={onUploadPsp} className="bg-primary w-full" size="sm">
-                  <Upload className="w-4 h-4 mr-2" />
-                  正常データを同期
-                </Button>
-                <Button onClick={onUploadPspWithError} variant="destructive" className="w-full" size="sm">
-                  <AlertTriangle className="w-4 h-4 mr-2" />
-                  異常データを同期
-                </Button>
+          <div className={`grid gap-4 ${showPsp && showFile ? "grid-cols-2" : "grid-cols-1"}`}>
+            {showPsp && (
+              <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-6 text-center bg-muted/20 hover:bg-muted/30 transition-colors">
+                <p className="font-medium mb-2">PSP連携</p>
+                <p className="text-sm text-muted-foreground mb-4">ホールがアップロードしたデータを同期</p>
+                <div className="flex flex-col gap-2">
+                  <Button onClick={onUploadPsp} className="bg-primary w-full" size="sm">
+                    <Upload className="w-4 h-4 mr-2" />
+                    正常データを同期
+                  </Button>
+                  <Button onClick={onUploadPspWithError} variant="destructive" className="w-full" size="sm">
+                    <AlertTriangle className="w-4 h-4 mr-2" />
+                    異常データを同期
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* 右: ファイルアップロード */}
-            <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-6 text-center bg-muted/20 hover:bg-muted/30 transition-colors">
-              <p className="font-medium mb-2">ファイルアップロード</p>
-              <p className="text-sm text-muted-foreground mb-4">手元のExcelファイルをアップロード</p>
-              <div
-                className="flex flex-col items-center justify-center h-[88px] border border-dashed rounded bg-background cursor-pointer hover:bg-accent/50"
-                onClick={onUploadFile}
-              >
-                <Upload className="w-6 h-6 text-muted-foreground mb-2" />
-                <span className="text-xs text-muted-foreground">クリックしてファイルを選択</span>
+            {showFile && (
+              <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-6 text-center bg-muted/20 hover:bg-muted/30 transition-colors">
+                <p className="font-medium mb-2">ファイルアップロード</p>
+                <p className="text-sm text-muted-foreground mb-4">手元のExcelファイルをアップロード</p>
+                <div
+                  className="flex flex-col items-center justify-center h-[88px] border border-dashed rounded bg-background cursor-pointer hover:bg-accent/50"
+                  onClick={onUploadFile}
+                >
+                  <Upload className="w-6 h-6 text-muted-foreground mb-2" />
+                  <span className="text-xs text-muted-foreground">クリックしてファイルを選択</span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         ) : (
           /* ─── アップロード後: ファイル情報 + テーブル + アラート ─── */

@@ -25,16 +25,6 @@ const PREFECTURES = [
   "福岡県", "佐賀県", "長崎県", "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県",
 ]
 
-/** 商材名の選択肢 */
-const PRODUCT_NAME_OPTIONS = [
-  "トリニティガール",
-  "合同抽選会",
-  "LINE広告",
-  "お知らせバナー",
-  "メインバナー",
-  "スロセレ",
-]
-
 /** 担当エリア選択肢 */
 const AREA_OPTIONS = [
   "東京本社①",
@@ -42,8 +32,10 @@ const AREA_OPTIONS = [
   "関東①",
   "関東②",
   "関西",
-  "東海",
+  "中部",
   "九州",
+  "東北",
+  "北海道",
 ]
 
 /** 部署選択肢 */
@@ -54,31 +46,66 @@ const DEPARTMENT_OPTIONS = [
   "企画部",
 ]
 
-/** ステータス選択肢 */
+/** 商材名の選択肢 */
+const PRODUCT_NAME_OPTIONS = [
+  "トリニティガール",
+  "合同抽選会",
+  "LINE広告",
+  "お知らせバナー",
+  "メインバナー",
+  "スロセレ",
+]
+
+/** ステータス（提案ステータス）選択肢 */
 const STATUS_OPTIONS = [
   { value: "提案前", label: "提案前" },
   { value: "提案中", label: "提案中" },
   { value: "受注済み", label: "受注済み" },
+]
+
+/** 実施ステータス選択肢 */
+const EXECUTION_STATUS_OPTIONS = [
   { value: "実施前", label: "実施前" },
   { value: "実施中", label: "実施中" },
   { value: "終了", label: "終了" },
 ]
 
+/** 当選デザイン依頼ステータス選択肢 */
+const DESIGN_ORDER_STATUS_OPTIONS = [
+  { value: "未依頼", label: "未依頼" },
+  { value: "依頼済み", label: "依頼済み" },
+]
+
+/** 景品発注依頼ステータス選択肢 */
+const PRIZE_ORDER_STATUS_OPTIONS = [
+  { value: "未発注", label: "未発注" },
+  { value: "発注済み", label: "発注済み" },
+]
+
+/** リスト確認ステータス選択肢 */
+const LIST_CONFIRM_STATUS_OPTIONS = [
+  { value: "未確認", label: "未確認" },
+  { value: "確認済み", label: "確認済み" },
+]
+
 type ProjectListFiltersProps = {
   filters: FilterState
   onFiltersChange: (filters: FilterState) => void
-  // 法人/ホール検索（一部はビュー側ローカル状態に移行）
-  companyHallSearchOpen?: boolean
-  onCompanyHallSearchOpenChange?: (open: boolean) => void
-  companyHallSearchType?: "hall" | "company"
-  onCompanyHallSearchTypeChange?: (type: "hall" | "company") => void
-  companyHallSearchQuery?: string
-  onCompanyHallSearchQueryChange?: (query: string) => void
+  // 法人検索
+  companySearchOpen: boolean
+  onCompanySearchOpenChange: (open: boolean) => void
+  companySearchQuery: string
+  onCompanySearchQueryChange: (query: string) => void
   filteredCompanies: Company[]
-  filteredHalls: Hall[]
   getCompanyByCompanyId: (companyId: string) => Company | undefined
-  onSelectHall: (hallName: string) => void
   onSelectCompany: (companyId: string) => void
+  // ホール検索
+  hallSearchOpen: boolean
+  onHallSearchOpenChange: (open: boolean) => void
+  hallSearchQuery: string
+  onHallSearchQueryChange: (query: string) => void
+  filteredHalls: Hall[]
+  onSelectHall: (hallName: string) => void
   // 検索条件管理
   savedConditions: SavedSearchCondition[]
   onSaveCondition: (name: string) => void
@@ -90,11 +117,19 @@ type ProjectListFiltersProps = {
 export const ProjectListFilters = ({
   filters,
   onFiltersChange,
+  companySearchOpen,
+  onCompanySearchOpenChange,
+  companySearchQuery,
+  onCompanySearchQueryChange,
   filteredCompanies,
-  filteredHalls,
   getCompanyByCompanyId,
-  onSelectHall,
   onSelectCompany,
+  hallSearchOpen,
+  onHallSearchOpenChange,
+  hallSearchQuery,
+  onHallSearchQueryChange,
+  filteredHalls,
+  onSelectHall,
   savedConditions,
   onSaveCondition,
   onDeleteCondition,
@@ -106,17 +141,6 @@ export const ProjectListFilters = ({
   const [saveName, setSaveName] = useState("")
   const [productNameSearchOpen, setProductNameSearchOpen] = useState(false)
   const [productNameQuery, setProductNameQuery] = useState("")
-  // 法人・ホール（独立化したポップオーバー用ローカル状態）
-  const [companyPopoverOpen, setCompanyPopoverOpen] = useState(false)
-  const [hallPopoverOpen, setHallPopoverOpen] = useState(false)
-  const [companyQuery, setCompanyQuery] = useState("")
-  const [hallQuery, setHallQuery] = useState("")
-  const companyResults = companyQuery
-    ? filteredCompanies.filter((c) => c.name.toLowerCase().includes(companyQuery.toLowerCase()))
-    : filteredCompanies
-  const hallResults = hallQuery
-    ? filteredHalls.filter((h) => h.name.toLowerCase().includes(hallQuery.toLowerCase()))
-    : filteredHalls
 
   const updateFilter = <K extends keyof FilterState>(key: K, value: FilterState[K]) => {
     onFiltersChange({ ...filters, [key]: value })
@@ -127,6 +151,14 @@ export const ProjectListFilters = ({
       ? filters.statuses.filter((s) => s !== status)
       : [...filters.statuses, status]
     updateFilter("statuses", next)
+  }
+
+  const toggleMultiSelect = (key: "prefectures" | "areas" | "departments" | "executionStatuses" | "designOrderStatuses" | "prizeOrderStatuses" | "listConfirmStatuses", value: string) => {
+    const current = filters[key]
+    const next = current.includes(value)
+      ? current.filter((v) => v !== value)
+      : [...current, value]
+    updateFilter(key, next)
   }
 
   const hasAnyFilter = Boolean(
@@ -143,8 +175,11 @@ export const ProjectListFilters = ({
       filters.prefectures.length > 0 ||
       filters.areas.length > 0 ||
       filters.departments.length > 0 ||
-      filters.projectNo ||
-      filters.statuses.length > 0,
+      filters.statuses.length > 0 ||
+      filters.executionStatuses.length > 0 ||
+      filters.designOrderStatuses.length > 0 ||
+      filters.prizeOrderStatuses.length > 0 ||
+      filters.listConfirmStatuses.length > 0,
   )
 
   const clearAll = () => {
@@ -165,6 +200,10 @@ export const ProjectListFilters = ({
       areas: [],
       departments: [],
       statuses: [],
+      executionStatuses: [],
+      designOrderStatuses: [],
+      prizeOrderStatuses: [],
+      listConfirmStatuses: [],
     })
   }
 
@@ -281,34 +320,33 @@ export const ProjectListFilters = ({
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* 法人 */}
+          {/* 法人検索 */}
           <div className="space-y-2">
             <Label className="text-sm font-semibold">法人</Label>
-            <Popover open={companyPopoverOpen} onOpenChange={setCompanyPopoverOpen}>
+            <Popover open={companySearchOpen} onOpenChange={onCompanySearchOpenChange}>
               <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" className="w-full justify-between bg-white">
+                <Button variant="outline" role="combobox" aria-expanded={companySearchOpen} className="w-full justify-between bg-white">
                   {filters.companyId
                     ? getCompanyByCompanyId(filters.companyId)?.name || "法人を検索..."
                     : "法人を検索..."}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[360px] p-0" align="start">
+              <PopoverContent className="w-[400px] p-0" align="start">
                 <Command>
-                  <CommandInput placeholder="法人名を検索..." value={companyQuery} onValueChange={setCompanyQuery} />
+                  <CommandInput
+                    placeholder="法人名を検索..."
+                    value={companySearchQuery}
+                    onValueChange={onCompanySearchQueryChange}
+                  />
                   <CommandList>
                     <CommandEmpty>法人が見つかりませんでした</CommandEmpty>
                     <CommandGroup>
-                      {filters.companyId && (
-                        <CommandItem value="__clear_company__" onSelect={() => { onSelectCompany(""); setCompanyPopoverOpen(false) }}>
-                          <span className="text-slate-500">選択を解除</span>
-                        </CommandItem>
-                      )}
-                      {companyResults.map((company) => (
+                      {filteredCompanies.map((company) => (
                         <CommandItem
                           key={company.id}
                           value={company.name}
-                          onSelect={() => { onSelectCompany(company.companyId); setCompanyPopoverOpen(false) }}
+                          onSelect={() => onSelectCompany(company.companyId)}
                         >
                           <Check className={`mr-2 h-4 w-4 ${filters.companyId === company.companyId ? "opacity-100" : "opacity-0"}`} />
                           <div className="flex flex-col">
@@ -324,32 +362,31 @@ export const ProjectListFilters = ({
             </Popover>
           </div>
 
-          {/* ホール */}
+          {/* ホール検索 */}
           <div className="space-y-2">
             <Label className="text-sm font-semibold">ホール</Label>
-            <Popover open={hallPopoverOpen} onOpenChange={setHallPopoverOpen}>
+            <Popover open={hallSearchOpen} onOpenChange={onHallSearchOpenChange}>
               <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" className="w-full justify-between bg-white">
+                <Button variant="outline" role="combobox" aria-expanded={hallSearchOpen} className="w-full justify-between bg-white">
                   {filters.hallName || "ホールを検索..."}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[360px] p-0" align="start">
+              <PopoverContent className="w-[400px] p-0" align="start">
                 <Command>
-                  <CommandInput placeholder="ホール名を検索..." value={hallQuery} onValueChange={setHallQuery} />
+                  <CommandInput
+                    placeholder="ホール名を検索..."
+                    value={hallSearchQuery}
+                    onValueChange={onHallSearchQueryChange}
+                  />
                   <CommandList>
                     <CommandEmpty>ホールが見つかりませんでした</CommandEmpty>
                     <CommandGroup>
-                      {filters.hallName && (
-                        <CommandItem value="__clear_hall__" onSelect={() => { onSelectHall(""); setHallPopoverOpen(false) }}>
-                          <span className="text-slate-500">選択を解除</span>
-                        </CommandItem>
-                      )}
-                      {hallResults.map((hall) => (
+                      {filteredHalls.map((hall) => (
                         <CommandItem
                           key={hall.id}
                           value={hall.name}
-                          onSelect={() => { onSelectHall(hall.name); setHallPopoverOpen(false) }}
+                          onSelect={() => onSelectHall(hall.name)}
                         >
                           <Check className={`mr-2 h-4 w-4 ${filters.hallName === hall.name ? "opacity-100" : "opacity-0"}`} />
                           <div className="flex flex-col">
@@ -365,12 +402,12 @@ export const ProjectListFilters = ({
             </Popover>
           </div>
 
-          {/* 都道府県（複数選択） */}
+          {/* 都道府県（複数選択・検索付き） */}
           <div className="space-y-2">
             <Label className="text-sm font-semibold">都道府県</Label>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-between bg-white">
+                <Button variant="outline" role="combobox" className="w-full justify-between bg-white">
                   {filters.prefectures.length > 0
                     ? `${filters.prefectures.length}件選択中`
                     : "都道府県を検索..."}
@@ -378,93 +415,99 @@ export const ProjectListFilters = ({
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[300px] p-0" align="start">
-                <div className="p-3 space-y-1 max-h-60 overflow-y-auto">
-                  {PREFECTURES.map((pref) => (
-                    <label key={pref} className="flex items-center gap-2 cursor-pointer text-sm py-0.5">
-                      <Checkbox
-                        checked={filters.prefectures.includes(pref)}
-                        onCheckedChange={() => {
-                          const next = filters.prefectures.includes(pref)
-                            ? filters.prefectures.filter((p) => p !== pref)
-                            : [...filters.prefectures, pref]
-                          updateFilter("prefectures", next)
-                        }}
-                      />
-                      {pref}
-                    </label>
-                  ))}
-                </div>
+                <Command>
+                  <CommandInput placeholder="都道府県を検索..." />
+                  <CommandList>
+                    <CommandEmpty>見つかりませんでした</CommandEmpty>
+                    <CommandGroup>
+                      {PREFECTURES.map((pref) => (
+                        <CommandItem
+                          key={pref}
+                          value={pref}
+                          onSelect={() => toggleMultiSelect("prefectures", pref)}
+                        >
+                          <Check className={`mr-2 h-4 w-4 ${filters.prefectures.includes(pref) ? "opacity-100" : "opacity-0"}`} />
+                          {pref}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
               </PopoverContent>
             </Popover>
           </div>
 
-          {/* 担当エリア（複数選択） */}
+          {/* 担当エリア（複数選択・検索付き） */}
           <div className="space-y-2">
             <Label className="text-sm font-semibold">担当エリア</Label>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-between bg-white">
+                <Button variant="outline" role="combobox" className="w-full justify-between bg-white">
                   {filters.areas.length > 0
                     ? `${filters.areas.length}件選択中`
-                    : "担当エリアを検索..."}
+                    : "エリアを検索..."}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[260px] p-0" align="start">
-                <div className="p-3 space-y-1 max-h-60 overflow-y-auto">
-                  {AREA_OPTIONS.map((area) => (
-                    <label key={area} className="flex items-center gap-2 cursor-pointer text-sm py-0.5">
-                      <Checkbox
-                        checked={filters.areas.includes(area)}
-                        onCheckedChange={() => {
-                          const next = filters.areas.includes(area)
-                            ? filters.areas.filter((a) => a !== area)
-                            : [...filters.areas, area]
-                          updateFilter("areas", next)
-                        }}
-                      />
-                      {area}
-                    </label>
-                  ))}
-                </div>
+              <PopoverContent className="w-[300px] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="エリアを検索..." />
+                  <CommandList>
+                    <CommandEmpty>見つかりませんでした</CommandEmpty>
+                    <CommandGroup>
+                      {AREA_OPTIONS.map((area) => (
+                        <CommandItem
+                          key={area}
+                          value={area}
+                          onSelect={() => toggleMultiSelect("areas", area)}
+                        >
+                          <Check className={`mr-2 h-4 w-4 ${filters.areas.includes(area) ? "opacity-100" : "opacity-0"}`} />
+                          {area}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
               </PopoverContent>
             </Popover>
           </div>
 
-          {/* 部署（複数選択） */}
+          {/* 部署（複数選択・検索付き） */}
           <div className="space-y-2">
             <Label className="text-sm font-semibold">部署</Label>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-between bg-white">
+                <Button variant="outline" role="combobox" className="w-full justify-between bg-white">
                   {filters.departments.length > 0
                     ? `${filters.departments.length}件選択中`
                     : "部署を検索..."}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[260px] p-0" align="start">
-                <div className="p-3 space-y-1 max-h-60 overflow-y-auto">
-                  {DEPARTMENT_OPTIONS.map((dept) => (
-                    <label key={dept} className="flex items-center gap-2 cursor-pointer text-sm py-0.5">
-                      <Checkbox
-                        checked={filters.departments.includes(dept)}
-                        onCheckedChange={() => {
-                          const next = filters.departments.includes(dept)
-                            ? filters.departments.filter((d) => d !== dept)
-                            : [...filters.departments, dept]
-                          updateFilter("departments", next)
-                        }}
-                      />
-                      {dept}
-                    </label>
-                  ))}
-                </div>
+              <PopoverContent className="w-[300px] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="部署を検索..." />
+                  <CommandList>
+                    <CommandEmpty>見つかりませんでした</CommandEmpty>
+                    <CommandGroup>
+                      {DEPARTMENT_OPTIONS.map((dept) => (
+                        <CommandItem
+                          key={dept}
+                          value={dept}
+                          onSelect={() => toggleMultiSelect("departments", dept)}
+                        >
+                          <Check className={`mr-2 h-4 w-4 ${filters.departments.includes(dept) ? "opacity-100" : "opacity-0"}`} />
+                          {dept}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
               </PopoverContent>
             </Popover>
           </div>
 
-          {/* ステータス（複数選択） */}
+          {/* ステータス（提案ステータス・複数選択） */}
           <div className="space-y-2">
             <Label className="text-sm font-semibold">ステータス</Label>
             <Popover>
@@ -476,8 +519,8 @@ export const ProjectListFilters = ({
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[260px] p-0" align="start">
-                <div className="p-3 space-y-1 max-h-60 overflow-y-auto">
+              <PopoverContent className="w-[300px] p-0" align="start">
+                <div className="p-3 space-y-1">
                   {STATUS_OPTIONS.map((opt) => (
                     <label key={opt.value} className="flex items-center gap-2 cursor-pointer text-sm py-0.5">
                       <Checkbox
@@ -492,7 +535,119 @@ export const ProjectListFilters = ({
             </Popover>
           </div>
 
-          {/* 商材区分（旧: 商品カテゴリ） */}
+          {/* 実施ステータス（複数選択） */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">実施ステータス</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-between bg-white">
+                  {filters.executionStatuses.length > 0
+                    ? `${filters.executionStatuses.length}件選択中`
+                    : "実施ステータスを選択..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[300px] p-0" align="start">
+                <div className="p-3 space-y-1">
+                  {EXECUTION_STATUS_OPTIONS.map((opt) => (
+                    <label key={opt.value} className="flex items-center gap-2 cursor-pointer text-sm py-0.5">
+                      <Checkbox
+                        checked={filters.executionStatuses.includes(opt.value)}
+                        onCheckedChange={() => toggleMultiSelect("executionStatuses", opt.value)}
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* 当選デザイン依頼（複数選択） */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">当選デザイン依頼</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-between bg-white">
+                  {filters.designOrderStatuses.length > 0
+                    ? `${filters.designOrderStatuses.length}件選択中`
+                    : "選択..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[300px] p-0" align="start">
+                <div className="p-3 space-y-1">
+                  {DESIGN_ORDER_STATUS_OPTIONS.map((opt) => (
+                    <label key={opt.value} className="flex items-center gap-2 cursor-pointer text-sm py-0.5">
+                      <Checkbox
+                        checked={filters.designOrderStatuses.includes(opt.value)}
+                        onCheckedChange={() => toggleMultiSelect("designOrderStatuses", opt.value)}
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* 景品発注依頼（複数選択） */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">景品発注依頼</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-between bg-white">
+                  {filters.prizeOrderStatuses.length > 0
+                    ? `${filters.prizeOrderStatuses.length}件選択中`
+                    : "選択..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[300px] p-0" align="start">
+                <div className="p-3 space-y-1">
+                  {PRIZE_ORDER_STATUS_OPTIONS.map((opt) => (
+                    <label key={opt.value} className="flex items-center gap-2 cursor-pointer text-sm py-0.5">
+                      <Checkbox
+                        checked={filters.prizeOrderStatuses.includes(opt.value)}
+                        onCheckedChange={() => toggleMultiSelect("prizeOrderStatuses", opt.value)}
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* リスト確認（複数選択） */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">リスト確認</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-between bg-white">
+                  {filters.listConfirmStatuses.length > 0
+                    ? `${filters.listConfirmStatuses.length}件選択中`
+                    : "選択..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[300px] p-0" align="start">
+                <div className="p-3 space-y-1">
+                  {LIST_CONFIRM_STATUS_OPTIONS.map((opt) => (
+                    <label key={opt.value} className="flex items-center gap-2 cursor-pointer text-sm py-0.5">
+                      <Checkbox
+                        checked={filters.listConfirmStatuses.includes(opt.value)}
+                        onCheckedChange={() => toggleMultiSelect("listConfirmStatuses", opt.value)}
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* 商材区分 */}
           <div className="space-y-2">
             <Label className="text-sm font-semibold">商材区分</Label>
             <Select
@@ -519,13 +674,13 @@ export const ProjectListFilters = ({
             </Select>
           </div>
 
-          {/* 商材名（旧: イベント区分）- コンボボックス（input+select） */}
+          {/* 商材名 */}
           <div className="space-y-2">
             <Label className="text-sm font-semibold">商材名</Label>
             <Popover open={productNameSearchOpen} onOpenChange={setProductNameSearchOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" role="combobox" className="w-full justify-between bg-white">
-                  {filters.eventType || "商材名を検索/選択..."}
+                  {filters.eventType || "商材名を検索..."}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
@@ -587,7 +742,7 @@ export const ProjectListFilters = ({
             </Select>
             <div className="flex items-center gap-2">
               <Input type="date" value={filters.dateFrom} onChange={(e) => updateFilter("dateFrom", e.target.value)} className="bg-white flex-1 min-w-0" />
-              <span className="text-sm text-slate-500 shrink-0">〜</span>
+              <span className="text-sm text-slate-500 shrink-0">-</span>
               <Input type="date" value={filters.dateTo} onChange={(e) => updateFilter("dateTo", e.target.value)} className="bg-white flex-1 min-w-0" />
             </div>
           </div>
@@ -603,18 +758,7 @@ export const ProjectListFilters = ({
             />
           </div>
 
-          {/* 案件No */}
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold">案件No</Label>
-            <Input
-              placeholder="案件Noを入力..."
-              value={filters.projectNo}
-              onChange={(e) => updateFilter("projectNo", e.target.value)}
-              className="bg-white"
-            />
-          </div>
-
-          {/* 案件番号 */}
+          {/* 案件番号検索 */}
           <div className="space-y-2">
             <Label className="text-sm font-semibold">案件番号</Label>
             <Input
@@ -637,7 +781,7 @@ export const ProjectListFilters = ({
           </div>
 
           {/* 案件名検索 */}
-          <div className="space-y-2">
+          <div className="lg:col-span-3 md:col-span-2 space-y-2">
             <Label className="text-sm font-semibold">案件名</Label>
             <Input
               placeholder="案件名を入力..."
@@ -665,6 +809,18 @@ export const ProjectListFilters = ({
                   </button>
                 </Badge>
               )}
+              {filters.hallName && (
+                <Badge variant="secondary" className="gap-1">
+                  ホール: {filters.hallName}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); updateFilter("hallName", "") }}
+                    className="ml-1 hover:text-red-600 cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              )}
               {filters.prefectures.length > 0 && (
                 <Badge variant="secondary" className="gap-1">
                   都道府県: {filters.prefectures.join(", ")}
@@ -677,12 +833,24 @@ export const ProjectListFilters = ({
                   </button>
                 </Badge>
               )}
-              {filters.hallName && (
+              {filters.areas.length > 0 && (
                 <Badge variant="secondary" className="gap-1">
-                  ホール: {filters.hallName}
+                  担当エリア: {filters.areas.join(", ")}
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); updateFilter("hallName", "") }}
+                    onClick={(e) => { e.stopPropagation(); updateFilter("areas", []) }}
+                    className="ml-1 hover:text-red-600 cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              )}
+              {filters.departments.length > 0 && (
+                <Badge variant="secondary" className="gap-1">
+                  部署: {filters.departments.join(", ")}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); updateFilter("departments", []) }}
                     className="ml-1 hover:text-red-600 cursor-pointer"
                   >
                     ×
@@ -719,6 +887,54 @@ export const ProjectListFilters = ({
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); updateFilter("statuses", []) }}
+                    className="ml-1 hover:text-red-600 cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              )}
+              {filters.executionStatuses.length > 0 && (
+                <Badge variant="secondary" className="gap-1">
+                  実施ステータス: {filters.executionStatuses.join(", ")}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); updateFilter("executionStatuses", []) }}
+                    className="ml-1 hover:text-red-600 cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              )}
+              {filters.designOrderStatuses.length > 0 && (
+                <Badge variant="secondary" className="gap-1">
+                  当選デザイン依頼: {filters.designOrderStatuses.join(", ")}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); updateFilter("designOrderStatuses", []) }}
+                    className="ml-1 hover:text-red-600 cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              )}
+              {filters.prizeOrderStatuses.length > 0 && (
+                <Badge variant="secondary" className="gap-1">
+                  景品発注依頼: {filters.prizeOrderStatuses.join(", ")}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); updateFilter("prizeOrderStatuses", []) }}
+                    className="ml-1 hover:text-red-600 cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              )}
+              {filters.listConfirmStatuses.length > 0 && (
+                <Badge variant="secondary" className="gap-1">
+                  リスト確認: {filters.listConfirmStatuses.join(", ")}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); updateFilter("listConfirmStatuses", []) }}
                     className="ml-1 hover:text-red-600 cursor-pointer"
                   >
                     ×

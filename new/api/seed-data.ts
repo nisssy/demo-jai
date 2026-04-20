@@ -7,7 +7,7 @@
 import type { Project, Product, DesignRequest, MonthlyBilling, Company, Hall, Employee, CastSchedule, MachineMaster } from "./types"
 
 /** シードデータのスキーマバージョン。型定義やシードデータを変更したらインクリメントする */
-export const SEED_VERSION = 31
+export const SEED_VERSION = 35
 
 // ─── Projects ───
 
@@ -228,6 +228,7 @@ export const SEED_PRODUCTS: Product[] = [
     projectNumber: "PJ-002",
     category: "ポイント",
     eventType: "合同抽選会",
+    serviceName: "たまリッチ",
     eventProductName: "春の大抽選会2026",
     eventDate: "2026/03/20",
     estimatedBillingAmount: 1200000,
@@ -272,10 +273,10 @@ export const SEED_PRODUCTS: Product[] = [
       {
         hallName: "グランドホール渋谷",
         quoteItems: [
-          { id: 1, name: "ポスターデザイン", quantity: 1, unitPrice: 25000, included: true },
-          { id: 2, name: "ポスター印刷", quantity: 30, unitPrice: 2000, included: true },
-          { id: 3, name: "DM発送代行", quantity: 1, unitPrice: 50000, included: true },
-          { id: 4, name: "抽選システム利用料", quantity: 1, unitPrice: 40000, included: true },
+          { id: 1, name: "ポスターデザイン", category: "イベント", eventSubject: "販促費", modelNumber: "PD-001", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 25000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-05-31", salesUnitPrice: 30000, orderVendorName: "仕入先A", orderDeadline: "2026-04-05", deliveryDate: "2026-04-12", orderId: "", orderDate: "", note: "" },
+          { id: 2, name: "ポスター印刷", category: "イベント", eventSubject: "印刷費", modelNumber: "PP-A3", rentalGrade: "-", setting: "-", quantity: 30, unitPrice: 2000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-05-31", salesUnitPrice: 2500, orderVendorName: "仕入先B", orderDeadline: "2026-04-10", deliveryDate: "2026-04-19", orderId: "", orderDate: "", note: "" },
+          { id: 3, name: "DM発送代行", category: "ポイント", eventSubject: "発送費", modelNumber: "DM-100", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 50000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-06-30", salesUnitPrice: 60000, orderVendorName: "仕入先C", orderDeadline: "2026-05-01", deliveryDate: "2026-05-10", orderId: "", orderDate: "", note: "" },
+          { id: 4, name: "抽選システム利用料", category: "ポイント", eventSubject: "システム費", modelNumber: "SYS-01", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 40000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-06-30", salesUnitPrice: 48000, orderVendorName: "仕入先D", orderDeadline: "2026-04-28", deliveryDate: "2026-05-08", orderId: "", orderDate: "", note: "" },
         ],
         percentage: 60,
         calculatedAmount: 175000,
@@ -283,10 +284,10 @@ export const SEED_PRODUCTS: Product[] = [
       {
         hallName: "パチンコキング新宿店",
         quoteItems: [
-          { id: 1, name: "ポスターデザイン", quantity: 1, unitPrice: 16667, included: true },
-          { id: 2, name: "ポスター印刷", quantity: 20, unitPrice: 2000, included: true },
-          { id: 3, name: "DM発送代行", quantity: 1, unitPrice: 33333, included: true },
-          { id: 4, name: "抽選システム利用料", quantity: 1, unitPrice: 26667, included: true },
+          { id: 1, name: "ポスターデザイン", category: "イベント", eventSubject: "販促費", modelNumber: "PD-001", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 16667, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-05-31", salesUnitPrice: 20000, orderVendorName: "仕入先A", orderDeadline: "2026-04-05", deliveryDate: "2026-04-12", orderId: "", orderDate: "", note: "" },
+          { id: 2, name: "ポスター印刷", category: "イベント", eventSubject: "印刷費", modelNumber: "PP-A3", rentalGrade: "-", setting: "-", quantity: 20, unitPrice: 2000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-05-31", salesUnitPrice: 2500, orderVendorName: "仕入先B", orderDeadline: "2026-04-10", deliveryDate: "2026-04-19", orderId: "", orderDate: "", note: "" },
+          { id: 3, name: "DM発送代行", category: "ポイント", eventSubject: "発送費", modelNumber: "DM-100", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 33333, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-06-30", salesUnitPrice: 40000, orderVendorName: "仕入先C", orderDeadline: "2026-05-01", deliveryDate: "2026-05-10", orderId: "", orderDate: "", note: "" },
+          { id: 4, name: "抽選システム利用料", category: "ポイント", eventSubject: "システム費", modelNumber: "SYS-01", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 26667, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-06-30", salesUnitPrice: 32000, orderVendorName: "仕入先D", orderDeadline: "2026-04-28", deliveryDate: "2026-05-08", orderId: "", orderDate: "", note: "" },
         ],
         percentage: 40,
         calculatedAmount: 116667,
@@ -687,6 +688,7 @@ export const SEED_PRODUCTS: Product[] = [
     projectNumber: "PJ-006",
     category: "ポイント",
     eventType: "合同抽選会",
+    serviceName: "たまリッチ",
     eventProductName: "GW大感謝抽選会2026",
     eventDate: "2026/05/03",
     estimatedBillingAmount: 900000,
@@ -722,10 +724,10 @@ export const SEED_PRODUCTS: Product[] = [
       {
         hallName: "パチンコパーラー池袋",
         quoteItems: [
-          { id: 1, name: "ポスターデザイン", quantity: 1, unitPrice: 25000, included: true },
-          { id: 2, name: "ポスター印刷", quantity: 20, unitPrice: 2000, included: true },
-          { id: 3, name: "DM発送代行", quantity: 1, unitPrice: 40000, included: true },
-          { id: 4, name: "抽選システム利用料", quantity: 1, unitPrice: 35000, included: true },
+          { id: 1, name: "ポスターデザイン", category: "イベント", eventSubject: "販促費", modelNumber: "PD-001", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 25000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-05-31", salesUnitPrice: 30000, orderVendorName: "仕入先A", orderDeadline: "2026-04-08", deliveryDate: "2026-04-15", orderId: "", orderDate: "", note: "" },
+          { id: 2, name: "ポスター印刷", category: "イベント", eventSubject: "印刷費", modelNumber: "PP-A3", rentalGrade: "-", setting: "-", quantity: 20, unitPrice: 2000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-05-31", salesUnitPrice: 2500, orderVendorName: "仕入先B", orderDeadline: "2026-04-15", deliveryDate: "2026-04-22", orderId: "", orderDate: "", note: "" },
+          { id: 3, name: "DM発送代行", category: "ポイント", eventSubject: "発送費", modelNumber: "DM-100", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 40000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-06-30", salesUnitPrice: 48000, orderVendorName: "仕入先C", orderDeadline: "2026-04-28", deliveryDate: "2026-05-05", orderId: "", orderDate: "", note: "" },
+          { id: 4, name: "抽選システム利用料", category: "ポイント", eventSubject: "システム費", modelNumber: "SYS-01", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: 35000, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: "2026-06-30", salesUnitPrice: 42000, orderVendorName: "仕入先D", orderDeadline: "2026-05-05", deliveryDate: "2026-05-12", orderId: "", orderDate: "", note: "" },
         ],
         percentage: 100,
         calculatedAmount: 140000,
@@ -824,11 +826,11 @@ export const SEED_COMPANIES: Company[] = [
 // ─── Halls ───
 
 export const SEED_HALLS: Hall[] = [
-  { id: 1, hallId: "HALL-001", name: "パチンコキング新宿店", salesPersonName: "山田 太郎", companyId: 1, address: "東京都新宿区01-1-1", prefecture: "東京都" },
-  { id: 2, hallId: "HALL-005", name: "グランドホール渋谷", salesPersonName: "山田 太郎", companyId: 2, address: "東京都渋谷区05-1-1", prefecture: "東京都" },
-  { id: 3, hallId: "HALL-010", name: "エスパス日拓高田馬場", salesPersonName: "山田 太郎", companyId: 3, address: "東京都豊島区10-1-1", prefecture: "東京都" },
-  { id: 4, hallId: "HALL-020", name: "パチンコパーラー池袋", salesPersonName: "山田 太郎", companyId: 4, address: "東京都豊島区20-1-1", prefecture: "東京都" },
-  { id: 5, hallId: "HALL-030", name: "メガガイア品川", salesPersonName: "山田 太郎", companyId: 5, address: "東京都港区30-1-1", prefecture: "東京都" },
+  { id: 1, hallId: "HALL-001", name: "パチンコキング新宿店", salesPersonName: "山田 太郎", companyId: 1, address: "東京都新宿区01-1-1", prefecture: "東京都", area: "東京本社①" },
+  { id: 2, hallId: "HALL-005", name: "グランドホール渋谷", salesPersonName: "山田 太郎", companyId: 2, address: "東京都渋谷区05-1-1", prefecture: "東京都", area: "東京本社①" },
+  { id: 3, hallId: "HALL-010", name: "エスパス日拓高田馬場", salesPersonName: "山田 太郎", companyId: 3, address: "東京都豊島区10-1-1", prefecture: "東京都", area: "東京本社②" },
+  { id: 4, hallId: "HALL-020", name: "パチンコパーラー池袋", salesPersonName: "山田 太郎", companyId: 4, address: "東京都豊島区20-1-1", prefecture: "東京都", area: "関東①" },
+  { id: 5, hallId: "HALL-030", name: "メガガイア品川", salesPersonName: "山田 太郎", companyId: 5, address: "東京都港区30-1-1", prefecture: "東京都", area: "関東②" },
 ]
 
 // ─── Employees ───

@@ -101,16 +101,26 @@ export const ProductContent = ({
     />
   )
 
-  // ステッパーモード（product-edit時）
   if (stepperMode) {
-    const step = currentStep ?? 1
-
-    if (step === 1) {
-      // Step 1: 基本情報 + ステータス
-      return (
-        <div className="space-y-6">
-          {basicFields}
-          {showCastingAndBilling && (
+    return (
+      <div className="space-y-6">
+        {basicFields}
+        {showCastingAndBilling && (
+          <>
+            <CastingSection
+              product={product}
+              checkAvailability={checkAvailability}
+              onCastCountChange={onCastCountChange}
+              onToggleCast={onToggleCast}
+              onToggleNomination={onToggleNomination}
+              onOpenCalendar={onOpenCalendar}
+              onCastHoldTypeChange={onCastHoldTypeChange}
+            />
+            <BillingSection
+              product={product}
+              hallAddress={hallAddress}
+              onFieldChange={onFieldChange}
+            />
             <LotteryStatus
               proposalStatus={product.proposalStatus}
               readingCertainty={product.readingCertainty}
@@ -120,55 +130,11 @@ export const ProductContent = ({
               onExecutionStatusChange={onExecutionStatusChange}
               onConfirmOrder={onConfirmOrder}
             />
-          )}
-          {isLottery && lotteryForm && (
-            <LotteryTabs lotteryForm={lotteryForm} />
-          )}
-        </div>
-      )
-    }
-
-    if (step === 2) {
-      // Step 2: キャスティング
-      if (showCastingAndBilling) {
-        return (
-          <CastingSection
-            product={product}
-            checkAvailability={checkAvailability}
-            onCastCountChange={onCastCountChange}
-            onToggleCast={onToggleCast}
-            onToggleNomination={onToggleNomination}
-            onOpenCalendar={onOpenCalendar}
-            onCastHoldTypeChange={onCastHoldTypeChange}
-          />
-        )
-      }
-      return (
-        <div className="text-center py-12 text-slate-500">
-          この商材区分ではキャスティング情報はありません
-        </div>
-      )
-    }
-
-    if (step === 3) {
-      // Step 3: 請求予定金額
-      if (showCastingAndBilling) {
-        return (
-          <BillingSection
-            product={product}
-            hallAddress={hallAddress}
-            onFieldChange={onFieldChange}
-          />
-        )
-      }
-      return (
-        <div className="text-center py-12 text-slate-500">
-          この商材区分では請求予定金額情報はありません
-        </div>
-      )
-    }
-
-    return basicFields
+          </>
+        )}
+        {isLottery && lotteryForm && <LotteryTabs lotteryForm={lotteryForm} />}
+      </div>
+    )
   }
 
   if (isLottery && lotteryForm) {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useCallback } from "react"
+import { useMemo, useCallback, useState, useEffect } from "react"
 import { useAppRouter } from "@/hooks/use-app-router"
 import type { ProjectRepository } from "@/new/api/project-repository"
 import type { Product, Project } from "@/new/api/types"
@@ -13,6 +13,9 @@ export type RecordDetailData = {
   project: Project
   proposalStatusLabel: string
   executionStatusLabel: string
+  designOrdered: boolean
+  prizeOrdered: boolean
+  listConfirmed: boolean
 }
 
 export type UseRecordDetailArgs = {
@@ -38,6 +41,9 @@ export function useRecordDetail({ repository, productId, role }: UseRecordDetail
       project,
       proposalStatusLabel: PROPOSAL_STATUS_LABELS[product.proposalStatus as ProposalStatus] ?? product.proposalStatus,
       executionStatusLabel: product.executionStatus ? EXECUTION_STATUS_LABELS[product.executionStatus] : "-",
+      designOrdered: !!product.notificationOrderSentAt,
+      prizeOrdered: !!product.prizeOrderRequestedAt,
+      listConfirmed: !!product.winnerListValidatedAt,
     }
   }, [repository, productId])
 
@@ -55,11 +61,28 @@ export function useRecordDetail({ repository, productId, role }: UseRecordDetail
     }
   }, [router, data, role])
 
+  // PSP連携状態（localStorage永続化）
+  const [pspLinked, setPspLinked] = useState(false)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    setPspLinked(localStorage.getItem(`psp_linked_${productId}`) === "1")
+  }, [productId])
+  const togglePsp = useCallback(() => {
+    if (typeof window === "undefined") return
+    setPspLinked((prev) => {
+      const next = !prev
+      localStorage.setItem(`psp_linked_${productId}`, next ? "1" : "0")
+      return next
+    })
+  }, [productId])
+
   return {
     data,
     canEdit,
     handleBack,
     handleEdit,
     handleGoToProject,
+    pspLinked,
+    togglePsp,
   }
 }

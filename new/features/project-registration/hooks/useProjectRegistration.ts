@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo, useEffect } from "react"
+import { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { useAppRouter } from "@/hooks/use-app-router"
 import type { ProjectRepository } from "@/new/api/project-repository"
@@ -78,6 +78,7 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
 
   // ─── リフレッシュ（repository更新後にuseMemo再計算を強制する） ───
   const [refreshKey, setRefreshKey] = useState(0)
+  const initialLoadDone = useRef(false)
 
   // ─── マスタデータ ───
   const allCompanies = useMemo(() => repository.getCompanies(), [repository])
@@ -213,6 +214,11 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
         requestDate: project.requestDate,
       }))
       setProjectNameTouched(true)
+    }
+
+    if (mode === "product-edit") {
+      const t = window.setTimeout(() => { initialLoadDone.current = true }, 1500)
+      return () => window.clearTimeout(t)
     }
   }, [mode, productId, repository])
 
@@ -696,13 +702,18 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
 
     const buildLotteryFields = (p: ProductFormState) => {
       if (p.category !== "ポイント" || !lotteryData) return {}
+      const lotteryHallNames = lotteryData.halls.filter((h) => h.hallName.trim()).map((h) => h.hallName)
+      // 新規作成時: lotteryFormに入力がなければ案件フォームの情報をフォールバック
+      const hallNames = lotteryHallNames.length > 0 ? lotteryHallNames : (form.hallName ? [form.hallName] : [])
+      const salesPersonId = Number(lotteryData.salesPersonId) || (form.salesPersonName ? undefined : undefined)
       return {
+        serviceName: lotteryData.serviceName || undefined,
         dmMailing: lotteryData.dmMailing,
-        hallNames: lotteryData.halls.filter((h) => h.hallName.trim()).map((h) => h.hallName),
+        hallNames,
         eventStartDate: lotteryData.eventStartDate,
         eventEndDate: lotteryData.eventEndDate,
-        eventProductName: lotteryData.eventName,
-        salesPersonId: Number(lotteryData.salesPersonId) || undefined,
+        eventProductName: lotteryData.eventName || form.projectName || undefined,
+        salesPersonId,
         insightPersonId: Number(lotteryData.insightPersonId) || undefined,
         readingCertainty: lotteryData.readingCertainty || undefined,
         proposalStatus: lotteryData.proposalStatus as "before-proposal" | "proposing" | "order-received",
@@ -1046,11 +1057,95 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
     }
   }, [form, mode, repository, router, validate, getLotteryData, allHalls])
 
+  // ─── product-edit モード: フォーム変更を自動保存 ───
+  useEffect(() => {
+    if (mode !== "product-edit") return
+    if (!initialLoadDone.current) return
+    const p = form.products[0]
+    const pid = p?.id
+    if (!pid) return
+    const handle = window.setTimeout(() => {
+      const hallAddress = allHalls.find((h) => h.hallId === form.hallId)?.address ?? ""
+      const lotteryData = getLotteryData ? getLotteryData() : undefined
+      const existing = repository.getProductById(pid)
+      const billing = (() => {
+        if (p.category === "ポイント") {
+          if (lotteryData?.hallQuotes && lotteryData.hallQuotes.length > 0) {
+            return lotteryData.hallQuotes.reduce((sum, hq) => sum + (hq.calculatedAmount ?? 0), 0)
+          }
+          // hallQuotesが空でも既存データがあればその値を維持
+          if (existing?.estimatedBillingAmount) return existing.estimatedBillingAmount
+          return 0
+        }
+        return computeEstimatedBilling({
+          startTime: p.startTime,
+          endTime: p.endTime,
+          companionCount: p.companionCount,
+          directorCount: p.directorCount,
+          selectedCompanions: p.selectedCompanions,
+          selectedDirectors: p.selectedDirectors,
+          performanceFeeDiscount: p.performanceFeeDiscount,
+          accommodationFeePerPerson: p.accommodationFeePerPerson,
+          eventBaseFeeDiscount: p.eventBaseFeeDiscount,
+          eventType: p.eventType,
+          hallAddress,
+          eventBaseFeeOverride: p.threeSetPlan && p.eventType === "スロセレ" ? THREE_SET_BASE_FEE_PER_EVENT : undefined,
+        })
+      })()
+      const lotteryFields = p.category === "ポイント" && lotteryData ? {
+        serviceName: lotteryData.serviceName || existing?.serviceName || undefined,
+        dmMailing: lotteryData.dmMailing || existing?.dmMailing,
+        hallNames: lotteryData.halls.filter((h) => h.hallName.trim()).length > 0
+          ? lotteryData.halls.filter((h) => h.hallName.trim()).map((h) => h.hallName)
+          : existing?.hallNames,
+        eventStartDate: lotteryData.eventStartDate || existing?.eventStartDate,
+        eventEndDate: lotteryData.eventEndDate || existing?.eventEndDate,
+        eventProductName: lotteryData.eventName || existing?.eventProductName,
+        salesPersonId: Number(lotteryData.salesPersonId) || existing?.salesPersonId || undefined,
+        insightPersonId: Number(lotteryData.insightPersonId) || existing?.insightPersonId || undefined,
+        readingCertainty: lotteryData.readingCertainty || existing?.readingCertainty || undefined,
+        proposalStatus: lotteryData.proposalStatus as "before-proposal" | "proposing" | "order-received",
+        executionStatus: lotteryData.executionStatus ?? existing?.executionStatus ?? undefined,
+        prizeInfo: lotteryData.prizeInfo?.length ? lotteryData.prizeInfo : existing?.prizeInfo,
+        hallQuotes: lotteryData.hallQuotes?.length ? lotteryData.hallQuotes : existing?.hallQuotes,
+        quoteConfig: lotteryData.quoteConfig ?? existing?.quoteConfig,
+      } : {}
+      repository.updateProduct(pid, {
+        category: p.category,
+        eventType: p.eventType,
+        eventProductName: p.eventProductName || existing?.eventProductName,
+        eventDate: p.eventDate,
+        startTime: p.startTime,
+        endTime: p.endTime,
+        mustSeeFlag: p.mustSeeFlag,
+        mustSeePublication: p.mustSeePublication,
+        publicationDate: p.publicationDate,
+        publicationTime: p.publicationTime,
+        reportRequired: p.reportRequired,
+        estimatedBillingAmount: billing,
+        proposalStatus: p.proposalStatus,
+        readingCertainty: p.readingCertainty || undefined,
+        executionStatus: p.executionStatus ?? undefined,
+        companionCount: p.companionCount || "0",
+        directorCount: p.directorCount || "0",
+        threeSetPlan: p.threeSetPlan || undefined,
+        ...lotteryFields,
+      })
+    }, 500)
+    return () => window.clearTimeout(handle)
+  }, [mode, form, repository, getLotteryData, allHalls])
+
   // ─── マネジメント部確認ステータス ───
   const managementConfirmationStatus = useMemo<ManagementConfirmationStatus>(() => {
     if (mode !== "product-edit" || !productId) return "unconfirmed"
     const product = repository.getProductById(productId)
     return product?.managementConfirmationStatus ?? "unconfirmed"
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, productId, repository, refreshKey])
+
+  const productEntity = useMemo(() => {
+    if (mode !== "product-edit" || !productId) return undefined
+    return repository.getProductById(productId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, productId, repository, refreshKey])
 
@@ -1126,6 +1221,8 @@ export function useProjectRegistration({ repository, mode, productId, comments, 
     // マネジメント部確認
     managementConfirmationStatus,
     handleRequestConfirmation,
+    // エンティティ（ステータス参照用）
+    productEntity,
     // アクション
     handleSubmit,
     handleBack,

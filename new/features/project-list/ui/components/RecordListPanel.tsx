@@ -1,8 +1,10 @@
 import { useState } from "react"
+import { useAppRouter } from "@/hooks/use-app-router"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Download, PackagePlus, Copy } from "lucide-react"
+import { Plus, Download, PackagePlus, Copy, Send, Gift } from "lucide-react"
 import type { FilterState, SavedSearchCondition } from "@/new/features/project-list/model/types"
 import type { ProjectGroupViewModel } from "@/new/features/project-list/hooks/useProjectList"
 import type { Company, Hall } from "@/new/api/types"
@@ -37,6 +39,9 @@ type RecordRow = {
   executionStatus: string
   estimatedBillingAmount: number
   requestDate: string
+  designOrdered: boolean
+  prizeOrdered: boolean
+  listConfirmed: boolean
 }
 
 /** テーブルデータのCSVエクスポート */
@@ -63,18 +68,21 @@ export type RecordListPanelProps = {
   // フィルタ
   filters: FilterState
   onFiltersChange: (filters: FilterState) => void
-  // 法人/ホール検索
-  companyHallSearchOpen: boolean
-  onCompanyHallSearchOpenChange: (open: boolean) => void
-  companyHallSearchType: "hall" | "company"
-  onCompanyHallSearchTypeChange: (type: "hall" | "company") => void
-  companyHallSearchQuery: string
-  onCompanyHallSearchQueryChange: (query: string) => void
+  // 法人検索
+  companySearchOpen: boolean
+  onCompanySearchOpenChange: (open: boolean) => void
+  companySearchQuery: string
+  onCompanySearchQueryChange: (query: string) => void
   filteredCompanies: Company[]
-  filteredHalls: Hall[]
   getCompanyByCompanyId: (companyId: string) => Company | undefined
-  onSelectHall: (hallName: string) => void
   onSelectCompany: (companyId: string) => void
+  // ホール検索
+  hallSearchOpen: boolean
+  onHallSearchOpenChange: (open: boolean) => void
+  hallSearchQuery: string
+  onHallSearchQueryChange: (query: string) => void
+  filteredHalls: Hall[]
+  onSelectHall: (hallName: string) => void
   // 検索条件管理
   savedConditions: SavedSearchCondition[]
   onSaveCondition: (name: string) => void
@@ -92,23 +100,27 @@ export type RecordListPanelProps = {
   onDuplicated: (newProjectNumber: string) => void
   // ヘッダー表示制御
   showHeader?: boolean
+  // 事務管理向け: チェックボックス + 一括依頼ボタン
+  adminBulkMode?: boolean
 }
 
 export const RecordListPanel = ({
   projectGroups,
   filters,
   onFiltersChange,
-  companyHallSearchOpen,
-  onCompanyHallSearchOpenChange,
-  companyHallSearchType,
-  onCompanyHallSearchTypeChange,
-  companyHallSearchQuery,
-  onCompanyHallSearchQueryChange,
+  companySearchOpen,
+  onCompanySearchOpenChange,
+  companySearchQuery,
+  onCompanySearchQueryChange,
   filteredCompanies,
-  filteredHalls,
   getCompanyByCompanyId,
-  onSelectHall,
   onSelectCompany,
+  hallSearchOpen,
+  onHallSearchOpenChange,
+  hallSearchQuery,
+  onHallSearchQueryChange,
+  filteredHalls,
+  onSelectHall,
   savedConditions,
   onSaveCondition,
   onDeleteCondition,
@@ -121,10 +133,27 @@ export const RecordListPanel = ({
   onProductCreated,
   onDuplicated,
   showHeader = true,
+  adminBulkMode = false,
 }: RecordListPanelProps) => {
+  const router = useAppRouter()
   const [addProductModalOpen, setAddProductModalOpen] = useState(false)
   const [duplicateModalOpen, setDuplicateModalOpen] = useState(false)
   const [duplicateTargetProjectNumber, setDuplicateTargetProjectNumber] = useState<string | null>(null)
+  const [selectedProductIds, setSelectedProductIds] = useState<number[]>([])
+
+  const toggleSelection = (id: number) => {
+    setSelectedProductIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
+  }
+
+  const goBulkNotification = () => {
+    if (selectedProductIds.length === 0) return
+    router.push(`/new/bulk-notification?ids=${selectedProductIds.join(",")}`)
+  }
+
+  const goBulkPrize = () => {
+    if (selectedProductIds.length === 0) return
+    router.push(`/new/bulk-prize?ids=${selectedProductIds.join(",")}`)
+  }
 
   // フラットなレコード行に変換
   const recordRows: RecordRow[] = projectGroups.flatMap((group) =>
@@ -144,6 +173,9 @@ export const RecordListPanel = ({
       executionStatus: product.executionStatus ? EXECUTION_STATUS_LABELS[product.executionStatus] : "-",
       estimatedBillingAmount: product.estimatedBillingAmount,
       requestDate: group.requestDate,
+      designOrdered: product.designOrdered,
+      prizeOrdered: product.prizeOrdered,
+      listConfirmed: product.listConfirmed,
     }))
   )
 
@@ -185,17 +217,19 @@ export const RecordListPanel = ({
       <ProjectListFilters
         filters={filters}
         onFiltersChange={onFiltersChange}
-        companyHallSearchOpen={companyHallSearchOpen}
-        onCompanyHallSearchOpenChange={onCompanyHallSearchOpenChange}
-        companyHallSearchType={companyHallSearchType}
-        onCompanyHallSearchTypeChange={onCompanyHallSearchTypeChange}
-        companyHallSearchQuery={companyHallSearchQuery}
-        onCompanyHallSearchQueryChange={onCompanyHallSearchQueryChange}
+        companySearchOpen={companySearchOpen}
+        onCompanySearchOpenChange={onCompanySearchOpenChange}
+        companySearchQuery={companySearchQuery}
+        onCompanySearchQueryChange={onCompanySearchQueryChange}
         filteredCompanies={filteredCompanies}
-        filteredHalls={filteredHalls}
         getCompanyByCompanyId={getCompanyByCompanyId}
-        onSelectHall={onSelectHall}
         onSelectCompany={onSelectCompany}
+        hallSearchOpen={hallSearchOpen}
+        onHallSearchOpenChange={onHallSearchOpenChange}
+        hallSearchQuery={hallSearchQuery}
+        onHallSearchQueryChange={onHallSearchQueryChange}
+        filteredHalls={filteredHalls}
+        onSelectHall={onSelectHall}
         savedConditions={savedConditions}
         onSaveCondition={onSaveCondition}
         onDeleteCondition={onDeleteCondition}
@@ -211,16 +245,33 @@ export const RecordListPanel = ({
           <div className="flex items-center justify-between px-4 py-3 border-b bg-slate-50">
             <div className="text-sm text-slate-600">
               {recordRows.length}件のレコード
+              {adminBulkMode && selectedProductIds.length > 0 && (
+                <span className="ml-2 text-blue-700 font-medium">（{selectedProductIds.length}件選択中）</span>
+              )}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              onClick={() => exportRecordsAsCSV(recordRows)}
-            >
-              <Download className="h-4 w-4" />
-              エクスポート
-            </Button>
+            <div className="flex items-center gap-2">
+              {adminBulkMode && selectedProductIds.length > 0 && (
+                <>
+                  <Button size="sm" className="gap-1.5" onClick={goBulkNotification}>
+                    <Send className="h-4 w-4" />
+                    当選デザイン一括依頼
+                  </Button>
+                  <Button size="sm" className="gap-1.5" onClick={goBulkPrize}>
+                    <Gift className="h-4 w-4" />
+                    景品発注一括依頼
+                  </Button>
+                </>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => exportRecordsAsCSV(recordRows)}
+              >
+                <Download className="h-4 w-4" />
+                エクスポート
+              </Button>
+            </div>
           </div>
 
           {/* テーブル */}
@@ -228,6 +279,7 @@ export const RecordListPanel = ({
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50">
+                  {adminBulkMode && <TableHead className="w-[40px]"></TableHead>}
                   <TableHead className="w-[100px] font-semibold text-slate-700">案件番号</TableHead>
                   <TableHead className="w-[100px] font-semibold text-slate-700">レコード番号</TableHead>
                   <TableHead className="font-semibold text-slate-700">ステータス</TableHead>
@@ -237,6 +289,9 @@ export const RecordListPanel = ({
                   <TableHead className="font-semibold text-slate-700">ホール</TableHead>
                   <TableHead className="font-semibold text-slate-700">実施日</TableHead>
                   <TableHead className="font-semibold text-slate-700">実施ステータス</TableHead>
+                  <TableHead className="font-semibold text-slate-700">当選デザイン依頼</TableHead>
+                  <TableHead className="font-semibold text-slate-700">景品発注依頼</TableHead>
+                  <TableHead className="font-semibold text-slate-700">リスト確認</TableHead>
                   <TableHead className="font-semibold text-slate-700 text-right">見積金額</TableHead>
                   <TableHead className="font-semibold text-slate-700">担当営業</TableHead>
                   <TableHead className="font-semibold text-slate-700 w-[60px]"></TableHead>
@@ -248,6 +303,14 @@ export const RecordListPanel = ({
                     key={row.productId}
                     className="hover:bg-blue-50/50 cursor-pointer transition-colors"
                   >
+                    {adminBulkMode && (
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedProductIds.includes(row.productId)}
+                          onCheckedChange={() => toggleSelection(row.productId)}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell>
                       <button
                         type="button"
@@ -283,6 +346,21 @@ export const RecordListPanel = ({
                     <TableCell>
                       <Badge className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5">
                         {row.executionStatus}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={`text-xs px-2 py-0.5 ${row.designOrdered ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-600"}`}>
+                        {row.designOrdered ? "実施済み" : "未実施"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={`text-xs px-2 py-0.5 ${row.prizeOrdered ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-600"}`}>
+                        {row.prizeOrdered ? "実施済み" : "未実施"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={`text-xs px-2 py-0.5 ${row.listConfirmed ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-600"}`}>
+                        {row.listConfirmed ? "確認済" : "確認前"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right text-sm font-medium text-slate-900">

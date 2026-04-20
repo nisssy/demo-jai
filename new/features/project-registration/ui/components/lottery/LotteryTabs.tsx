@@ -1,29 +1,46 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+"use client"
+
+import { useSearchParams } from "next/navigation"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { UseLotteryFormReturn } from "@/new/features/project-registration/hooks/useLotteryForm"
+import type { Role } from "@/new/types/role"
 import { LotteryBasicInfo } from "./LotteryBasicInfo"
 import { LotteryPrizeSet } from "./LotteryPrizeSet"
 import { LotteryQuoteConfig } from "./LotteryQuoteConfig"
-import { LotteryStatus } from "./LotteryStatus"
 import { LotteryProduction } from "./LotteryProduction"
+import { ExtractionConditionSection } from "./ExtractionConditionSection"
+import { DesignVendorEstimateSection } from "./DesignVendorEstimateSection"
+import { ProductManagementSection } from "./ProductManagementSection"
+import { PspLinkButton } from "../PspLinkButton"
 
 type LotteryTabsProps = {
   lotteryForm: UseLotteryFormReturn
 }
 
-export const LotteryTabs = ({ lotteryForm: f }: LotteryTabsProps) => {
-  return (
-    <Tabs value={f.activeTab} onValueChange={f.setActiveTab} className="w-full">
-      <TabsList className="w-full grid grid-cols-5">
-        <TabsTrigger value="basic-info" className="text-xs">基本情報</TabsTrigger>
-        <TabsTrigger value="prize-set" className="text-xs">景品セット</TabsTrigger>
-        <TabsTrigger value="status" className="text-xs">ステータス</TabsTrigger>
-        <TabsTrigger value="quote" className="text-xs">見積り</TabsTrigger>
-        <TabsTrigger value="production" className="text-xs">制作進行</TabsTrigger>
-      </TabsList>
+const SectionCard = ({ title, children, right }: { title: string; children: React.ReactNode; right?: React.ReactNode }) => (
+  <Card>
+    <CardHeader className="pb-3">
+      <div className="flex items-center justify-between">
+        <CardTitle className="text-base font-bold text-slate-900">{title}</CardTitle>
+        {right}
+      </div>
+    </CardHeader>
+    <CardContent className="space-y-4">{children}</CardContent>
+  </Card>
+)
 
-      <TabsContent value="basic-info" className="mt-4">
+export const LotteryTabs = ({ lotteryForm: f }: LotteryTabsProps) => {
+  const search = useSearchParams()
+  const role = (search?.get("role") as Role | null) ?? "Sales"
+  const isSalesOrInternal = role === "Sales" || role === "Internal"
+  const isSmartPoint = f.serviceName === "SmartPoint"
+
+  return (
+    <div className="space-y-6">
+      <SectionCard title="基本情報" right={<PspLinkButton productId={f.productId} />}>
         <LotteryBasicInfo
           halls={f.halls}
+          serviceName={f.serviceName}
           dmMailing={f.dmMailing}
           eventStartDate={f.eventStartDate}
           eventEndDate={f.eventEndDate}
@@ -37,6 +54,7 @@ export const LotteryTabs = ({ lotteryForm: f }: LotteryTabsProps) => {
           onRemoveHall={f.removeHall}
           onSelectCompanyForHall={f.selectCompanyForHall}
           onSelectHallForEntry={f.selectHallForEntry}
+          onServiceNameChange={f.setServiceName}
           onDmMailingChange={f.setDmMailing}
           onEventStartDateChange={f.setEventStartDate}
           onEventEndDateChange={f.setEventEndDate}
@@ -45,9 +63,9 @@ export const LotteryTabs = ({ lotteryForm: f }: LotteryTabsProps) => {
           onEventNameChange={f.setEventName}
           getHallsByCompanyId={f.getHallsByCompanyId}
         />
-      </TabsContent>
+      </SectionCard>
 
-      <TabsContent value="prize-set" className="mt-4">
+      <SectionCard title="景品セット">
         <LotteryPrizeSet
           selectedPrizeSetId={f.selectedPrizeSetId}
           prizeInfo={f.prizeInfo}
@@ -57,48 +75,28 @@ export const LotteryTabs = ({ lotteryForm: f }: LotteryTabsProps) => {
           onRemovePrize={f.removePrize}
           onUpdatePrize={f.updatePrize}
         />
-      </TabsContent>
+        {isSmartPoint && (isSalesOrInternal || role === "LotteryAdmin") && (
+          <ExtractionConditionSection productId={f.productId} />
+        )}
+      </SectionCard>
 
-      <TabsContent value="status" className="mt-4">
-        <LotteryStatus
-          proposalStatus={f.proposalStatus}
-          readingCertainty={f.readingCertainty}
-          executionStatus={f.executionStatus}
-          onStatusChange={f.handleStatusChange}
-          onReadingCertaintyChange={f.setReadingCertainty}
-          onExecutionStatusChange={f.setExecutionStatus}
-          onConfirmOrder={f.handleConfirmOrder}
+      <SectionCard title="見積り">
+        <DesignVendorEstimateSection
+          productId={f.productId}
+          onApplyQuoteToItem={(amount) => {
+            f.updateTotalQuoteItem(1, String(amount))
+            f.addDesignCorrectionToHallQuotes(amount)
+          }}
         />
-      </TabsContent>
-
-      <TabsContent value="quote" className="mt-4">
         <LotteryQuoteConfig
-          totalQuoteItems={f.quoteConfig.totalQuoteItems}
-          posterPrintQuantity={f.posterPrintQuantity}
-          posterPrintUnitPrice={f.posterPrintUnitPrice}
-          dmOrderCount={f.dmOrderCount}
-          dmMailing={f.dmMailing}
-          onTotalQuoteItemChange={f.updateTotalQuoteItem}
-          onPosterPrintQuantityChange={f.setPosterPrintQuantity}
-          onPosterPrintUnitPriceChange={f.setPosterPrintUnitPrice}
-          onDmOrderCountChange={f.setDmOrderCount}
-          proportionMode={f.proportionMode}
-          halls={f.halls}
-          hallPercentages={f.hallPercentages}
-          companyPercentages={f.companyPercentages}
-          onProportionModeChange={f.setProportionMode}
-          onHallPercentageChange={f.updateHallPercentage}
-          onCompanyPercentageChange={f.updateCompanyPercentage}
-          onDistributeEvenly={f.handleDistributeEvenly}
-          totalAmount={f.quoteCalc.totalAmount}
-          percentageSum={f.quoteCalc.percentageSum}
-          isPercentageValid={f.quoteCalc.isPercentageValid}
           quoteGenerated={f.quoteGenerated}
           hallQuotes={f.hallQuotes}
+          dmMailing={f.dmMailing}
+          onUpdateItem={f.updateHallQuoteItem}
         />
-      </TabsContent>
+      </SectionCard>
 
-      <TabsContent value="production" className="mt-4">
+      <SectionCard title="制作進行">
         <LotteryProduction
           productId={f.productId}
           posterStatus={f.posterStatus}
@@ -130,7 +128,13 @@ export const LotteryTabs = ({ lotteryForm: f }: LotteryTabsProps) => {
           eventEndDate={f.eventEndDate}
           halls={f.halls}
         />
-      </TabsContent>
-    </Tabs>
+      </SectionCard>
+
+      {f.productId && (role === "LotteryAdmin" || (isSalesOrInternal && !isSmartPoint)) && (
+        <SectionCard title="商材管理">
+          <ProductManagementSection productId={f.productId} serviceName={f.serviceName} />
+        </SectionCard>
+      )}
+    </div>
   )
 }

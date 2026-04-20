@@ -36,6 +36,8 @@ export type ProductViewModel = {
   winnerListStatus: DesignRequest["status"] | null
   prizeOrdered: boolean
   threeSetPlan: boolean
+  designOrdered: boolean
+  listConfirmed: boolean
 }
 
 export type ProjectGroupViewModel = {
@@ -73,6 +75,10 @@ const INITIAL_FILTERS: FilterState = {
   areas: [],
   departments: [],
   statuses: [],
+  executionStatuses: [],
+  designOrderStatuses: [],
+  prizeOrderStatuses: [],
+  listConfirmStatuses: [],
 }
 
 const SAVED_CONDITIONS_KEY = "saved_search_conditions"
@@ -169,6 +175,8 @@ function toProductViewModel(product: Product, designStatuses: { poster: DesignRe
     readingCertainty: product.readingCertainty,
     prizeOrdered: !!product.prizeOrderedAt,
     threeSetPlan: !!product.threeSetPlan,
+    designOrdered: !!product.notificationOrderSentAt,
+    listConfirmed: !!product.winnerListValidatedAt,
   }
 }
 
@@ -184,6 +192,7 @@ export function useProjectList({ repository, role = "Sales" }: UseProjectListArg
   const [activeTab, setActiveTab] = useState<ProjectListTab>("projects")
   const [filters, setFiltersRaw] = useState<FilterState>(() => loadPersistedFilters() ?? INITIAL_FILTERS)
   const [savedConditions, setSavedConditionsState] = useState<SavedSearchCondition[]>(() => loadSavedConditions())
+  const [addProductModalOpen, setAddProductModalOpen] = useState(false)
 
   // フィルタ変更時にlocalStorageに保持
   const setFilters = useCallback((f: FilterState | ((prev: FilterState) => FilterState)) => {
@@ -245,51 +254,51 @@ export function useProjectList({ repository, role = "Sales" }: UseProjectListArg
     URL.revokeObjectURL(url)
   }, [savedConditions])
 
-  // 法人/ホール検索のUI状態
-  const [companyHallSearchOpen, setCompanyHallSearchOpen] = useState(false)
-  const [companyHallSearchType, setCompanyHallSearchType] = useState<"hall" | "company">("company")
-  const [companyHallSearchQuery, setCompanyHallSearchQuery] = useState("")
+  // 法人検索のUI状態
+  const [companySearchOpen, setCompanySearchOpen] = useState(false)
+  const [companySearchQuery, setCompanySearchQuery] = useState("")
+
+  // ホール検索のUI状態
+  const [hallSearchOpen, setHallSearchOpen] = useState(false)
+  const [hallSearchQuery, setHallSearchQuery] = useState("")
 
   // マスタデータ
   const allCompanies = useMemo(() => repository.getCompanies(), [repository])
   const allHalls = useMemo(() => repository.getHalls(), [repository])
+  const allEmployees = useMemo(() => repository.getEmployees(), [repository])
 
-  // 法人/ホール検索のフィルタ済みリスト
+  // 法人検索のフィルタ済みリスト
   const filteredCompanies = useMemo(() => {
-    if (!companyHallSearchQuery) return allCompanies
-    const q = companyHallSearchQuery.toLowerCase()
+    if (!companySearchQuery) return allCompanies
+    const q = companySearchQuery.toLowerCase()
     return allCompanies.filter((c) => c.name.toLowerCase().includes(q))
-  }, [allCompanies, companyHallSearchQuery])
+  }, [allCompanies, companySearchQuery])
 
+  // ホール検索のフィルタ済みリスト
   const filteredHalls = useMemo(() => {
-    if (!companyHallSearchQuery) return allHalls
-    const q = companyHallSearchQuery.toLowerCase()
+    if (!hallSearchQuery) return allHalls
+    const q = hallSearchQuery.toLowerCase()
     return allHalls.filter((h) => h.name.toLowerCase().includes(q))
-  }, [allHalls, companyHallSearchQuery])
+  }, [allHalls, hallSearchQuery])
 
   const getCompanyByCompanyId = useCallback(
     (companyId: string): Company | undefined => allCompanies.find((c) => c.companyId === companyId),
     [allCompanies],
   )
 
-  // 法人/ホール選択ハンドラ
-  const handleSelectHall = useCallback((hallName: string) => {
-    setFilters((prev) => ({ ...prev, hallName }))
-    setCompanyHallSearchOpen(false)
-    setCompanyHallSearchQuery("")
-  }, [])
-
+  // 法人選択ハンドラ
   const handleSelectCompany = useCallback((companyId: string) => {
     setFilters((prev) => ({ ...prev, companyId }))
-    setCompanyHallSearchOpen(false)
-    setCompanyHallSearchQuery("")
-  }, [])
+    setCompanySearchOpen(false)
+    setCompanySearchQuery("")
+  }, [setFilters])
 
-  const handleCompanyHallSearchTypeChange = useCallback((type: "hall" | "company") => {
-    setCompanyHallSearchType(type)
-    setFilters((prev) => ({ ...prev, hallName: "", companyId: "" }))
-    setCompanyHallSearchQuery("")
-  }, [])
+  // ホール選択ハンドラ
+  const handleSelectHall = useCallback((hallName: string) => {
+    setFilters((prev) => ({ ...prev, hallName }))
+    setHallSearchOpen(false)
+    setHallSearchQuery("")
+  }, [setFilters])
 
   // リポジトリからデータ取得 + ViewModel変換
   const { projectsTabGroups, messagesTabGroups } = useMemo(() => {
@@ -324,9 +333,23 @@ export function useProjectList({ repository, role = "Sales" }: UseProjectListArg
       if (filters.hallName && project.hallName !== filters.hallName) continue
       if (filters.companyId && project.companyId !== filters.companyId) continue
       if (filters.salesPersonId && !project.salesPersonName.includes(filters.salesPersonId)) continue
+
+      // 都道府県フィルタ
       if (filters.prefectures.length > 0) {
         const hall = allHalls.find((h) => h.name === project.hallName)
         if (!hall?.prefecture || !filters.prefectures.includes(hall.prefecture)) continue
+      }
+
+      // 担当エリアフィルタ
+      if (filters.areas.length > 0) {
+        const hall = allHalls.find((h) => h.name === project.hallName)
+        if (!hall?.area || !filters.areas.includes(hall.area)) continue
+      }
+
+      // 部署フィルタ（営業担当者の部署で絞り込み）
+      if (filters.departments.length > 0) {
+        const employee = allEmployees.find((e) => e.name === project.salesPersonName)
+        if (!employee?.department || !filters.departments.includes(employee.department)) continue
       }
 
       // レコード番号フィルタ（商材IDで検索）
@@ -352,17 +375,30 @@ export function useProjectList({ repository, role = "Sales" }: UseProjectListArg
       const filteredProducts = productVMs.filter((p) => {
         if (filters.category && p.category !== filters.category) return false
         if (filters.eventType && !p.eventType.includes(filters.eventType) && !p.eventProductName.includes(filters.eventType)) return false
-        // ステータス複数選択フィルタ
+        // ステータス（提案ステータス）フィルタ
         if (filters.statuses.length > 0) {
-          const productStatuses: string[] = []
-          if (p.proposalStatus === "order-received") productStatuses.push("受注済み")
-          else if (p.proposalStatus === "proposing") productStatuses.push("提案中")
-          else if (p.proposalStatus === "before-proposal") productStatuses.push("提案前")
-          if (p.executionStatus === "実施前") productStatuses.push("実施前")
-          if (p.executionStatus === "実施中") productStatuses.push("実施中")
-          if (p.executionStatus === "終了") productStatuses.push("終了")
-          const match = filters.statuses.some((s) => productStatuses.includes(s))
-          if (!match) return false
+          const proposalLabel = p.proposalStatus === "order-received" ? "受注済み"
+            : p.proposalStatus === "proposing" ? "提案中" : "提案前"
+          if (!filters.statuses.includes(proposalLabel)) return false
+        }
+        // 実施ステータスフィルタ
+        if (filters.executionStatuses.length > 0) {
+          if (!p.executionStatus || !filters.executionStatuses.includes(p.executionStatus)) return false
+        }
+        // 当選デザイン依頼フィルタ
+        if (filters.designOrderStatuses.length > 0) {
+          const label = p.designOrdered ? "依頼済み" : "未依頼"
+          if (!filters.designOrderStatuses.includes(label)) return false
+        }
+        // 景品発注依頼フィルタ
+        if (filters.prizeOrderStatuses.length > 0) {
+          const label = p.prizeOrdered ? "発注済み" : "未発注"
+          if (!filters.prizeOrderStatuses.includes(label)) return false
+        }
+        // リスト確認フィルタ
+        if (filters.listConfirmStatuses.length > 0) {
+          const label = p.listConfirmed ? "確認済み" : "未確認"
+          if (!filters.listConfirmStatuses.includes(label)) return false
         }
         if (filters.dateFrom || filters.dateTo) {
           const dateValue = filters.dateMode === "execution" ? p.eventDate : project.createdAt
@@ -422,7 +458,7 @@ export function useProjectList({ repository, role = "Sales" }: UseProjectListArg
       projectsTabGroups: allGroups,
       messagesTabGroups: messageGroups,
     }
-  }, [repository, filters, allHalls])
+  }, [repository, filters, allHalls, allEmployees])
 
   const messagesCount = messagesTabGroups.reduce((sum, g) => sum + g.products.length, 0)
 
@@ -498,18 +534,21 @@ export function useProjectList({ repository, role = "Sales" }: UseProjectListArg
     messagesCount,
     filters,
     setFilters,
-    // 法人/ホール検索
-    companyHallSearchOpen,
-    setCompanyHallSearchOpen,
-    companyHallSearchType,
-    companyHallSearchQuery,
-    setCompanyHallSearchQuery,
+    // 法人検索
+    companySearchOpen,
+    setCompanySearchOpen,
+    companySearchQuery,
+    setCompanySearchQuery,
     filteredCompanies,
-    filteredHalls,
     getCompanyByCompanyId,
-    handleSelectHall,
     handleSelectCompany,
-    handleCompanyHallSearchTypeChange,
+    // ホール検索
+    hallSearchOpen,
+    setHallSearchOpen,
+    hallSearchQuery,
+    setHallSearchQuery,
+    filteredHalls,
+    handleSelectHall,
     // 検索条件管理
     savedConditions,
     handleSaveCondition,
@@ -524,6 +563,8 @@ export function useProjectList({ repository, role = "Sales" }: UseProjectListArg
     handleClickMessageProduct,
     handleProductCreated,
     handleDuplicated,
+    addProductModalOpen,
+    setAddProductModalOpen,
     repository,
   }
 }

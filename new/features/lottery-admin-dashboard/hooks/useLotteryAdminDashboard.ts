@@ -45,6 +45,7 @@ export function useLotteryAdminDashboard(repository: ProjectRepository) {
   const [desiredDeliveryDate, setDesiredDeliveryDate] = useState("")
   // Send confirmation modal states
   const [pendingNotificationVendor, setPendingNotificationVendor] = useState<{ id: string; name: string } | null>(null)
+  const [notificationDraftDeadline, setNotificationDraftDeadline] = useState<string>("")
   const [pendingPrizeVendorId, setPendingPrizeVendorId] = useState<string | null>(null)
 
   // ─── Data Loading ───
@@ -54,9 +55,7 @@ export function useLotteryAdminDashboard(repository: ProjectRepository) {
     const lotteryProducts = allProducts.filter(
       (p) =>
         p.category === "ポイント" &&
-        p.eventType === "合同抽選会" &&
-        p.prizeInfo &&
-        p.prizeInfo.length > 0
+        p.eventType === "合同抽選会"
     )
     setProducts(lotteryProducts)
   }, [repository])
@@ -339,6 +338,8 @@ export function useLotteryAdminDashboard(repository: ProjectRepository) {
     confirmSendNotificationOrder,
     cancelSendNotificationOrder,
     pendingNotificationVendor,
+    notificationDraftDeadline,
+    setNotificationDraftDeadline,
     designVendors,
     notificationDesignRequests,
     notificationCommentText,

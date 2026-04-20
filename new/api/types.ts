@@ -142,6 +142,7 @@ export type Product = {
   // 3点セットプラン（スロセレ: 同月3回・週1回の割引プラン）
   threeSetPlan?: boolean
   // 合同抽選会
+  serviceName?: "たまリッチ" | "SmartPoint"
   dmMailing?: "yes" | "no"
   hallNames?: string[]
   eventStartDate?: string
@@ -193,6 +194,21 @@ export type QuoteItem = {
   quantity: number
   unitPrice: number
   included: boolean
+  category?: string
+  eventSubject?: string
+  modelNumber?: string
+  rentalGrade?: string
+  setting?: string
+  purchaseReducedTax?: "対象" | "対象外"
+  purchaseRecordDate?: string
+  salesReducedTax?: "対象" | "対象外"
+  salesUnitPrice?: number
+  orderVendorName?: string
+  orderDeadline?: string
+  deliveryDate?: string
+  orderId?: string
+  orderDate?: string
+  note?: string
 }
 
 export type HallQuote = {
@@ -351,6 +367,7 @@ export type Hall = {
   companyId: number
   address?: string
   prefecture?: string
+  area?: string
 }
 
 export type Employee = {

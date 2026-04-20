@@ -4,9 +4,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { FileText, Sparkles, Loader2, AlertTriangle, CheckCircle2, Mail } from "lucide-react"
+import { PosterOrderModal } from "./PosterOrderModal"
+import { DmOrderModal } from "./DmOrderModal"
 
 type LotteryProductionProps = {
   productId?: number
@@ -54,7 +54,6 @@ function StatusBadge({ status }: { status: ProductionStatus }) {
 }
 
 export const LotteryProduction = (props: LotteryProductionProps) => {
-  const printingPartners = TRADING_PARTNERS.filter((t) => t.type === "printing")
   const designPartners = TRADING_PARTNERS.filter((t) => t.type === "design")
 
   if (!props.productId) {
@@ -95,63 +94,23 @@ export const LotteryProduction = (props: LotteryProductionProps) => {
         )}
       </Tabs>
 
-      {/* ポスター発注モーダル */}
-      <Dialog open={props.showPosterOrderModal} onOpenChange={props.onShowPosterOrderModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-sm">ポスター発注</DialogTitle>
-            <DialogDescription className="text-xs">印刷会社を選択して発注してください</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-xs">印刷会社</Label>
-              <Select value={props.posterOrderVendorId} onValueChange={props.onPosterOrderVendorIdChange}>
-                <SelectTrigger className="text-xs h-9">
-                  <SelectValue placeholder="印刷会社を選択..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {printingPartners.map((p) => (
-                    <SelectItem key={p.id} value={p.id} className="text-xs">{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => props.onShowPosterOrderModal(false)} className="text-xs">キャンセル</Button>
-              <Button size="sm" onClick={props.onPosterOrder} className="text-xs">発注</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <PosterOrderModal
+        open={props.showPosterOrderModal}
+        onOpenChange={props.onShowPosterOrderModal}
+        vendorId={props.posterOrderVendorId}
+        onVendorIdChange={props.onPosterOrderVendorIdChange}
+        onSubmit={props.onPosterOrder}
+        eventName={props.eventName}
+      />
 
-      {/* DM作成モーダル */}
-      <Dialog open={props.showDmCreateModal} onOpenChange={props.onShowDmCreateModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-sm">DM作成依頼</DialogTitle>
-            <DialogDescription className="text-xs">デザイン会社を選択して依頼してください</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-xs">デザイン会社</Label>
-              <Select value={props.dmCreateVendorId} onValueChange={props.onDmCreateVendorIdChange}>
-                <SelectTrigger className="text-xs h-9">
-                  <SelectValue placeholder="デザイン会社を選択..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {designPartners.map((p) => (
-                    <SelectItem key={p.id} value={p.id} className="text-xs">{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => props.onShowDmCreateModal(false)} className="text-xs">キャンセル</Button>
-              <Button size="sm" onClick={props.onDmCreate} className="text-xs">依頼</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <DmOrderModal
+        open={props.showDmCreateModal}
+        onOpenChange={props.onShowDmCreateModal}
+        vendorId={props.dmCreateVendorId}
+        onVendorIdChange={props.onDmCreateVendorIdChange}
+        onSubmit={props.onDmCreate}
+        eventName={props.eventName}
+      />
     </>
   )
 }

@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ProjectProvider } from "@/contexts/project-context"
+import { NotificationProvider } from "@/new/notifications/notification-context"
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 
@@ -41,10 +42,12 @@ export default function RootLayout({
     <html lang="ja">
       <body className={`font-sans antialiased`} suppressHydrationWarning>
         <ProjectProvider>
-          <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-            {children}
-            <Toaster />
-          </div>
+          <NotificationProvider>
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+              {children}
+              <Toaster />
+            </div>
+          </NotificationProvider>
         </ProjectProvider>
         <Analytics />
       </body>

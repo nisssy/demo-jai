@@ -18,6 +18,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Send } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import type { DesignRequest } from "@/new/api/types"
 import type { DesignVendorOption } from "../hooks/useLotteryAdminDashboard"
 
@@ -43,6 +45,8 @@ export interface NotificationOrderSectionViewProps {
   onGenerate: () => void
   onSelectVendor: (vendorId: string, vendorName: string) => void
   selectedVendor: { id: string; name: string } | null
+  draftDeadline: string
+  onDraftDeadlineChange: (value: string) => void
   onRequestSend: () => void
   onConfirmSend: () => void
   onCancelSend: () => void
@@ -75,6 +79,8 @@ export const NotificationOrderSectionView = ({
   onGenerate,
   onSelectVendor,
   selectedVendor,
+  draftDeadline,
+  onDraftDeadlineChange,
   onRequestSend,
   onConfirmSend,
   onCancelSend,
@@ -140,6 +146,19 @@ export const NotificationOrderSectionView = ({
 
           <div className="h-px bg-border" />
 
+          {/* ── 初稿希望日 ── */}
+          <div className="space-y-1.5 max-w-[240px]">
+            <Label className="text-xs">初稿希望日</Label>
+            <Input
+              type="date"
+              className="h-9 text-xs"
+              value={draftDeadline}
+              onChange={(e) => onDraftDeadlineChange(e.target.value)}
+            />
+          </div>
+
+          <div className="h-px bg-border" />
+
           {/* ── Step 2: 発注書生成 ── */}
           <div className="space-y-2">
             <h4 className="text-sm font-semibold flex items-center gap-2">
@@ -192,7 +211,7 @@ export const NotificationOrderSectionView = ({
                     : "Step 2 で発注書を生成すると送信が可能になります。"}
               </p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <p className="text-xs text-muted-foreground">
                   {selectedVendor.name} に発注依頼メールを送信します。パスワード付きファイルが添付されます。
                 </p>
@@ -315,6 +334,12 @@ export const NotificationOrderSectionView = ({
                 <span className="text-muted-foreground">添付ファイル</span>
                 <span className="font-medium">winner_notification_data.xlsx（パスワード保護）</span>
               </div>
+              {draftDeadline && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">初稿希望日</span>
+                  <span className="font-medium">{draftDeadline}</span>
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>

@@ -32,6 +32,8 @@ export interface LotteryAdminDashboardViewProps {
   onConfirmSendNotification: () => void
   onCancelSendNotification: () => void
   pendingNotificationVendor: { id: string; name: string } | null
+  notificationDraftDeadline: string
+  onNotificationDraftDeadlineChange: (value: string) => void
   designVendors: DesignVendorOption[]
   notificationDesignRequests: DesignRequest[]
   notificationCommentText: string
@@ -70,6 +72,8 @@ export const LotteryAdminDashboardView = ({
   onConfirmSendNotification,
   onCancelSendNotification,
   pendingNotificationVendor,
+  notificationDraftDeadline,
+  onNotificationDraftDeadlineChange,
   designVendors,
   notificationDesignRequests,
   notificationCommentText,
@@ -100,17 +104,19 @@ export const LotteryAdminDashboardView = ({
           projectGroups={projectList.projectsTabGroups}
           filters={projectList.filters}
           onFiltersChange={projectList.setFilters}
-          companyHallSearchOpen={projectList.companyHallSearchOpen}
-          onCompanyHallSearchOpenChange={projectList.setCompanyHallSearchOpen}
-          companyHallSearchType={projectList.companyHallSearchType}
-          onCompanyHallSearchTypeChange={projectList.handleCompanyHallSearchTypeChange}
-          companyHallSearchQuery={projectList.companyHallSearchQuery}
-          onCompanyHallSearchQueryChange={projectList.setCompanyHallSearchQuery}
+          companySearchOpen={projectList.companySearchOpen}
+          onCompanySearchOpenChange={projectList.setCompanySearchOpen}
+          companySearchQuery={projectList.companySearchQuery}
+          onCompanySearchQueryChange={projectList.setCompanySearchQuery}
           filteredCompanies={projectList.filteredCompanies}
-          filteredHalls={projectList.filteredHalls}
           getCompanyByCompanyId={projectList.getCompanyByCompanyId}
-          onSelectHall={projectList.handleSelectHall}
           onSelectCompany={projectList.handleSelectCompany}
+          hallSearchOpen={projectList.hallSearchOpen}
+          onHallSearchOpenChange={projectList.setHallSearchOpen}
+          hallSearchQuery={projectList.hallSearchQuery}
+          onHallSearchQueryChange={projectList.setHallSearchQuery}
+          filteredHalls={projectList.filteredHalls}
+          onSelectHall={projectList.handleSelectHall}
           savedConditions={projectList.savedConditions}
           onSaveCondition={projectList.handleSaveCondition}
           onDeleteCondition={projectList.handleDeleteCondition}
@@ -122,6 +128,7 @@ export const LotteryAdminDashboardView = ({
           repository={projectList.repository}
           onProductCreated={projectList.handleProductCreated}
           onDuplicated={projectList.handleDuplicated}
+          adminBulkMode
         />
       </TabsContent>
 
@@ -169,6 +176,7 @@ export const LotteryAdminDashboardView = ({
                   onReset={onResetWinnerList}
                   onDismissError={onDismissWinnerListError}
                   onValidate={onValidateWinnerList}
+                  mode="admin"
                 />
 
                 {/* 2. Notification Order */}
@@ -188,6 +196,8 @@ export const LotteryAdminDashboardView = ({
                   onConfirmSend={onConfirmSendNotification}
                   onCancelSend={onCancelSendNotification}
                   pendingVendor={pendingNotificationVendor}
+                  draftDeadline={notificationDraftDeadline}
+                  onDraftDeadlineChange={onNotificationDraftDeadlineChange}
                   onAddComment={onAddNotificationComment}
                   canGenerate={!!selectedProduct.winnerListValidatedAt}
                 />

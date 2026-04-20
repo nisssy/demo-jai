@@ -1,4 +1,4 @@
-import type { PrizeInfo, HallQuote } from "@/new/api/types"
+import type { PrizeInfo, HallQuote, QuoteItem } from "@/new/api/types"
 
 /** 受注ステータス */
 export type OrderStatus = "before-proposal" | "proposing" | "order-received"
@@ -33,6 +33,7 @@ export type QuoteConfigState = {
 export type LotteryFormState = {
   // 基本情報
   halls: LotteryHallEntry[]
+  serviceName: "たまリッチ" | "SmartPoint" | ""
   dmMailing: "yes" | "no"
   eventStartDate: string
   eventEndDate: string
@@ -64,6 +65,7 @@ export type UseLotteryFormReturn = {
   isLastTab: boolean
   // 基本情報
   halls: LotteryHallEntry[]
+  serviceName: "たまリッチ" | "SmartPoint" | ""
   dmMailing: "yes" | "no"
   eventStartDate: string
   eventEndDate: string
@@ -76,6 +78,7 @@ export type UseLotteryFormReturn = {
   removeHall: (index: number) => void
   selectCompanyForHall: (index: number, companyId: string) => void
   selectHallForEntry: (index: number, hallName: string) => void
+  setServiceName: (value: "たまリッチ" | "SmartPoint" | "") => void
   setDmMailing: (value: "yes" | "no") => void
   setEventStartDate: (value: string) => void
   setEventEndDate: (value: string) => void
@@ -121,6 +124,7 @@ export type UseLotteryFormReturn = {
   }
   quoteGenerated: boolean
   hallQuotes: HallQuote[]
+  updateHallQuoteItem: (hallName: string, itemId: number, updates: Partial<QuoteItem>) => void
   // ステータス
   proposalStatus: OrderStatus
   readingCertainty: "A" | "B" | "C" | ""

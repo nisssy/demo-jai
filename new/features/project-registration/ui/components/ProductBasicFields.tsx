@@ -29,6 +29,9 @@ type ProductBasicFieldsProps = {
   canSwitchToThreeSet?: boolean
   // 新規作成モード: 商材区分+商材名のみ表示
   newModeMinimal?: boolean
+  // サービス名（合同抽選会 + newModeMinimal 時に表示）
+  serviceName?: "たまリッチ" | "SmartPoint" | ""
+  onServiceNameChange?: (value: "たまリッチ" | "SmartPoint" | "") => void
 }
 
 export const ProductBasicFields = ({
@@ -47,6 +50,8 @@ export const ProductBasicFields = ({
   onThreeSetModeChange,
   canSwitchToThreeSet,
   newModeMinimal,
+  serviceName,
+  onServiceNameChange,
 }: ProductBasicFieldsProps) => {
   const isLottery = product.category === "ポイント"
   const isSloCele = product.eventType === "スロセレ"
@@ -119,6 +124,22 @@ export const ProductBasicFields = ({
                   <p className="text-xs text-red-500">{errors[`product_${index}_eventType`]}</p>
                 )}
               </div>
+
+              {/* サービス名（合同抽選会 + newModeMinimal 時のみ表示） */}
+              {newModeMinimal && product.eventType === "合同抽選会" && onServiceNameChange && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">サービス名</Label>
+                  <Select value={serviceName || "たまリッチ"} onValueChange={(v) => onServiceNameChange(v as "たまリッチ" | "SmartPoint")}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="サービス名を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="たまリッチ">たまリッチ</SelectItem>
+                      <SelectItem value="SmartPoint">SmartPoint</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* 3点セット登録タイプ（スロセレのみ、新規作成モードでは非表示） */}
               {!newModeMinimal && isSloCele && onThreeSetModeChange && (

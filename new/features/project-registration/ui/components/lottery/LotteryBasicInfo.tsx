@@ -12,6 +12,7 @@ import { useState } from "react"
 
 type LotteryBasicInfoProps = {
   halls: LotteryHallEntry[]
+  serviceName: "たまリッチ" | "SmartPoint" | ""
   dmMailing: "yes" | "no"
   eventStartDate: string
   eventEndDate: string
@@ -25,6 +26,7 @@ type LotteryBasicInfoProps = {
   onRemoveHall: (index: number) => void
   onSelectCompanyForHall: (index: number, companyId: string) => void
   onSelectHallForEntry: (index: number, hallName: string) => void
+  onServiceNameChange: (value: "たまリッチ" | "SmartPoint" | "") => void
   onDmMailingChange: (value: "yes" | "no") => void
   onEventStartDateChange: (value: string) => void
   onEventEndDateChange: (value: string) => void
@@ -36,6 +38,7 @@ type LotteryBasicInfoProps = {
 
 export const LotteryBasicInfo = ({
   halls,
+  serviceName,
   dmMailing,
   eventStartDate,
   eventEndDate,
@@ -49,6 +52,7 @@ export const LotteryBasicInfo = ({
   onRemoveHall,
   onSelectCompanyForHall,
   onSelectHallForEntry,
+  onServiceNameChange,
   onDmMailingChange,
   onEventStartDateChange,
   onEventEndDateChange,
@@ -72,6 +76,20 @@ export const LotteryBasicInfo = ({
 
   return (
     <div className="space-y-5">
+      {/* サービス名 */}
+      <div className="space-y-2">
+        <Label className="text-sm font-semibold">サービス名</Label>
+        <Select value={serviceName || "たまリッチ"} onValueChange={(v) => onServiceNameChange(v as "たまリッチ" | "SmartPoint")}>
+          <SelectTrigger className="w-48 h-9 text-xs">
+            <SelectValue placeholder="サービス名を選択" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="たまリッチ" className="text-xs">たまリッチ</SelectItem>
+            <SelectItem value="SmartPoint" className="text-xs">SmartPoint</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* ホール情報 */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">

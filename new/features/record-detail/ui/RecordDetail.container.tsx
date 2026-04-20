@@ -1,9 +1,7 @@
 "use client"
 
-import { useMemo } from "react"
-import { LocalStorageProjectRepository } from "@/new/api/impl/local-storage-project-repository"
-import { useRecordDetail } from "../hooks/useRecordDetail"
-import { RecordDetailView } from "./RecordDetail.view"
+import { useEffect } from "react"
+import { useAppRouter } from "@/hooks/use-app-router"
 
 type RecordDetailContainerProps = {
   productId: number
@@ -11,21 +9,15 @@ type RecordDetailContainerProps = {
 }
 
 export const RecordDetailContainer = ({ productId, role = "Sales" }: RecordDetailContainerProps) => {
-  const repository = useMemo(() => new LocalStorageProjectRepository(), [])
+  const router = useAppRouter()
 
-  const { data, canEdit, handleBack, handleEdit, handleGoToProject } = useRecordDetail({
-    repository,
-    productId,
-    role,
-  })
+  useEffect(() => {
+    router.replace(`/new/project-registration?mode=product-edit&productId=${productId}&role=${role}`)
+  }, [router, productId, role])
 
   return (
-    <RecordDetailView
-      data={data}
-      canEdit={canEdit}
-      onBack={handleBack}
-      onEdit={handleEdit}
-      onGoToProject={handleGoToProject}
-    />
+    <div className="flex h-[60vh] items-center justify-center text-sm text-slate-500">
+      レコードを開いています…
+    </div>
   )
 }

@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChevronLeft, ChevronsUpDown, Check } from "lucide-react"
 import type { Project, Company, Hall } from "@/new/api/types"
 import type { ProjectRepository } from "@/new/api/project-repository"
@@ -66,25 +65,27 @@ export const AddProductModal = ({ open, onOpenChange, repository, onProductCreat
   const [newCategory, setNewCategory] = useState("")
   const [newProductName, setNewProductName] = useState("")
 
-  // 法人/ホール検索
-  const [companyHallOpen, setCompanyHallOpen] = useState(false)
-  const [companyHallType, setCompanyHallType] = useState<"company" | "hall">("company")
-  const [companyHallQuery, setCompanyHallQuery] = useState("")
+  // 法人検索
+  const [companyOpen, setCompanyOpen] = useState(false)
+  const [companyQuery, setCompanyQuery] = useState("")
+  // ホール検索
+  const [hallOpen, setHallOpen] = useState(false)
+  const [hallQuery, setHallQuery] = useState("")
 
   const allCompanies = useMemo(() => repository.getCompanies(), [repository])
   const allHalls = useMemo(() => repository.getHalls(), [repository])
 
   const filteredCompaniesModal = useMemo(() => {
-    if (!companyHallQuery) return allCompanies
-    const q = companyHallQuery.toLowerCase()
+    if (!companyQuery) return allCompanies
+    const q = companyQuery.toLowerCase()
     return allCompanies.filter((c) => c.name.toLowerCase().includes(q))
-  }, [allCompanies, companyHallQuery])
+  }, [allCompanies, companyQuery])
 
   const filteredHallsModal = useMemo(() => {
-    if (!companyHallQuery) return allHalls
-    const q = companyHallQuery.toLowerCase()
+    if (!hallQuery) return allHalls
+    const q = hallQuery.toLowerCase()
     return allHalls.filter((h) => h.name.toLowerCase().includes(q))
-  }, [allHalls, companyHallQuery])
+  }, [allHalls, hallQuery])
 
   // フィルタ済み案件リスト
   const filteredProjects = useMemo(() => {
@@ -166,7 +167,7 @@ export const AddProductModal = ({ open, onOpenChange, repository, onProductCreat
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose() }}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
         {step === "select-project" ? (
           <>
             <DialogHeader>
@@ -175,81 +176,87 @@ export const AddProductModal = ({ open, onOpenChange, repository, onProductCreat
 
             {/* モーダル内検索フィルタ */}
             <div className="space-y-4 py-2">
-              <div className="grid grid-cols-3 gap-3">
-                {/* 法人/ホール */}
+              <div className="grid grid-cols-4 gap-3">
+                {/* 法人 */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">法人/ホール</Label>
-                  <div className="flex gap-1.5">
-                    <Popover open={companyHallOpen} onOpenChange={setCompanyHallOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="flex-1 justify-between text-xs h-8">
-                          {companyHallType === "company"
-                            ? modalFilters.companyId
-                              ? getCompanyName(modalFilters.companyId)
-                              : "法人名を検索..."
-                            : modalFilters.hallName || "ホール名を検索..."}
-                          <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[280px] p-0" align="start">
-                        <Command>
-                          <CommandInput
-                            placeholder={companyHallType === "hall" ? "ホール名..." : "法人名..."}
-                            value={companyHallQuery}
-                            onValueChange={setCompanyHallQuery}
-                          />
-                          <CommandList>
-                            {companyHallType === "hall" ? (
-                              <>
-                                <CommandEmpty>見つかりません</CommandEmpty>
-                                <CommandGroup>
-                                  {filteredHallsModal.map((h) => (
-                                    <CommandItem key={h.id} value={h.name} onSelect={() => {
-                                      updateModalFilter("hallName", h.name)
-                                      updateModalFilter("companyId", "")
-                                      setCompanyHallOpen(false)
-                                      setCompanyHallQuery("")
-                                    }}>
-                                      <Check className={`mr-2 h-3 w-3 ${modalFilters.hallName === h.name ? "opacity-100" : "opacity-0"}`} />
-                                      {h.name}
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              </>
-                            ) : (
-                              <>
-                                <CommandEmpty>見つかりません</CommandEmpty>
-                                <CommandGroup>
-                                  {filteredCompaniesModal.map((c) => (
-                                    <CommandItem key={c.id} value={c.name} onSelect={() => {
-                                      updateModalFilter("companyId", c.companyId)
-                                      updateModalFilter("hallName", "")
-                                      setCompanyHallOpen(false)
-                                      setCompanyHallQuery("")
-                                    }}>
-                                      <Check className={`mr-2 h-3 w-3 ${modalFilters.companyId === c.companyId ? "opacity-100" : "opacity-0"}`} />
-                                      {c.name}
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              </>
-                            )}
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                    <Tabs value={companyHallType} onValueChange={(v) => {
-                      setCompanyHallType(v as "company" | "hall")
-                      updateModalFilter("hallName", "")
-                      updateModalFilter("companyId", "")
-                      setCompanyHallQuery("")
-                    }}>
-                      <TabsList className="h-8 bg-white">
-                        <TabsTrigger value="company" className="px-2 text-xs h-6">法人</TabsTrigger>
-                        <TabsTrigger value="hall" className="px-2 text-xs h-6">ホール</TabsTrigger>
-                      </TabsList>
-                    </Tabs>
-                  </div>
+                  <Label className="text-xs font-semibold">法人</Label>
+                  <Popover open={companyOpen} onOpenChange={setCompanyOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="w-full justify-between text-xs h-8">
+                        {modalFilters.companyId ? getCompanyName(modalFilters.companyId) : "法人名を検索..."}
+                        <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[280px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="法人名..." value={companyQuery} onValueChange={setCompanyQuery} />
+                        <CommandList>
+                          <CommandEmpty>見つかりません</CommandEmpty>
+                          <CommandGroup>
+                            <CommandItem value="すべて" onSelect={() => {
+                              updateModalFilter("companyId", "")
+                              setCompanyOpen(false)
+                              setCompanyQuery("")
+                            }}>
+                              <Check className={`mr-2 h-3 w-3 ${!modalFilters.companyId ? "opacity-100" : "opacity-0"}`} />
+                              すべて
+                            </CommandItem>
+                            {filteredCompaniesModal.map((c) => (
+                              <CommandItem key={c.id} value={c.name} onSelect={() => {
+                                updateModalFilter("companyId", c.companyId)
+                                setCompanyOpen(false)
+                                setCompanyQuery("")
+                              }}>
+                                <Check className={`mr-2 h-3 w-3 ${modalFilters.companyId === c.companyId ? "opacity-100" : "opacity-0"}`} />
+                                {c.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* ホール */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">ホール</Label>
+                  <Popover open={hallOpen} onOpenChange={setHallOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="w-full justify-between text-xs h-8">
+                        {modalFilters.hallName || "ホール名を検索..."}
+                        <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[280px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="ホール名..." value={hallQuery} onValueChange={setHallQuery} />
+                        <CommandList>
+                          <CommandEmpty>見つかりません</CommandEmpty>
+                          <CommandGroup>
+                            <CommandItem value="すべて" onSelect={() => {
+                              updateModalFilter("hallName", "")
+                              setHallOpen(false)
+                              setHallQuery("")
+                            }}>
+                              <Check className={`mr-2 h-3 w-3 ${!modalFilters.hallName ? "opacity-100" : "opacity-0"}`} />
+                              すべて
+                            </CommandItem>
+                            {filteredHallsModal.map((h) => (
+                              <CommandItem key={h.id} value={h.name} onSelect={() => {
+                                updateModalFilter("hallName", h.name)
+                                setHallOpen(false)
+                                setHallQuery("")
+                              }}>
+                                <Check className={`mr-2 h-3 w-3 ${modalFilters.hallName === h.name ? "opacity-100" : "opacity-0"}`} />
+                                {h.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 {/* 商品カテゴリ */}

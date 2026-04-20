@@ -9,6 +9,7 @@ import type { ProjectRepository } from "@/new/api/project-repository"
 import { ProjectCard } from "./components/ProjectCard"
 import { MessageCard } from "./components/MessageCard"
 import { RecordListPanel } from "./components/RecordListPanel"
+import { AddProductModal } from "./components/AddProductModal"
 
 export type ProjectListViewProps = {
   // タブ
@@ -21,18 +22,21 @@ export type ProjectListViewProps = {
   // フィルタ
   filters: FilterState
   onFiltersChange: (filters: FilterState) => void
-  // 法人/ホール検索
-  companyHallSearchOpen: boolean
-  onCompanyHallSearchOpenChange: (open: boolean) => void
-  companyHallSearchType: "hall" | "company"
-  onCompanyHallSearchTypeChange: (type: "hall" | "company") => void
-  companyHallSearchQuery: string
-  onCompanyHallSearchQueryChange: (query: string) => void
+  // 法人検索
+  companySearchOpen: boolean
+  onCompanySearchOpenChange: (open: boolean) => void
+  companySearchQuery: string
+  onCompanySearchQueryChange: (query: string) => void
   filteredCompanies: Company[]
-  filteredHalls: Hall[]
   getCompanyByCompanyId: (companyId: string) => Company | undefined
-  onSelectHall: (hallName: string) => void
   onSelectCompany: (companyId: string) => void
+  // ホール検索
+  hallSearchOpen: boolean
+  onHallSearchOpenChange: (open: boolean) => void
+  hallSearchQuery: string
+  onHallSearchQueryChange: (query: string) => void
+  filteredHalls: Hall[]
+  onSelectHall: (hallName: string) => void
   // 検索条件管理
   savedConditions: SavedSearchCondition[]
   onSaveCondition: (name: string) => void
@@ -49,6 +53,9 @@ export type ProjectListViewProps = {
   onProductCreated: (productId: number) => void
   // 複製
   onDuplicated: (newProjectNumber: string) => void
+  // 商材追加モーダル
+  addProductModalOpen: boolean
+  onAddProductModalOpenChange: (open: boolean) => void
 }
 
 const tabTriggerClass = "relative px-4 py-2.5 text-base font-normal text-slate-500 hover:text-slate-700 transition-all duration-200 data-[state=active]:text-slate-900 data-[state=active]:font-medium border-0 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1.5px] after:bg-blue-600 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
@@ -61,17 +68,19 @@ export const ProjectListView = ({
   messagesCount,
   filters,
   onFiltersChange,
-  companyHallSearchOpen,
-  onCompanyHallSearchOpenChange,
-  companyHallSearchType,
-  onCompanyHallSearchTypeChange,
-  companyHallSearchQuery,
-  onCompanyHallSearchQueryChange,
+  companySearchOpen,
+  onCompanySearchOpenChange,
+  companySearchQuery,
+  onCompanySearchQueryChange,
   filteredCompanies,
-  filteredHalls,
   getCompanyByCompanyId,
-  onSelectHall,
   onSelectCompany,
+  hallSearchOpen,
+  onHallSearchOpenChange,
+  hallSearchQuery,
+  onHallSearchQueryChange,
+  filteredHalls,
+  onSelectHall,
   savedConditions,
   onSaveCondition,
   onDeleteCondition,
@@ -84,6 +93,8 @@ export const ProjectListView = ({
   repository,
   onProductCreated,
   onDuplicated,
+  addProductModalOpen,
+  onAddProductModalOpenChange,
 }: ProjectListViewProps) => {
   return (
     <div className="space-y-6">
@@ -91,7 +102,7 @@ export const ProjectListView = ({
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">案件一覧</h1>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="gap-2" onClick={() => {}}>
+          <Button variant="outline" className="gap-2" onClick={() => onAddProductModalOpenChange(true)}>
             <PackagePlus className="h-4 w-4" />
             新規商材追加
           </Button>
@@ -126,17 +137,19 @@ export const ProjectListView = ({
             projectGroups={projectsTabGroups}
             filters={filters}
             onFiltersChange={onFiltersChange}
-            companyHallSearchOpen={companyHallSearchOpen}
-            onCompanyHallSearchOpenChange={onCompanyHallSearchOpenChange}
-            companyHallSearchType={companyHallSearchType}
-            onCompanyHallSearchTypeChange={onCompanyHallSearchTypeChange}
-            companyHallSearchQuery={companyHallSearchQuery}
-            onCompanyHallSearchQueryChange={onCompanyHallSearchQueryChange}
+            companySearchOpen={companySearchOpen}
+            onCompanySearchOpenChange={onCompanySearchOpenChange}
+            companySearchQuery={companySearchQuery}
+            onCompanySearchQueryChange={onCompanySearchQueryChange}
             filteredCompanies={filteredCompanies}
-            filteredHalls={filteredHalls}
             getCompanyByCompanyId={getCompanyByCompanyId}
-            onSelectHall={onSelectHall}
             onSelectCompany={onSelectCompany}
+            hallSearchOpen={hallSearchOpen}
+            onHallSearchOpenChange={onHallSearchOpenChange}
+            hallSearchQuery={hallSearchQuery}
+            onHallSearchQueryChange={onHallSearchQueryChange}
+            filteredHalls={filteredHalls}
+            onSelectHall={onSelectHall}
             savedConditions={savedConditions}
             onSaveCondition={onSaveCondition}
             onDeleteCondition={onDeleteCondition}
@@ -178,6 +191,13 @@ export const ProjectListView = ({
           )}
         </TabsContent>
       </Tabs>
+
+      <AddProductModal
+        open={addProductModalOpen}
+        onOpenChange={onAddProductModalOpenChange}
+        repository={repository}
+        onProductCreated={onProductCreated}
+      />
     </div>
   )
 }

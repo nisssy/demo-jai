@@ -223,32 +223,26 @@ export class LocalStorageProjectRepository implements ProjectRepository {
 
   // ─── 複製 ───
 
-  duplicateProject(
-    projectNumber: string,
-    productIds: number[],
-    mode: "new" | "same" = "new",
-  ): { project: Project; products: Product[] } {
+  duplicateProject(projectNumber: string, productIds: number[]): { project: Project; products: Product[] } {
     const sourceProject = this.getProjectByProjectNumber(projectNumber)
     if (!sourceProject) throw new Error(`Project ${projectNumber} not found`)
 
     const now = new Date().toISOString()
+    const newProjectNumber = this.generateProjectNumber()
 
-    // 複製先案件を決定
-    const targetProject =
-      mode === "same"
-        ? sourceProject
-        : this.createProject({
-            projectNumber: this.generateProjectNumber(),
-            projectName: sourceProject.projectName,
-            companyName: sourceProject.companyName,
-            companyId: sourceProject.companyId,
-            hallName: sourceProject.hallName,
-            hallId: sourceProject.hallId,
-            salesPersonName: sourceProject.salesPersonName,
-            requestDate: sourceProject.requestDate,
-            createdAt: now,
-            updatedAt: now,
-          })
+    // 案件を複製
+    const newProject = this.createProject({
+      projectNumber: newProjectNumber,
+      projectName: sourceProject.projectName,
+      companyName: sourceProject.companyName,
+      companyId: sourceProject.companyId,
+      hallName: sourceProject.hallName,
+      hallId: sourceProject.hallId,
+      salesPersonName: sourceProject.salesPersonName,
+      requestDate: sourceProject.requestDate,
+      createdAt: now,
+      updatedAt: now,
+    })
 
     // 選択された商材を複製
     const newProducts: Product[] = []
@@ -259,17 +253,13 @@ export class LocalStorageProjectRepository implements ProjectRepository {
       const { id: _id, projectId: _projectId, ...rest } = sourceProduct
       const newProduct = this.createProduct({
         ...rest,
-        projectId: targetProject.id,
-        projectNumber: targetProject.projectNumber,
-        // ステータス系を初期状態に戻す
+        projectId: newProject.id,
+        projectNumber: newProjectNumber,
+        // ステータス系はリセット
         proposalStatus: "before-proposal",
         executionStatus: "実施前",
         readingCertainty: undefined,
-        managementConfirmationStatus: "unconfirmed",
-        // キャストの予約ステータスもリセット
-        companionBookingStatus: {},
-        directorBookingStatus: {},
-        mcBookingStatus: {},
+        managementConfirmationStatus: undefined,
         chatMessages: [],
         comments: [],
         statusHistory: [],
@@ -278,7 +268,36 @@ export class LocalStorageProjectRepository implements ProjectRepository {
       newProducts.push(newProduct)
     }
 
-    return { project: targetProject, products: newProducts }
+    return { project: newProject, products: newProducts }
+  }
+
+  duplicateProductsToSameProject(projectNumber: string, productIds: number[]): { projectNumber: string; products: Product[] } {
+    const sourceProject = this.getProjectByProjectNumber(projectNumber)
+    if (!sourceProject) throw new Error(`Project ${projectNumber} not found`)
+
+    const newProducts: Product[] = []
+    for (const productId of productIds) {
+      const sourceProduct = this.getProductById(productId)
+      if (!sourceProduct) continue
+
+      const { id: _id, projectId: _projectId, ...rest } = sourceProduct
+      const newProduct = this.createProduct({
+        ...rest,
+        projectId: sourceProject.id,
+        projectNumber: projectNumber,
+        proposalStatus: "before-proposal",
+        executionStatus: "実施前",
+        readingCertainty: undefined,
+        managementConfirmationStatus: undefined,
+        chatMessages: [],
+        comments: [],
+        statusHistory: [],
+        correctionRequest: undefined,
+      })
+      newProducts.push(newProduct)
+    }
+
+    return { projectNumber, products: newProducts }
   }
 
   // ─── 月次計上 ───

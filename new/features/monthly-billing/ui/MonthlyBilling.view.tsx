@@ -3,18 +3,23 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import type { MonthlyBilling } from "@/new/api/types"
-import type { BillingMode, CustomerBillingRow, UndeliveredItem } from "../hooks/useMonthlyBilling"
-import { VendorBillingList } from "./components/VendorBillingList"
+import type { MonthlyBilling, Company, Hall, HallQuote } from "@/new/api/types"
+import type { BillingMode, UndeliveredItem } from "../hooks/useMonthlyBilling"
+import type { BillingFilterState } from "./components/BillingFilters"
+import type { InvoiceRow } from "./components/BillingInvoiceTab"
+import type { PaymentRow } from "./components/BillingPaymentTab"
+import { BillingInvoiceTab } from "./components/BillingInvoiceTab"
+import { BillingPaymentTab } from "./components/BillingPaymentTab"
+import { InvoiceDetailView } from "./components/InvoiceDetailView"
 import { BillingDetail } from "./components/BillingDetail"
-import { CustomerBillingPreview } from "./components/CustomerBillingPreview"
+import { VendorBillingList } from "./components/VendorBillingList"
 
 export interface MonthlyBillingViewProps {
   billingMode: BillingMode
   onChangeBillingMode: (mode: BillingMode) => void
   selectedMonth: string
   onChangeMonth: (month: string) => void
-  // Payment mode props
+  // Payment mode props (vendor detail)
   billings: MonthlyBilling[]
   selectedBillingId: string | null
   onSelectBilling: (id: string) => void
@@ -35,233 +40,146 @@ export interface MonthlyBillingViewProps {
   onConfirmCarryOver: () => void
   onCancelCarryOver: () => void
   carriedOverItems: UndeliveredItem[]
-  // Invoice mode props
-  customerBillingRows: CustomerBillingRow[]
-  onExtractCustomerBillings: () => void
-  onDownloadCustomerBillingCsv: () => void
+  // 請求タブ
+  invoiceFilters: BillingFilterState
+  onInvoiceFiltersChange: (f: BillingFilterState) => void
+  invoiceRows: InvoiceRow[]
+  selectedInvoiceRow: InvoiceRow | null
+  onSelectInvoiceRow: (row: InvoiceRow | null) => void
+  invoiceHallQuote: HallQuote | null
+  // 支払いタブ
+  paymentFilters: BillingFilterState
+  onPaymentFiltersChange: (f: BillingFilterState) => void
+  paymentRows: PaymentRow[]
+  selectedPaymentRow: PaymentRow | null
+  onSelectPaymentRow: (row: PaymentRow | null) => void
+  onPaymentRowClick: (row: PaymentRow) => void
+  // master data
+  companies: Company[]
+  halls: Hall[]
 }
 
 const MODE_TABS: { mode: BillingMode; label: string }[] = [
-  { mode: "payment", label: "支払データ" },
-  { mode: "invoice", label: "請求データ" },
+  { mode: "invoice", label: "請求" },
+  { mode: "payment", label: "支払い" },
 ]
 
-export const MonthlyBillingView = ({
-  billingMode,
-  onChangeBillingMode,
-  selectedMonth,
-  onChangeMonth,
-  billings,
-  selectedBillingId,
-  onSelectBilling,
-  selectedBilling,
-  onExtractBillings,
-  onSendToVendor,
-  onResendToVendor,
-  onSendAgreement,
-  chatText,
-  onChatTextChange,
-  onSendChat,
-  allAcknowledged,
-  closingReported,
-  onReportClosing,
-  onDownloadCsv,
-  pendingCarryOver,
-  onConfirmCarryOver,
-  onCancelCarryOver,
-  carriedOverItems,
-  customerBillingRows,
-  onExtractCustomerBillings,
-  onDownloadCustomerBillingCsv,
-}: MonthlyBillingViewProps) => {
+export const MonthlyBillingView = (props: MonthlyBillingViewProps) => {
+  const { billingMode, onChangeBillingMode } = props
+
   return (
     <div className="flex flex-col h-full">
-      {/* Mode tabs */}
-      <div className="flex border-b shrink-0">
-        {MODE_TABS.map((tab) => (
-          <button
-            key={tab.mode}
-            onClick={() => onChangeBillingMode(tab.mode)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              billingMode === tab.mode
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* Mode tabs - only show when not drilled down */}
+      {!props.selectedInvoiceRow && !props.selectedPaymentRow && (
+        <div className="flex border-b shrink-0">
+          {MODE_TABS.map((tab) => (
+            <button
+              key={tab.mode}
+              onClick={() => onChangeBillingMode(tab.mode)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                billingMode === tab.mode
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Content area */}
       <div className="flex-1 overflow-hidden">
-        {billingMode === "payment" ? (
-          <PaymentModeContent
-            selectedMonth={selectedMonth}
-            onChangeMonth={onChangeMonth}
-            billings={billings}
-            selectedBillingId={selectedBillingId}
-            onSelectBilling={onSelectBilling}
-            selectedBilling={selectedBilling}
-            onExtractBillings={onExtractBillings}
-            onSendToVendor={onSendToVendor}
-            onResendToVendor={onResendToVendor}
-            onSendAgreement={onSendAgreement}
-            chatText={chatText}
-            onChatTextChange={onChatTextChange}
-            onSendChat={onSendChat}
-            allAcknowledged={allAcknowledged}
-            closingReported={closingReported}
-            onReportClosing={onReportClosing}
-            onDownloadCsv={onDownloadCsv}
-            pendingCarryOver={pendingCarryOver}
-            onConfirmCarryOver={onConfirmCarryOver}
-            onCancelCarryOver={onCancelCarryOver}
-            carriedOverItems={carriedOverItems}
+        {/* Invoice detail drilldown */}
+        {props.selectedInvoiceRow && props.invoiceHallQuote ? (
+          <InvoiceDetailView
+            quoteId={props.selectedInvoiceRow.quoteId}
+            projectNumber={props.selectedInvoiceRow.projectNumber}
+            productName={props.selectedInvoiceRow.productName}
+            companyName={props.selectedInvoiceRow.companyName}
+            hallQuote={props.invoiceHallQuote}
+            status={props.selectedInvoiceRow.status}
+            onBack={() => props.onSelectInvoiceRow(null)}
+          />
+        ) : props.selectedPaymentRow && props.selectedBilling ? (
+          /* Payment detail drilldown - vendor billing detail */
+          <div className="flex flex-col h-full">
+            <div className="p-3 border-b shrink-0">
+              <Button variant="ghost" size="sm" onClick={() => props.onSelectPaymentRow(null)} className="text-xs">
+                ← 支払い一覧に戻る
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <BillingDetail
+                billing={props.selectedBilling}
+                chatText={props.chatText}
+                onChatTextChange={props.onChatTextChange}
+                onSendChat={props.onSendChat}
+                onSendToVendor={props.onSendToVendor}
+                onResendToVendor={props.onResendToVendor}
+                onSendAgreement={props.onSendAgreement}
+              />
+            </div>
+          </div>
+        ) : billingMode === "invoice" ? (
+          <BillingInvoiceTab
+            filters={props.invoiceFilters}
+            onFiltersChange={props.onInvoiceFiltersChange}
+            rows={props.invoiceRows}
+            onClickRow={(row) => props.onSelectInvoiceRow(row)}
+            companies={props.companies}
+            halls={props.halls}
           />
         ) : (
-          <InvoiceModeContent
-            selectedMonth={selectedMonth}
-            onChangeMonth={onChangeMonth}
-            customerBillingRows={customerBillingRows}
-            onExtractCustomerBillings={onExtractCustomerBillings}
-            onDownloadCustomerBillingCsv={onDownloadCustomerBillingCsv}
-          />
-        )}
-      </div>
-    </div>
-  )
-}
-
-/* ---- Payment mode (existing layout) ---- */
-
-const PaymentModeContent = ({
-  selectedMonth,
-  onChangeMonth,
-  billings,
-  selectedBillingId,
-  onSelectBilling,
-  selectedBilling,
-  onExtractBillings,
-  onSendToVendor,
-  onResendToVendor,
-  onSendAgreement,
-  chatText,
-  onChatTextChange,
-  onSendChat,
-  allAcknowledged,
-  closingReported,
-  onReportClosing,
-  onDownloadCsv,
-  pendingCarryOver,
-  onConfirmCarryOver,
-  onCancelCarryOver,
-  carriedOverItems,
-}: {
-  selectedMonth: string
-  onChangeMonth: (month: string) => void
-  billings: MonthlyBilling[]
-  selectedBillingId: string | null
-  onSelectBilling: (id: string) => void
-  selectedBilling: MonthlyBilling | null
-  onExtractBillings: () => void
-  onSendToVendor: () => void
-  onResendToVendor: () => void
-  onSendAgreement: () => void
-  chatText: string
-  onChatTextChange: (text: string) => void
-  onSendChat: () => void
-  allAcknowledged: boolean
-  closingReported: boolean
-  onReportClosing: () => void
-  onDownloadCsv: () => void
-  pendingCarryOver: UndeliveredItem[] | null
-  onConfirmCarryOver: () => void
-  onCancelCarryOver: () => void
-  carriedOverItems: UndeliveredItem[]
-}) => {
-  return (
-    <div className="flex h-full">
-      {/* Left panel: month selector + vendor list */}
-      <div className="w-[320px] border-r flex flex-col shrink-0">
-        <div className="p-3 border-b space-y-2">
-          <div className="flex items-center gap-2">
-            <Input
-              type="month"
-              value={selectedMonth}
-              onChange={(e) => onChangeMonth(e.target.value)}
-              className="text-sm"
-            />
-          </div>
-          <Button onClick={onExtractBillings} size="sm" className="w-full">
-            データ抽出
-          </Button>
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          <VendorBillingList
-            billings={billings}
-            selectedBillingId={selectedBillingId}
-            onSelectBilling={onSelectBilling}
-          />
-        </div>
-
-        {/* Closing section */}
-        {billings.length > 0 && (
-          <div className="p-3 border-t space-y-2">
-            {allAcknowledged && !closingReported && (
-              <Button onClick={onReportClosing} size="sm" className="w-full">
-                請求チームへ確認完了を報告
+          <div className="flex flex-col h-full">
+            {/* Month selector + extract */}
+            <div className="p-3 border-b flex items-center gap-3 shrink-0">
+              <Input
+                type="month"
+                value={props.selectedMonth}
+                onChange={(e) => props.onChangeMonth(e.target.value)}
+                className="text-sm w-[200px]"
+              />
+              <Button onClick={props.onExtractBillings} size="sm">
+                データ抽出
               </Button>
-            )}
-            {closingReported && (
-              <Badge className="w-full justify-center bg-green-100 text-green-800 py-1">
-                請求チームへ報告済み
-              </Badge>
-            )}
-            {!allAcknowledged && billings.length > 0 && (
-              <p className="text-xs text-muted-foreground text-center">
-                全業者の了承完了後に締め処理が可能です
-              </p>
-            )}
-            <Button onClick={onDownloadCsv} size="sm" variant="outline" className="w-full">
-              支払データCSVダウンロード
-            </Button>
+              {props.billings.length > 0 && (
+                <Button onClick={props.onDownloadCsv} size="sm" variant="outline">
+                  支払データCSVダウンロード
+                </Button>
+              )}
+              {props.allAcknowledged && !props.closingReported && (
+                <Button onClick={props.onReportClosing} size="sm">
+                  請求チームへ確認完了を報告
+                </Button>
+              )}
+              {props.closingReported && (
+                <Badge className="bg-green-100 text-green-800 py-1 px-3">報告済み</Badge>
+              )}
+            </div>
+
+            {/* Payment tab: search filters + table */}
+            <BillingPaymentTab
+              filters={props.paymentFilters}
+              onFiltersChange={props.onPaymentFiltersChange}
+              rows={props.paymentRows}
+              onClickRow={(row) => {
+                props.onPaymentRowClick(row)
+                props.onSelectPaymentRow(row)
+              }}
+              companies={props.companies}
+              halls={props.halls}
+            />
+
+            {/* Carry-over dialog */}
+            <CarryOverDialog
+              pendingCarryOver={props.pendingCarryOver}
+              onConfirm={props.onConfirmCarryOver}
+              onCancel={props.onCancelCarryOver}
+            />
           </div>
         )}
       </div>
-
-      {/* Right panel: detail + carried-over notice */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Carried-over items notice */}
-        {carriedOverItems.length > 0 && (
-          <CarriedOverNotice items={carriedOverItems} />
-        )}
-
-        <div className="flex-1 overflow-y-auto">
-          {!selectedBilling ? (
-            <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-              左のリストから業者を選択してください
-            </div>
-          ) : (
-            <BillingDetail
-              billing={selectedBilling}
-              chatText={chatText}
-              onChatTextChange={onChatTextChange}
-              onSendChat={onSendChat}
-              onSendToVendor={onSendToVendor}
-              onResendToVendor={onResendToVendor}
-              onSendAgreement={onSendAgreement}
-            />
-          )}
-        </div>
-      </div>
-
-      {/* Carry-over confirmation dialog */}
-      <CarryOverDialog
-        pendingCarryOver={pendingCarryOver}
-        onConfirm={onConfirmCarryOver}
-        onCancel={onCancelCarryOver}
-      />
     </div>
   )
 }
@@ -284,7 +202,7 @@ const CarryOverDialog = ({
         <DialogHeader>
           <DialogTitle>発送未完了の景品があります</DialogTitle>
           <DialogDescription>
-            以下の景品は発送完了日が未入力のため、翌月に繰り越されます。完了済みの景品のみで支払データを作成します。
+            以下の景品は発送完了日が未入力のため、翌月に繰り越されます。
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto border rounded-md">
@@ -308,89 +226,10 @@ const CarryOverDialog = ({
           </Table>
         </div>
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={onCancel}>
-            キャンセル
-          </Button>
-          <Button onClick={onConfirm}>
-            繰り越して抽出
-          </Button>
+          <Button variant="outline" onClick={onCancel}>キャンセル</Button>
+          <Button onClick={onConfirm}>繰り越して抽出</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
-}
-
-/* ---- Carried-over items notice ---- */
-
-const CarriedOverNotice = ({ items }: { items: UndeliveredItem[] }) => {
-  return (
-    <div className="border-b bg-amber-50 p-3 shrink-0">
-      <p className="text-sm font-medium text-amber-800 mb-2">
-        翌月繰越: {items.length}件の景品が未発送のため繰り越されました
-      </p>
-      <div className="border rounded-md bg-white overflow-auto max-h-[200px]">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="text-xs">業者名</TableHead>
-              <TableHead className="text-xs">景品名</TableHead>
-              <TableHead className="text-xs">当選者名</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.map((item) => (
-              <TableRow key={`${item.vendorId}-${item.winnerId}`}>
-                <TableCell className="text-xs py-1">{item.vendorName}</TableCell>
-                <TableCell className="text-xs py-1">{item.prizeName}</TableCell>
-                <TableCell className="text-xs py-1">{item.winnerName}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  )
-}
-
-/* ---- Invoice mode ---- */
-
-const InvoiceModeContent = ({
-  selectedMonth,
-  onChangeMonth,
-  customerBillingRows,
-  onExtractCustomerBillings,
-  onDownloadCustomerBillingCsv,
-}: {
-  selectedMonth: string
-  onChangeMonth: (month: string) => void
-  customerBillingRows: CustomerBillingRow[]
-  onExtractCustomerBillings: () => void
-  onDownloadCustomerBillingCsv: () => void
-}) => {
-  return (
-    <div className="flex flex-col h-full">
-      {/* Top bar: month selector + actions */}
-      <div className="p-3 border-b flex items-center gap-3 shrink-0">
-        <Input
-          type="month"
-          value={selectedMonth}
-          onChange={(e) => onChangeMonth(e.target.value)}
-          className="text-sm w-[200px]"
-        />
-        <Button onClick={onExtractCustomerBillings} size="sm">
-          データ抽出
-        </Button>
-        {customerBillingRows.length > 0 && (
-          <Button onClick={onDownloadCustomerBillingCsv} size="sm" variant="outline">
-            請求データCSVダウンロード
-          </Button>
-        )}
-      </div>
-
-      {/* Preview table */}
-      <div className="flex-1 overflow-y-auto">
-        <CustomerBillingPreview rows={customerBillingRows} />
-      </div>
-    </div>
   )
 }

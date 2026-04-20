@@ -17,6 +17,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import type { Role } from "@/new/types/role"
+import { NotificationBell } from "@/new/ui/NotificationBell"
 
 const ROLE_BADGE_CONFIG: Record<Role, { label: string; color: string; icon: React.ReactNode }> = {
   Sales: { label: "営業", color: "bg-blue-600", icon: <Briefcase className="h-4 w-4" /> },
@@ -93,6 +94,8 @@ export const AppHeader = ({ currentRole }: AppHeaderProps) => {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+
+            <NotificationBell currentRole={currentRole} />
 
             <Badge variant="default" className={`${badge.color} text-white px-3 py-1.5 gap-2`}>
               {badge.icon}

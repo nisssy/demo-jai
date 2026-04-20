@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChevronLeft } from "lucide-react"
-import type { Company, Hall, ProductComment, ManagementConfirmationStatus } from "@/new/api/types"
+import type { Company, Hall, Product, ProductComment, ManagementConfirmationStatus } from "@/new/api/types"
 import type { RegistrationMode, ProjectFormState, ProductFormState, FormErrors } from "@/new/features/project-registration/model/types"
 import type { UseLotteryFormReturn } from "@/new/features/project-registration/hooks/useLotteryForm"
 import type { UseCastCalendarReturn } from "@/new/features/project-registration/hooks/useCastCalendar"
@@ -15,6 +15,7 @@ import { ThreeSetSection } from "./components/ThreeSetSection"
 import { ActionButtons } from "./components/ActionButtons"
 import { ConfirmationStatusBar } from "./components/ConfirmationStatusBar"
 import { ProductDetailStepper } from "./components/ProductDetailStepper"
+import { ProductEditHeader } from "./components/ProductEditHeader"
 import { CastCalendarModal } from "./components/CastCalendarModal"
 
 const MODE_TITLES: Record<RegistrationMode, string> = {
@@ -71,6 +72,8 @@ export type ProjectRegistrationViewProps = {
   // マネジメント部確認
   managementConfirmationStatus: ManagementConfirmationStatus
   handleRequestConfirmation: () => void
+  // エンティティ（ステータス参照用）
+  productEntity?: Product
   // アクション
   handleSubmit: () => void
   handleBack: () => void
@@ -119,6 +122,7 @@ export const ProjectRegistrationView = ({
   handleCastHoldTypeChange,
   managementConfirmationStatus,
   handleRequestConfirmation,
+  productEntity,
   handleSubmit,
   handleBack,
   lotteryForm,
@@ -164,7 +168,7 @@ export const ProjectRegistrationView = ({
   const renderProducts = () => {
     if (isProjectEditMode) return null
 
-    // 新規作成モード: 商材区分＋商材名のみ
+    // 新規作成モード: 商材区分＋商材名のみ（合同抽選会ならサービス名も表示）
     if (mode === "new") {
       return form.products.map((product, idx) => (
         <Card key={idx}>
@@ -195,6 +199,8 @@ export const ProjectRegistrationView = ({
               onThreeSetModeChange={() => {}}
               canSwitchToThreeSet={false}
               newModeMinimal
+              serviceName={lotteryForm.serviceName}
+              onServiceNameChange={lotteryForm.setServiceName}
             />
           </CardContent>
         </Card>
@@ -259,17 +265,15 @@ export const ProjectRegistrationView = ({
 
       if (mode === "product-edit") {
         elements.push(
-          <Card key={idx}>
-            <CardContent className="pt-6">
-              {product.category !== "ポイント" && (
-                <ConfirmationStatusBar
-                  status={managementConfirmationStatus}
-                  onRequestConfirmation={handleRequestConfirmation}
-                />
-              )}
-              <ProductContent {...contentProps} />
-            </CardContent>
-          </Card>
+          <div key={idx} className="space-y-6">
+            {product.category !== "ポイント" && (
+              <ConfirmationStatusBar
+                status={managementConfirmationStatus}
+                onRequestConfirmation={handleRequestConfirmation}
+              />
+            )}
+            <ProductContent {...contentProps} />
+          </div>
         )
       } else {
         elements.push(
@@ -288,26 +292,23 @@ export const ProjectRegistrationView = ({
     return elements
   }
 
-  // 商材編集モード用: 最初の商材情報を取得（ステッパー表示用）
   const firstProduct = form.products[0]
+  const isProductEdit = mode === "product-edit"
 
   return (
     <div className="space-y-0">
-      {/* 商材詳細ステッパー（product-edit モードのみ） */}
-      {mode === "product-edit" && firstProduct && (
-        <ProductDetailStepper
+      {isProductEdit && firstProduct && (
+        <ProductEditHeader
           proposalStatus={firstProduct.proposalStatus}
-          executionStatus={firstProduct.executionStatus}
-          eventProductName={firstProduct.eventProductName}
-          eventDate={firstProduct.eventDate}
-          category={firstProduct.category}
-          eventType={firstProduct.eventType}
-          estimatedBillingAmount={Number((firstProduct as any).estimatedBillingAmount) || 0}
-          hallName={form.hallName}
-          companyName={form.companyName}
-          salesPersonName={form.salesPersonName}
-          currentStep={currentStep}
-          onStepChange={setCurrentStep}
+          executionStatus={firstProduct.executionStatus ?? undefined}
+          managementConfirmationStatus={managementConfirmationStatus}
+          productEntity={productEntity}
+          form={form}
+          product={firstProduct}
+          onStatusChange={(status) => updateProduct(0, "proposalStatus", status)}
+          onReadingCertaintyChange={(value) => updateProduct(0, "readingCertainty", value)}
+          onExecutionStatusChange={(status) => updateProduct(0, "executionStatus", status)}
+          onConfirmOrder={() => { updateProduct(0, "proposalStatus", "order-received"); updateProduct(0, "readingCertainty", "") }}
         />
       )}
 

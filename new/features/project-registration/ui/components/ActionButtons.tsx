@@ -25,6 +25,10 @@ export const ActionButtons = ({
 }: ActionButtonsProps) => {
   const isProductMode = mode === "product-add" || mode === "product-edit"
   const canAddProduct = !isProductMode && mode !== "project-edit" && productCount < 5
+  // product-edit モードは自動保存するため更新ボタン不要
+  const showSubmit = mode !== "product-edit"
+
+  if (!canAddProduct && !showSubmit) return null
 
   return (
     <div className="flex items-center gap-4">
@@ -34,9 +38,11 @@ export const ActionButtons = ({
           商材を追加
         </Button>
       )}
-      <Button onClick={onSubmit}>
-        {SUBMIT_LABELS[mode]}
-      </Button>
+      {showSubmit && (
+        <Button onClick={onSubmit}>
+          {SUBMIT_LABELS[mode]}
+        </Button>
+      )}
     </div>
   )
 }

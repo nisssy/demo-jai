@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import type { ProjectRepository } from "@/new/api/project-repository"
-import type { MonthlyBilling, BillingLineItem, BillingChatMessage } from "@/new/api/types"
+import type { MonthlyBilling, BillingLineItem, BillingChatMessage, HallQuote } from "@/new/api/types"
+import type { InvoiceRow } from "../ui/components/BillingInvoiceTab"
+import type { PaymentRow } from "../ui/components/BillingPaymentTab"
+import { type BillingFilterState, INITIAL_BILLING_FILTERS } from "../ui/components/BillingFilters"
 
 export type BillingMode = "payment" | "invoice"
 
@@ -473,6 +476,103 @@ export function useMonthlyBilling(repository: ProjectRepository) {
     triggerDownload(csv, filename)
   }, [customerBillingRows, buildCustomerRows, selectedMonth])
 
+  // ─── 請求/支払い タブ用データ ───
+
+  const [invoiceFilters, setInvoiceFilters] = useState<BillingFilterState>(INITIAL_BILLING_FILTERS)
+  const [paymentFilters, setPaymentFilters] = useState<BillingFilterState>(INITIAL_BILLING_FILTERS)
+  const [selectedInvoiceRow, setSelectedInvoiceRow] = useState<InvoiceRow | null>(null)
+  const [selectedPaymentRow, setSelectedPaymentRow] = useState<PaymentRow | null>(null)
+
+  // Build invoice rows from hallQuotes across all lottery products
+  const allInvoiceRows = useMemo((): InvoiceRow[] => {
+    const products = repository.getProducts()
+    const projects = repository.getProjects()
+    const rows: InvoiceRow[] = []
+
+    for (const product of products) {
+      if (!product.hallQuotes || product.hallQuotes.length === 0) continue
+      const project = projects.find((pj) => pj.projectNumber === product.projectNumber)
+
+      product.hallQuotes.forEach((hq, hallIdx) => {
+        const total = hq.calculatedAmount ?? hq.quoteItems.reduce((s, qi) => s + qi.quantity * qi.unitPrice, 0)
+        const hasOrder = Boolean(product.prizeOrderRequestedAt)
+        const isPaid = Boolean(product.notificationOrderSentAt && product.prizeOrderRequestedAt)
+        const status: InvoiceRow["status"] = isPaid ? "請求完了" : hasOrder ? "請求中" : "請求前"
+
+        rows.push({
+          quoteId: `Q-${product.projectNumber}-${String(hallIdx + 1).padStart(2, "0")}`,
+          quoteAmount: total,
+          status,
+          projectNumber: product.projectNumber,
+          recordNumber: `R-${String(product.id).padStart(4, "0")}`,
+          category: product.category,
+          productName: product.eventProductName,
+          companyName: project?.companyName ?? "-",
+          hallName: hq.hallName,
+          productId: product.id,
+          hallIndex: hallIdx,
+        })
+      })
+    }
+    return rows
+  }, [repository, refreshKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Filter invoice rows
+  const filteredInvoiceRows = useMemo(() => {
+    return allInvoiceRows.filter((row) => {
+      const f = invoiceFilters
+      if (f.companyId && !row.companyName.includes(f.companyId)) return false
+      if (f.hallName && row.hallName !== f.hallName) return false
+      if (f.category && row.category !== f.category) return false
+      if (f.productName && !row.productName.includes(f.productName)) return false
+      if (f.quoteId && !row.quoteId.includes(f.quoteId)) return false
+      if (f.projectNumber && !row.projectNumber.includes(f.projectNumber)) return false
+      if (f.recordNumber && !row.recordNumber.includes(f.recordNumber)) return false
+      if (f.projectName && !row.productName.includes(f.projectName)) return false
+      return true
+    })
+  }, [allInvoiceRows, invoiceFilters])
+
+  // Build payment rows from monthly billings
+  const allPaymentRows = useMemo((): PaymentRow[] => {
+    return billings.map((b) => {
+      let status: PaymentRow["status"] = "支払い前"
+      if (b.status === "acknowledged" || b.status === "agreed") {
+        status = "支払い完了"
+      } else if (b.status === "sent" || b.status === "confirmed" || b.status === "invoice-received" || b.status === "correction-requested") {
+        status = "支払い中"
+      }
+      return {
+        vendorId: b.vendorId,
+        vendorName: b.vendorName,
+        paymentAmount: b.totalAmount,
+        status,
+        billingId: b.id,
+      }
+    })
+  }, [billings])
+
+  const filteredPaymentRows = useMemo(() => {
+    return allPaymentRows.filter((row) => {
+      const f = paymentFilters
+      if (f.projectName && !row.vendorName.includes(f.projectName)) return false
+      return true
+    })
+  }, [allPaymentRows, paymentFilters])
+
+  // Get hall quote for invoice detail
+  const getInvoiceHallQuote = useCallback((productId: number, hallIndex: number): HallQuote | null => {
+    const product = repository.getProductById(productId)
+    if (!product?.hallQuotes || hallIndex >= product.hallQuotes.length) return null
+    return product.hallQuotes[hallIndex]
+  }, [repository])
+
+  // Handle payment row click → select the billing and show detail
+  const handlePaymentRowClick = useCallback((row: PaymentRow) => {
+    setSelectedBillingId(row.billingId)
+    setSelectedPaymentRow(row)
+  }, [])
+
   return {
     billingMode,
     setBillingMode,
@@ -498,5 +598,18 @@ export function useMonthlyBilling(repository: ProjectRepository) {
     confirmCarryOverAndExtract,
     cancelCarryOver,
     carriedOverItems,
+    // 請求/支払い タブ
+    invoiceFilters,
+    setInvoiceFilters,
+    paymentFilters,
+    setPaymentFilters,
+    filteredInvoiceRows,
+    filteredPaymentRows,
+    selectedInvoiceRow,
+    setSelectedInvoiceRow,
+    selectedPaymentRow,
+    setSelectedPaymentRow,
+    getInvoiceHallQuote,
+    handlePaymentRowClick,
   }
 }

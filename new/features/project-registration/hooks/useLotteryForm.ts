@@ -63,7 +63,8 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
 
   // ─── セクション1: 基本情報 ───
   const [halls, setHalls] = useState<LotteryHallEntry[]>([emptyHallEntry()])
-  const [dmMailing, setDmMailing] = useState<"yes" | "no">("no")
+  const [serviceName, setServiceName] = useState<"たまリッチ" | "SmartPoint" | "">("たまリッチ")
+  const [dmMailing, setDmMailing] = useState<"yes" | "no">("yes")
   const [eventStartDate, setEventStartDate] = useState("")
   const [eventEndDate, setEventEndDate] = useState("")
   const [salesPersonId, setSalesPersonId] = useState("")
@@ -264,25 +265,55 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
       return companyHalls.length > 0 ? companyPct / companyHalls.length : 0
     }
 
+    /** 納品予定日を生成（25日以前のランダム日付） */
+    const makeDeliveryDate = (baseId: number): string => {
+      const now = new Date()
+      const month = now.getMonth() + (baseId <= 2 ? 0 : 1)
+      const year = now.getFullYear() + Math.floor(month / 12)
+      const m = month % 12
+      const day = 5 + ((baseId * 7) % 20) // 5〜24の範囲
+      return `${year}-${String(m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+    }
+    /** 仕入計上日 = 納品予定日の翌月末 */
+    const makePurchaseRecordDate = (deliveryDate: string): string => {
+      const d = new Date(deliveryDate)
+      const nextMonth = new Date(d.getFullYear(), d.getMonth() + 2, 0) // 翌月末
+      return `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, "0")}-${String(nextMonth.getDate()).padStart(2, "0")}`
+    }
+
     return validHalls.map((hall) => {
       const pct = getHallPct(hall)
       const items: QuoteItem[] = []
 
+      /** 発注期限 = 納品予定日の7日前 */
+      const makeOrderDeadline = (deliveryDate: string): string => {
+        const d = new Date(deliveryDate)
+        d.setDate(d.getDate() - 7)
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+      }
+
       const designAmt = parseFloat(quoteConfig.totalQuoteItems[1] || "0") || 0
-      items.push({ id: 1, name: "ポスターデザイン", quantity: 1, unitPrice: Math.floor((designAmt * pct) / 100), included: true })
+      const designUnitPrice = Math.floor((designAmt * pct) / 100)
+      const dd1 = makeDeliveryDate(1)
+      items.push({ id: 1, name: "ポスターデザイン", category: "イベント", eventSubject: "販促費", modelNumber: "PD-001", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: designUnitPrice, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: makePurchaseRecordDate(dd1), salesUnitPrice: Math.floor(designUnitPrice * 1.2), orderVendorName: "仕入先A", orderDeadline: makeOrderDeadline(dd1), deliveryDate: dd1, orderId: "", orderDate: "", note: "" })
 
       const totalPoster = posterPrintQty * posterPrintPrice
       const hallPosterAmt = Math.floor((totalPoster * pct) / 100)
       const hallPosterQty = posterPrintPrice > 0 ? Math.floor(hallPosterAmt / posterPrintPrice) : 0
-      items.push({ id: 2, name: "ポスター印刷", quantity: hallPosterQty, unitPrice: posterPrintPrice, included: true })
+      const dd2 = makeDeliveryDate(2)
+      items.push({ id: 2, name: "ポスター印刷", category: "イベント", eventSubject: "印刷費", modelNumber: "PP-A3", rentalGrade: "-", setting: "-", quantity: hallPosterQty, unitPrice: posterPrintPrice, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: makePurchaseRecordDate(dd2), salesUnitPrice: Math.floor(posterPrintPrice * 1.25), orderVendorName: "仕入先B", orderDeadline: makeOrderDeadline(dd2), deliveryDate: dd2, orderId: "", orderDate: "", note: "" })
 
       if (dmMailing === "yes") {
         const dmAmt = parseFloat(quoteConfig.totalQuoteItems[3] || "0") || 0
-        items.push({ id: 3, name: "DM発送代行", quantity: 1, unitPrice: Math.floor((dmAmt * pct) / 100), included: true })
+        const dmUnitPrice = Math.floor((dmAmt * pct) / 100)
+        const dd3 = makeDeliveryDate(3)
+        items.push({ id: 3, name: "DM発送代行", category: "ポイント", eventSubject: "発送費", modelNumber: "DM-100", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: dmUnitPrice, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: makePurchaseRecordDate(dd3), salesUnitPrice: Math.floor(dmUnitPrice * 1.2), orderVendorName: "仕入先C", orderDeadline: makeOrderDeadline(dd3), deliveryDate: dd3, orderId: "", orderDate: "", note: "" })
       }
 
       const sysAmt = parseFloat(quoteConfig.totalQuoteItems[4] || "0") || 0
-      items.push({ id: 4, name: "抽選システム利用料", quantity: 1, unitPrice: Math.floor((sysAmt * pct) / 100), included: true })
+      const sysUnitPrice = Math.floor((sysAmt * pct) / 100)
+      const dd4 = makeDeliveryDate(4)
+      items.push({ id: 4, name: "抽選システム利用料", category: "ポイント", eventSubject: "システム費", modelNumber: "SYS-01", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: sysUnitPrice, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: makePurchaseRecordDate(dd4), salesUnitPrice: Math.floor(sysUnitPrice * 1.2), orderVendorName: "仕入先D", orderDeadline: makeOrderDeadline(dd4), deliveryDate: dd4, orderId: "", orderDate: "", note: "" })
 
       return {
         hallName: hall.hallName,
@@ -303,6 +334,55 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
       setQuoteGenerated(true)
     }
   }, [isPercentageValid, totalAmount, generateHallQuotes])
+
+  // デザイン修正費をホール別見積もりに追加
+  const addDesignCorrectionToHallQuotes = useCallback((amount: number) => {
+    setHallQuotes((prev) => {
+      if (prev.length === 0) return prev
+      const now = new Date()
+      const dd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(Math.min(now.getDate() + 14, 24)).padStart(2, "0")}`
+      const prd = (() => { const d = new Date(dd); const nme = new Date(d.getFullYear(), d.getMonth() + 2, 0); return `${nme.getFullYear()}-${String(nme.getMonth() + 1).padStart(2, "0")}-${String(nme.getDate()).padStart(2, "0")}` })()
+      const odl = (() => { const d = new Date(dd); d.setDate(d.getDate() - 7); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` })()
+      return prev.map((hq) => {
+        const pct = hq.percentage || 100
+        const hallAmount = Math.floor((amount * pct) / 100)
+        const existing = hq.quoteItems.find((item) => item.name === "デザイン修正費")
+        const newItem: QuoteItem = {
+          id: Math.max(...hq.quoteItems.map((i) => i.id), 0) + 1,
+          name: "デザイン修正費", category: "イベント", eventSubject: "修正費", modelNumber: "", rentalGrade: "-",
+          quantity: 1, unitPrice: hallAmount, included: true,
+          purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: prd,
+          salesUnitPrice: Math.floor(hallAmount * 1.2),
+          orderVendorName: "", orderDeadline: odl, deliveryDate: dd, orderId: "", orderDate: "", note: "",
+        }
+        const updatedItems = existing
+          ? hq.quoteItems.map((item) => item.name === "デザイン修正費" ? { ...item, unitPrice: hallAmount, salesUnitPrice: Math.floor(hallAmount * 1.2) } : item)
+          : [...hq.quoteItems, newItem]
+        const newTotal = updatedItems.filter((i) => i.included).reduce((s, i) => s + i.quantity * i.unitPrice, 0)
+        return { ...hq, quoteItems: updatedItems, calculatedAmount: newTotal }
+      })
+    })
+  }, [])
+
+  // ホール別見積もりの個別項目を編集
+  const updateHallQuoteItem = useCallback((hallName: string, itemId: number, updates: Partial<QuoteItem>) => {
+    setHallQuotes((prev) => prev.map((hq) => {
+      if (hq.hallName !== hallName) return hq
+      const updatedItems = hq.quoteItems.map((item) => {
+        if (item.id !== itemId) return item
+        const updated = { ...item, ...updates }
+        // 仕入計上日の自動計算: deliveryDate が変更されたら翌月末を設定
+        if (updates.deliveryDate && !updates.purchaseRecordDate) {
+          const d = new Date(updates.deliveryDate)
+          const nextMonthEnd = new Date(d.getFullYear(), d.getMonth() + 2, 0)
+          updated.purchaseRecordDate = `${nextMonthEnd.getFullYear()}-${String(nextMonthEnd.getMonth() + 1).padStart(2, "0")}-${String(nextMonthEnd.getDate()).padStart(2, "0")}`
+        }
+        return updated
+      })
+      const newTotal = updatedItems.filter((i) => i.included).reduce((s, i) => s + i.quantity * i.unitPrice, 0)
+      return { ...hq, quoteItems: updatedItems, calculatedAmount: newTotal }
+    }))
+  }, [])
 
   // ─── セクション4: ステータス ───
   const [proposalStatus, setProposalStatus] = useState<OrderStatus>("before-proposal")
@@ -539,6 +619,7 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
       })
       setHalls(loadedHalls)
     }
+    if (product.serviceName) setServiceName(product.serviceName)
     if (product.dmMailing) setDmMailing(product.dmMailing)
     if (product.eventStartDate) setEventStartDate(product.eventStartDate.replace(/\//g, "-"))
     if (product.eventEndDate) setEventEndDate(product.eventEndDate.replace(/\//g, "-"))
@@ -554,11 +635,85 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
 
     // 見積
     if (product.quoteConfig) {
-      setQuoteConfig(product.quoteConfig)
+      const loadedConfig = { ...product.quoteConfig }
+      // ホールがあるが hallPercentages が空の場合、均等配分を自動設定
+      if (product.hallNames?.length && (!loadedConfig.hallPercentages || Object.keys(loadedConfig.hallPercentages).length === 0)) {
+        const count = product.hallNames.length
+        const pct = Math.floor(10000 / count) / 100
+        const newPercentages: Record<string, number> = {}
+        product.hallNames.forEach((name) => { newPercentages[name] = pct })
+        loadedConfig.hallPercentages = newPercentages
+      }
+      setQuoteConfig(loadedConfig)
+    } else if (product.hallNames?.length) {
+      // quoteConfig 自体がない場合でもホールがあれば均等配分を設定
+      const count = product.hallNames.length
+      const pct = Math.floor(10000 / count) / 100
+      const newPercentages: Record<string, number> = {}
+      product.hallNames.forEach((name) => { newPercentages[name] = pct })
+      setQuoteConfig((prev) => ({ ...prev, hallPercentages: newPercentages }))
     }
     if (product.hallQuotes?.length) {
       setHallQuotes(product.hallQuotes)
       setQuoteGenerated(true)
+    } else if (product.hallNames?.length) {
+      // hallQuotesが未生成の場合、quoteConfigとhallNamesからその場で生成
+      const cfg = product.quoteConfig ?? emptyQuoteConfig()
+      const hpct: Record<string, number> = (cfg.hallPercentages && Object.keys(cfg.hallPercentages).length > 0)
+        ? cfg.hallPercentages
+        : (() => {
+            const p: Record<string, number> = {}
+            const c = product.hallNames!.length
+            product.hallNames!.forEach((n) => { p[n] = Math.floor(10000 / c) / 100 })
+            return p
+          })()
+      const pQty = parseFloat(cfg.posterPrintQuantity || "50") || 0
+      const pPrice = parseFloat(cfg.posterPrintUnitPrice || "2000") || 0
+      const pTotal = pQty * pPrice
+      const isDm = (product.dmMailing ?? "yes") === "yes"
+      let tAmount = 0
+      tAmount += parseFloat(cfg.totalQuoteItems?.[1] || "0") || 0
+      tAmount += pTotal
+      if (isDm) tAmount += parseFloat(cfg.totalQuoteItems?.[3] || "0") || 0
+      tAmount += parseFloat(cfg.totalQuoteItems?.[4] || "0") || 0
+      if (tAmount > 0) {
+        const mkDD = (baseId: number): string => {
+          const now = new Date()
+          const month = now.getMonth() + (baseId <= 2 ? 0 : 1)
+          const year = now.getFullYear() + Math.floor(month / 12)
+          const m = month % 12
+          const day = 5 + ((baseId * 7) % 20)
+          return `${year}-${String(m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+        }
+        const mkPRD = (dd: string): string => {
+          const d = new Date(dd)
+          const nme = new Date(d.getFullYear(), d.getMonth() + 2, 0)
+          return `${nme.getFullYear()}-${String(nme.getMonth() + 1).padStart(2, "0")}-${String(nme.getDate()).padStart(2, "0")}`
+        }
+        const mkODL = (dd: string): string => {
+          const d = new Date(dd); d.setDate(d.getDate() - 7)
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+        }
+        const generated: HallQuote[] = product.hallNames!.map((name) => {
+          const pct = hpct[name] || 0
+          const dd1 = mkDD(1); const dd2 = mkDD(2); const dd3 = mkDD(3); const dd4 = mkDD(4)
+          const designUp = Math.floor((parseFloat(cfg.totalQuoteItems?.[1] || "0") * pct) / 100)
+          const posterQty = pPrice > 0 ? Math.floor((pTotal * pct / 100) / pPrice) : 0
+          const items: QuoteItem[] = [
+            { id: 1, name: "ポスターデザイン", category: "イベント", eventSubject: "販促費", modelNumber: "PD-001", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: designUp, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: mkPRD(dd1), salesUnitPrice: Math.floor(designUp * 1.2), orderVendorName: "仕入先A", orderDeadline: mkODL(dd1), deliveryDate: dd1, orderId: "", orderDate: "", note: "" },
+            { id: 2, name: "ポスター印刷", category: "イベント", eventSubject: "印刷費", modelNumber: "PP-A3", rentalGrade: "-", setting: "-", quantity: posterQty, unitPrice: pPrice, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: mkPRD(dd2), salesUnitPrice: Math.floor(pPrice * 1.25), orderVendorName: "仕入先B", orderDeadline: mkODL(dd2), deliveryDate: dd2, orderId: "", orderDate: "", note: "" },
+          ]
+          if (isDm) {
+            const dmUp = Math.floor((parseFloat(cfg.totalQuoteItems?.[3] || "0") * pct) / 100)
+            items.push({ id: 3, name: "DM発送代行", category: "ポイント", eventSubject: "発送費", modelNumber: "DM-100", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: dmUp, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: mkPRD(dd3), salesUnitPrice: Math.floor(dmUp * 1.2), orderVendorName: "仕入先C", orderDeadline: mkODL(dd3), deliveryDate: dd3, orderId: "", orderDate: "", note: "" })
+          }
+          const sysUp = Math.floor((parseFloat(cfg.totalQuoteItems?.[4] || "0") * pct) / 100)
+          items.push({ id: 4, name: "抽選システム利用料", category: "ポイント", eventSubject: "システム費", modelNumber: "SYS-01", rentalGrade: "-", setting: "-", quantity: 1, unitPrice: sysUp, included: true, purchaseReducedTax: "対象外", salesReducedTax: "対象外", purchaseRecordDate: mkPRD(dd4), salesUnitPrice: Math.floor(sysUp * 1.2), orderVendorName: "仕入先D", orderDeadline: mkODL(dd4), deliveryDate: dd4, orderId: "", orderDate: "", note: "" })
+          return { hallName: name, quoteItems: items, percentage: pct, calculatedAmount: Math.floor((tAmount * pct) / 100) }
+        })
+        setHallQuotes(generated)
+        setQuoteGenerated(true)
+      }
     }
 
     // salesPerson名
@@ -575,6 +730,7 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
   // ─── getLotteryData: 保存用データ ───
   const getLotteryData = useCallback((): LotteryFormState => ({
     halls,
+    serviceName,
     dmMailing,
     eventStartDate,
     eventEndDate,
@@ -592,7 +748,7 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
     readingCertainty,
     executionStatus,
   }), [
-    halls, dmMailing, eventStartDate, eventEndDate, salesPersonId, salesPersonName,
+    halls, serviceName, dmMailing, eventStartDate, eventEndDate, salesPersonId, salesPersonName,
     insightPersonId, insightPersonName, eventName, selectedPrizeSetId, prizeInfo,
     quoteConfig, quoteGenerated, hallQuotes, proposalStatus, readingCertainty, executionStatus,
   ])
@@ -605,6 +761,7 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
     isLastTab,
     // 基本情報
     halls,
+    serviceName,
     dmMailing,
     eventStartDate,
     eventEndDate,
@@ -617,6 +774,7 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
     removeHall,
     selectCompanyForHall,
     selectHallForEntry,
+    setServiceName,
     setDmMailing,
     setEventStartDate,
     setEventEndDate,
@@ -647,6 +805,7 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
     hallPercentages,
     companyPercentages,
     updateTotalQuoteItem,
+    addDesignCorrectionToHallQuotes,
     setPosterPrintQuantity,
     setPosterPrintUnitPrice,
     setDmOrderCount,
@@ -657,6 +816,7 @@ export function useLotteryForm({ repository, productId, initialHallName, initial
     quoteCalc,
     quoteGenerated,
     hallQuotes,
+    updateHallQuoteItem,
     // ステータス
     proposalStatus,
     readingCertainty,

@@ -16,17 +16,19 @@ export const ProjectListContainer = () => {
     messagesCount,
     filters,
     setFilters,
-    companyHallSearchOpen,
-    setCompanyHallSearchOpen,
-    companyHallSearchType,
-    companyHallSearchQuery,
-    setCompanyHallSearchQuery,
+    companySearchOpen,
+    setCompanySearchOpen,
+    companySearchQuery,
+    setCompanySearchQuery,
     filteredCompanies,
-    filteredHalls,
     getCompanyByCompanyId,
-    handleSelectHall,
     handleSelectCompany,
-    handleCompanyHallSearchTypeChange,
+    hallSearchOpen,
+    setHallSearchOpen,
+    hallSearchQuery,
+    setHallSearchQuery,
+    filteredHalls,
+    handleSelectHall,
     savedConditions,
     handleSaveCondition,
     handleDeleteCondition,
@@ -38,6 +40,8 @@ export const ProjectListContainer = () => {
     handleClickMessageProduct,
     handleProductCreated,
     handleDuplicated,
+    addProductModalOpen,
+    setAddProductModalOpen,
     repository: hookRepository,
   } = useProjectList({ repository })
 
@@ -50,17 +54,19 @@ export const ProjectListContainer = () => {
       messagesCount={messagesCount}
       filters={filters}
       onFiltersChange={setFilters}
-      companyHallSearchOpen={companyHallSearchOpen}
-      onCompanyHallSearchOpenChange={setCompanyHallSearchOpen}
-      companyHallSearchType={companyHallSearchType}
-      onCompanyHallSearchTypeChange={handleCompanyHallSearchTypeChange}
-      companyHallSearchQuery={companyHallSearchQuery}
-      onCompanyHallSearchQueryChange={setCompanyHallSearchQuery}
+      companySearchOpen={companySearchOpen}
+      onCompanySearchOpenChange={setCompanySearchOpen}
+      companySearchQuery={companySearchQuery}
+      onCompanySearchQueryChange={setCompanySearchQuery}
       filteredCompanies={filteredCompanies}
-      filteredHalls={filteredHalls}
       getCompanyByCompanyId={getCompanyByCompanyId}
-      onSelectHall={handleSelectHall}
       onSelectCompany={handleSelectCompany}
+      hallSearchOpen={hallSearchOpen}
+      onHallSearchOpenChange={setHallSearchOpen}
+      hallSearchQuery={hallSearchQuery}
+      onHallSearchQueryChange={setHallSearchQuery}
+      filteredHalls={filteredHalls}
+      onSelectHall={handleSelectHall}
       savedConditions={savedConditions}
       onSaveCondition={handleSaveCondition}
       onDeleteCondition={handleDeleteCondition}
@@ -73,6 +79,8 @@ export const ProjectListContainer = () => {
       repository={hookRepository}
       onProductCreated={handleProductCreated}
       onDuplicated={handleDuplicated}
+      addProductModalOpen={addProductModalOpen}
+      onAddProductModalOpenChange={setAddProductModalOpen}
     />
   )
 }
