@@ -97,16 +97,17 @@ export const COSTUME_LABELS: Record<string, string> = {
 
 // ─── カテゴリ・イベント区分マッピング ───
 
-export const EVENT_TYPE_TO_CATEGORY: Record<string, string> = {
-  "トリニティガール": "イベント",
-  "スロセレ": "イベント",
-  "合同抽選会": "ポイント",
-}
-
 export const CATEGORY_TO_EVENT_TYPES: Record<string, string[]> = {
   "イベント": ["トリニティガール", "スロセレ"],
+  "オプション": ["LINE広告", "お知らせバナー", "メインバナー"],
   "ポイント": ["合同抽選会"],
 }
+
+export const EVENT_TYPE_TO_CATEGORY: Record<string, string> = Object.fromEntries(
+  Object.entries(CATEGORY_TO_EVENT_TYPES).flatMap(([category, eventTypes]) =>
+    eventTypes.map((eventType) => [eventType, category])
+  )
+)
 
 export function getCategoryByEventType(eventType: string): string | undefined {
   return EVENT_TYPE_TO_CATEGORY[eventType]
@@ -114,6 +115,14 @@ export function getCategoryByEventType(eventType: string): string | undefined {
 
 export function getEventTypesByCategory(category: string): string[] {
   return CATEGORY_TO_EVENT_TYPES[category] || []
+}
+
+export function getAllCategories(): string[] {
+  return Object.keys(CATEGORY_TO_EVENT_TYPES)
+}
+
+export function getAllEventTypes(): string[] {
+  return Object.values(CATEGORY_TO_EVENT_TYPES).flat()
 }
 
 // ─── マネジメント部確認ステータス ───

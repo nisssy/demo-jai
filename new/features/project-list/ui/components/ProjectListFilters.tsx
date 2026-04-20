@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import type { FilterState, SavedSearchCondition } from "@/new/features/project-list/model/types"
 import type { Company, Hall } from "@/new/api/types"
+import { getAllCategories, getAllEventTypes, getEventTypesByCategory } from "@/new/api/display"
 
 /** 47都道府県 */
 const PREFECTURES = [
@@ -46,15 +47,7 @@ const DEPARTMENT_OPTIONS = [
   "企画部",
 ]
 
-/** 商材名の選択肢 */
-const PRODUCT_NAME_OPTIONS = [
-  "トリニティガール",
-  "合同抽選会",
-  "LINE広告",
-  "お知らせバナー",
-  "メインバナー",
-  "スロセレ",
-]
+const CATEGORY_OPTIONS = getAllCategories()
 
 /** ステータス（提案ステータス）選択肢 */
 const STATUS_OPTIONS = [
@@ -207,9 +200,12 @@ export const ProjectListFilters = ({
     })
   }
 
+  const availableProductNames = filters.category
+    ? getEventTypesByCategory(filters.category)
+    : getAllEventTypes()
   const filteredProductNames = productNameQuery
-    ? PRODUCT_NAME_OPTIONS.filter((n) => n.toLowerCase().includes(productNameQuery.toLowerCase()))
-    : PRODUCT_NAME_OPTIONS
+    ? availableProductNames.filter((n) => n.toLowerCase().includes(productNameQuery.toLowerCase()))
+    : availableProductNames
 
   return (
     <Card className="mb-6 border-slate-200 bg-slate-50">
@@ -655,8 +651,9 @@ export const ProjectListFilters = ({
               onValueChange={(value) => {
                 const newCategory = value === "all" ? "" : value
                 updateFilter("category", newCategory)
-                if (filters.eventType) {
-                  if (newCategory && !PRODUCT_NAME_OPTIONS.some((n) => n === filters.eventType)) {
+                if (filters.eventType && newCategory) {
+                  const allowed = getEventTypesByCategory(newCategory)
+                  if (!allowed.includes(filters.eventType)) {
                     updateFilter("eventType", "")
                   }
                 }
@@ -667,9 +664,9 @@ export const ProjectListFilters = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">すべて</SelectItem>
-                <SelectItem value="イベント">イベント</SelectItem>
-                <SelectItem value="ポイント">ポイント</SelectItem>
-                <SelectItem value="オプション">オプション</SelectItem>
+                {CATEGORY_OPTIONS.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

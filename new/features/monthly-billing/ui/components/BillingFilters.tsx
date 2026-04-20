@@ -9,6 +9,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import type { Company, Hall } from "@/new/api/types"
+import { getAllCategories, getAllEventTypes } from "@/new/api/display"
 
 export type BillingFilterState = {
   companyId: string
@@ -57,8 +58,8 @@ const PREFECTURES = [
 
 const AREA_OPTIONS = ["東京本社①", "東京本社②", "関東①", "関東②", "関西", "中部", "九州", "東北", "北海道"]
 const DEPARTMENT_OPTIONS = ["営業部", "管理部", "経理部", "企画部"]
-const CATEGORY_OPTIONS = ["イベント", "ポイント"]
-const PRODUCT_NAME_OPTIONS = ["トリニティガール", "合同抽選会", "LINE広告", "お知らせバナー", "メインバナー", "スロセレ"]
+const CATEGORY_OPTIONS = getAllCategories()
+const PRODUCT_NAME_OPTIONS = getAllEventTypes()
 
 type BillingFiltersProps = {
   filters: BillingFilterState

@@ -12,16 +12,9 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { ChevronLeft, ChevronsUpDown, Check } from "lucide-react"
 import type { Project, Company, Hall } from "@/new/api/types"
 import type { ProjectRepository } from "@/new/api/project-repository"
+import { getAllEventTypes } from "@/new/api/display"
 
-/** 商材名の選択肢 */
-const PRODUCT_NAME_OPTIONS = [
-  "トリニティガール",
-  "合同抽選会",
-  "LINE広告",
-  "お知らせバナー",
-  "メインバナー",
-  "スロセレ",
-]
+const PRODUCT_NAME_OPTIONS = getAllEventTypes()
 
 type AddProductModalProps = {
   open: boolean
