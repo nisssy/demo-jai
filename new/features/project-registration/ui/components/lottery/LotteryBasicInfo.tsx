@@ -13,7 +13,7 @@ import { useState } from "react"
 type LotteryBasicInfoProps = {
   halls: LotteryHallEntry[]
   serviceName: "たまリッチ" | "SmartPoint" | ""
-  dmMailing: "yes" | "no"
+  posterDesignChange: "yes" | "no"
   eventStartDate: string
   eventEndDate: string
   salesPersonName: string
@@ -27,7 +27,7 @@ type LotteryBasicInfoProps = {
   onSelectCompanyForHall: (index: number, companyId: string) => void
   onSelectHallForEntry: (index: number, hallName: string) => void
   onServiceNameChange: (value: "たまリッチ" | "SmartPoint" | "") => void
-  onDmMailingChange: (value: "yes" | "no") => void
+  onPosterDesignChangeChange: (value: "yes" | "no") => void
   onEventStartDateChange: (value: string) => void
   onEventEndDateChange: (value: string) => void
   onSalesPersonChange: (id: string, name: string) => void
@@ -39,7 +39,7 @@ type LotteryBasicInfoProps = {
 export const LotteryBasicInfo = ({
   halls,
   serviceName,
-  dmMailing,
+  posterDesignChange,
   eventStartDate,
   eventEndDate,
   salesPersonName,
@@ -53,7 +53,7 @@ export const LotteryBasicInfo = ({
   onSelectCompanyForHall,
   onSelectHallForEntry,
   onServiceNameChange,
-  onDmMailingChange,
+  onPosterDesignChangeChange,
   onEventStartDateChange,
   onEventEndDateChange,
   onSalesPersonChange,
@@ -128,10 +128,10 @@ export const LotteryBasicInfo = ({
         </div>
       </div>
 
-      {/* DM投函有無 */}
+      {/* ポスター有無 */}
       <div className="space-y-2">
-        <Label className="text-sm font-semibold">DM投函有無</Label>
-        <Select value={dmMailing} onValueChange={(v) => onDmMailingChange(v as "yes" | "no")}>
+        <Label className="text-sm font-semibold">ポスター有無</Label>
+        <Select value={posterDesignChange} onValueChange={(v) => onPosterDesignChangeChange(v as "yes" | "no")}>
           <SelectTrigger className="w-32 h-9 text-xs">
             <SelectValue />
           </SelectTrigger>

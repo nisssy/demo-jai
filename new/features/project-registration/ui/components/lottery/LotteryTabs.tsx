@@ -2,11 +2,15 @@
 
 import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { UseLotteryFormReturn } from "@/new/features/project-registration/hooks/useLotteryForm"
 import type { Role } from "@/new/types/role"
 import { LotteryBasicInfo } from "./LotteryBasicInfo"
 import { LotteryPrizeSet } from "./LotteryPrizeSet"
+import { LotteryQuoteInputs } from "./LotteryQuoteInputs"
 import { LotteryQuoteConfig } from "./LotteryQuoteConfig"
+import { DesignVendorEstimateSection } from "./DesignVendorEstimateSection"
 import { LotteryProduction } from "./LotteryProduction"
 import { ExtractionConditionSection } from "./ExtractionConditionSection"
 import { ProductManagementSection } from "./ProductManagementSection"
@@ -40,7 +44,7 @@ export const LotteryTabs = ({ lotteryForm: f }: LotteryTabsProps) => {
         <LotteryBasicInfo
           halls={f.halls}
           serviceName={f.serviceName}
-          dmMailing={f.dmMailing}
+          posterDesignChange={f.posterDesignChange}
           eventStartDate={f.eventStartDate}
           eventEndDate={f.eventEndDate}
           salesPersonName={f.salesPersonName}
@@ -54,7 +58,7 @@ export const LotteryTabs = ({ lotteryForm: f }: LotteryTabsProps) => {
           onSelectCompanyForHall={f.selectCompanyForHall}
           onSelectHallForEntry={f.selectHallForEntry}
           onServiceNameChange={f.setServiceName}
-          onDmMailingChange={f.setDmMailing}
+          onPosterDesignChangeChange={f.setPosterDesignChange}
           onEventStartDateChange={f.setEventStartDate}
           onEventEndDateChange={f.setEventEndDate}
           onSalesPersonChange={(id, name) => { f.setSalesPersonId(id); f.setSalesPersonName(name) }}
@@ -74,12 +78,60 @@ export const LotteryTabs = ({ lotteryForm: f }: LotteryTabsProps) => {
           onRemovePrize={f.removePrize}
           onUpdatePrize={f.updatePrize}
         />
-        {isSmartPoint && (isSalesOrInternal || role === "LotteryAdmin") && (
+      </SectionCard>
+
+      <SectionCard title="告知DM">
+        <div className="space-y-2">
+          <Label className="text-sm font-semibold">告知DM</Label>
+          <Select value={f.dmMailing} onValueChange={(v) => f.setDmMailing(v as "yes" | "no")}>
+            <SelectTrigger className="w-32 h-9 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="no" className="text-xs">無</SelectItem>
+              <SelectItem value="yes" className="text-xs">有</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {isSmartPoint && f.dmMailing === "yes" && (isSalesOrInternal || role === "LotteryAdmin") && (
           <ExtractionConditionSection productId={f.productId} />
         )}
       </SectionCard>
 
       <SectionCard title="見積り">
+        {role !== "LotteryAdmin" && (
+          <DesignVendorEstimateSection
+            productId={f.productId}
+            onApplyQuoteToItem={(amount) => {
+              f.updateTotalQuoteItem(1, String(amount))
+              f.addDesignCorrectionToHallQuotes(amount)
+            }}
+          />
+        )}
+        {role !== "LotteryAdmin" && (
+          <LotteryQuoteInputs
+            totalQuoteItems={f.quoteConfig.totalQuoteItems}
+            posterPrintQuantity={f.posterPrintQuantity}
+            posterPrintUnitPrice={f.posterPrintUnitPrice}
+            dmOrderCount={f.dmOrderCount}
+            dmMailing={f.dmMailing}
+            onTotalQuoteItemChange={f.updateTotalQuoteItem}
+            onPosterPrintQuantityChange={f.setPosterPrintQuantity}
+            onPosterPrintUnitPriceChange={f.setPosterPrintUnitPrice}
+            onDmOrderCountChange={f.setDmOrderCount}
+            proportionMode={f.proportionMode}
+            halls={f.halls}
+            hallPercentages={f.hallPercentages}
+            companyPercentages={f.companyPercentages}
+            onProportionModeChange={f.setProportionMode}
+            onHallPercentageChange={f.updateHallPercentage}
+            onCompanyPercentageChange={f.updateCompanyPercentage}
+            onDistributeEvenly={f.handleDistributeEvenly}
+            totalAmount={f.quoteCalc.totalAmount}
+            percentageSum={f.quoteCalc.percentageSum}
+            isPercentageValid={f.quoteCalc.isPercentageValid}
+          />
+        )}
         <LotteryQuoteConfig
           quoteGenerated={f.quoteGenerated}
           hallQuotes={f.hallQuotes}
@@ -89,12 +141,14 @@ export const LotteryTabs = ({ lotteryForm: f }: LotteryTabsProps) => {
         />
       </SectionCard>
 
+      {(role !== "Sales" || f.proposalStatus === "order-received") && (
       <SectionCard title="制作進行">
         <LotteryProduction
           productId={f.productId}
           posterStatus={f.posterStatus}
           dmStatus={f.dmStatus}
           dmMailing={f.dmMailing}
+          posterDesignChange={f.posterDesignChange}
           latestPosterRequest={f.latestPosterRequest}
           posterRequests={f.posterRequests}
           aiProofing={f.aiProofing}
@@ -122,6 +176,7 @@ export const LotteryTabs = ({ lotteryForm: f }: LotteryTabsProps) => {
           halls={f.halls}
         />
       </SectionCard>
+      )}
 
       {f.productId && (role === "LotteryAdmin" || (isSalesOrInternal && !isSmartPoint)) && (
         <SectionCard title="商材管理">

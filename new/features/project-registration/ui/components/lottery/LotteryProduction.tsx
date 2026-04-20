@@ -13,6 +13,7 @@ type LotteryProductionProps = {
   posterStatus: ProductionStatus
   dmStatus: ProductionStatus
   dmMailing: "yes" | "no"
+  posterDesignChange: "yes" | "no"
   // ポスター
   latestPosterRequest: DesignRequestInfo | null
   posterRequests: DesignRequestInfo[]
@@ -119,6 +120,24 @@ export const LotteryProduction = (props: LotteryProductionProps) => {
 function PosterTab(props: LotteryProductionProps) {
   return (
     <div className="space-y-5">
+      {/* デザイン会社へ見積り依頼（ポスターデザイン変更ありの場合のみ） */}
+      {props.posterDesignChange === "yes" && (
+        <div className="space-y-3 rounded-lg border p-4">
+          <div>
+            <Label className="text-sm font-semibold">デザイン会社へ見積り依頼</Label>
+            <p className="text-xs text-slate-500 mt-0.5">ポスターデザイン変更分の見積りをデザイン会社へ依頼します。</p>
+          </div>
+          <Button
+            onClick={() => alert("デザイン会社へ見積り依頼を送信しました")}
+            size="sm"
+            className="w-full text-xs gap-1 bg-gradient-to-r from-purple-600 to-purple-700"
+          >
+            <Mail className="h-3.5 w-3.5" />
+            デザイン会社へ見積り依頼
+          </Button>
+        </div>
+      )}
+
       {/* ポスター発注 */}
       <div className="space-y-3 rounded-lg border p-4">
         <div>
